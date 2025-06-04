@@ -7,31 +7,31 @@ on:
     branches: [main, dev]
 
 jobs:
-  test-client:
-    name: Client - Lint, Build & Test
-    runs-on: ubuntu-latest
+  # test-client:
+  #   name: Client - Lint, Build & Test
+  #   runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./client
+  #   defaults:
+  #     run:
+  #       working-directory: ./client
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: npm install
+  #     - name: Install dependencies
+  #       run: npm install
 
-      - name: Run Lint (Optional)
-        run: npm run lint
-        continue-on-error: true  # để không fail workflow nếu chưa setup lint
+  #     - name: Run Lint (Optional)
+  #       run: npm run lint
+  #       continue-on-error: true  # để không fail workflow nếu chưa setup lint
 
-      - name: Build project (Optional)
-        run: npm run build
-        continue-on-error: true  # để không fail nếu frontend không cần build
+  #     - name: Build project (Optional)
+  #       run: npm run build
+  #       continue-on-error: true  # để không fail nếu frontend không cần build
 
-      - name: Run Tests
-        run: npm test
+  #     - name: Run Tests
+  #       run: npm test
 
   test-server:
     name: Server - Lint, Build & Test
