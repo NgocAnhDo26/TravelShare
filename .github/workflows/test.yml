@@ -1,0 +1,60 @@
+name: Test Client & Server
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test-client:
+    name: Client - Lint, Build & Test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Lint (Optional)
+        run: npm run lint
+        continue-on-error: true  # để không fail workflow nếu chưa setup lint
+
+      - name: Build project (Optional)
+        run: npm run build
+        continue-on-error: true  # để không fail nếu frontend không cần build
+
+      - name: Run Tests
+        run: npm test
+
+  test-server:
+    name: Server - Lint, Build & Test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Lint (Optional)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Compile TypeScript
+        run: npm run build
+        continue-on-error: true
+
+      - name: Run Tests
+        run: npm test

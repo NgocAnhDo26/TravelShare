@@ -1,4 +1,4 @@
-// THIS IS EXAMPLE USAGE OKAY 
+// THIS IS EXAMPLE USAGE
 
 // module.exports = {
 //   secret: process.env.JWT_SECRET || 'some-super-secret-key',
