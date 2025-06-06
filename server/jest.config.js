@@ -1,6 +1,3 @@
-/* eslint-disable */
-module.exports = {
-    preset: 'ts-jest',
-    testEnvironment: 'node',
-    testMatch: ['**/tests/**/*.test.ts'],
-};
+export const preset = 'ts-jest';
+export const testEnvironment = 'node';
+export const testMatch = ['**/tests/**/*.test.ts'];
