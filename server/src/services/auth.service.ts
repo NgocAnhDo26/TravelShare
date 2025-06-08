@@ -3,7 +3,6 @@ import jwt, { Secret, JwtPayload } from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
-import uploadUseCases from '../middlewares/upload';
 import User from '../models/user.model';
 const saltRounds = 15;
 dotenv.config();
