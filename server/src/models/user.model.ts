@@ -1,6 +1,8 @@
 import { Schema, model, Model } from 'mongoose';
 
 export interface IUser extends Document {
+  firstName?: string;
+  lastName?: string;
   username: string;
   email: string;
   passwordHash: string;
@@ -13,6 +15,8 @@ export interface IUser extends Document {
 
 const userSchema: Schema<IUser> = new Schema(
   {
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
     username: {
       type: String,
       required: true,

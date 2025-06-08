@@ -16,9 +16,14 @@
   "type": "commonjs",
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.2",
     "@types/jest": "^29.5.14",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/multer": "^1.4.13",
     "@types/node": "^22.15.29",
+    "base64-arraybuffer": "^1.0.2",
     "dotenv": "^16.5.0",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.5",
@@ -34,7 +39,11 @@
     "typescript-eslint": "^8.33.1"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
-    "mongoose": "^8.15.1"
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.15.1",
+    "multer": "^2.0.1"
   }
 }
