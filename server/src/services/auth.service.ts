@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import jwt, { Secret, JwtPayload } from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
-import mongoose from 'mongoose';
 import User from '../models/user.model';
 const saltRounds = 15;
 dotenv.config();
@@ -129,7 +128,7 @@ const AuthService: IAuthenticationService = {
 
       const accessToken = createToken(user._id.toString(), 'access');
       const refreshToken = createToken(user._id.toString(), 'refresh');
-
+      
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -156,35 +155,37 @@ const AuthService: IAuthenticationService = {
   },
 
   verifyToken: async (req: Request, res: Response) => {
-    const token = req.headers.authorization?.split(' ')[1];
-
-    if (!token) {
-      res.status(401).json({ error: 'No token provided.' });
-      return;
-    }
-
+    const accessToken = req.cookies.accessToken;
+    const refreshToken = req.cookies.refreshToken;
     try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET as Secret,
-      ) as JwtPayload;
-      const userId = decoded.userId;
-
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(401).json({ error: 'Invalid token.' });
+      if(!accessToken && !refreshToken) {
+        res.status(401).json({ error: 'No token provided.' });
         return;
       }
-
-      const user = await User.findById(userId);
-      if (!user) {
-        res.status(404).json({ error: 'User not found.' });
+      let decoded: JwtPayload | string;
+      if (accessToken) {
+        decoded = jwt.verify(accessToken, process.env.JWT_SECRET as Secret);
+        res.status(200).json({ valid: true, userId: (decoded as JwtPayload).userId });
         return;
       }
-
-      res.status(200).json({ userId: user._id, username: user.username });
-    } catch (error) {
+      if (refreshToken) {
+        decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as Secret);
+        const userId = (decoded as JwtPayload).userId;
+        const newAccessToken = createToken(userId, 'access');
+        res.cookie('accessToken', newAccessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 3 * 60 * 60 * 1000, // 3 hours
+          sameSite: 'strict'
+        });
+        res.status(200).json({ valid: true, userId });
+        return;
+      }
+      res.status(401).json({ valid: false, error: 'Invalid token.' });
+    }
+    catch (error) {
       console.error('Token verification error:', error);
-      res.status(401).json({ error: 'Invalid or expired token.' });
+      res.status(401).json({ valid: false, error: 'Invalid token.' });
     }
   },
 };

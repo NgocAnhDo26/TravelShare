@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect} from "react";
 import API from "@/utils/axiosInstance";
 import toast from "react-hot-toast";
 
@@ -65,6 +65,25 @@ export function LoginForm({
 				});
 		}
 	};
+
+	useEffect(() => {
+		API.post("/auth/verify-token")
+			.then((response) => {
+				if (response.data.valid) {
+					toast.success("Token is valid. You are already logged in.");
+					// Redirect to dashboard or home page
+					window.location.href = "/dashboard"; // TODO: Change to HOME
+				}
+			})
+			.catch((error) => {
+				console.error("Token verification failed:", error);
+				if (error.response?.status === 401) {
+					toast.error("You are not logged in. Please login.");
+				} else {
+					toast.error("An error occurred while verifying token.");
+				}
+			});
+	}, []);
 
 	return (
 		<div className={cn("flex flex-col gap-6", className)} {...props}>
