@@ -21,7 +21,7 @@ interface RegisterData {
   profilePhoto?: Express.Multer.File;
 }
 
-function createToken(userId: string, type: string): string {
+export function createToken(userId: string, type: string): string {
   let token: string;
   if (type === 'access') {
     const secret = process.env.JWT_SECRET;
@@ -93,23 +93,6 @@ const AuthService: IAuthenticationService = {
       });
       
       await newUser.save();
-      
-      const accessToken = createToken(newUser._id.toString(), 'access');
-      const refreshToken = createToken(newUser._id.toString(), 'refresh');
-      
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'strict' as const
-      });
-      
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 3 * 60 * 60 * 1000, // 3 hours
-        sameSite: 'strict' as const
-      });
       
       res.status(201).json({ 
         message: 'User registered successfully.',
