@@ -1,0 +1,105 @@
+name: CI/CD - Test and Deploy
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  # test-client:
+  #   name: Client - Lint, Build & Test
+  #   runs-on: ubuntu-latest
+
+  #   defaults:
+  #     run:
+  #       working-directory: ./client
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+
+  #     - name: Install dependencies
+  #       run: npm install
+
+  #     - name: Run Lint (Optional)
+  #       run: npm run lint
+  #       continue-on-error: true  # để không fail workflow nếu chưa setup lint
+
+  #     - name: Build project (Optional)
+  #       run: npm run build
+  #       continue-on-error: true  # để không fail nếu frontend không cần build
+
+  #     - name: Run Tests
+  #       run: npm test
+
+  test-server:
+    name: Server - Lint, Build & Test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Lint (Optional)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Compile TypeScript
+        run: npm run build
+        continue-on-error: true
+
+      - name: Run Tests
+        run: npm test
+
+  deploy-server:
+    name: Deploy Server to EC2
+    needs: [test-server]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            # Set environment variables from GitHub Secrets
+            export PORT='${{ secrets.PORT }}'
+            export SUPABASE_URL='${{ secrets.SUPABASE_URL }}'
+            export SUPABASE_SERVICE_KEY='${{ secrets.SUPABASE_SERVICE_KEY }}'
+            export MONGO_URI='${{ secrets.MONGO_URI }}'
+            export CORS_ORIGIN='${{ secrets.CORS_ORIGIN }}'
+            export JWT_SECRET='${{ secrets.JWT_SECRET }}'
+            export JWT_REFRESH_SECRET='${{ secrets.JWT_REFRESH_SECRET }}'
+            
+            cd /home/${{ secrets.EC2_USER }}/app
+            git pull
+            cd server
+            npm install
+            npm install pm2 -g
+            npm run build
+            
+            # Create/update the .env file for the Node application
+            echo "PORT=${PORT}" > .env
+            echo "SUPABASE_URL=${SUPABASE_URL}" >> .env
+            echo "SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}" >> .env
+            echo "MONGO_URI=${MONGO_URI}" >> .env
+            echo "CORS_ORIGIN=${CORS_ORIGIN}" >> .env
+            echo "JWT_SECRET=${JWT_SECRET}" >> .env
+            echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> .env
+            
+            # Restart the server application using PM2
+            pm2 startOrReload ecosystem.config.js --update-env
