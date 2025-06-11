@@ -2,7 +2,7 @@ module.exports = {
     apps: [
         {
             name: 'travel-share',
-            script: './dist/server.js',
+            script: './src/server.js',
             instances: 1,
             autorestart: true,
             watch: false,

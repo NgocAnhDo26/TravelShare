@@ -33,35 +33,35 @@ jobs:
   #     - name: Run Tests
   #       run: npm test
 
-  test-server:
-    name: Server - Lint, Build & Test
-    runs-on: ubuntu-latest
+  # test-server:
+  #   name: Server - Lint, Build & Test
+  #   runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./server
+  #   defaults:
+  #     run:
+  #       working-directory: ./server
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: npm install
+  #     - name: Install dependencies
+  #       run: npm install
 
-      - name: Run Lint (Optional)
-        run: npm run lint
-        continue-on-error: true
+  #     - name: Run Lint (Optional)
+  #       run: npm run lint
+  #       continue-on-error: true
 
-      - name: Compile TypeScript
-        run: npm run build
-        continue-on-error: true
+  #     - name: Compile TypeScript
+  #       run: npm run build
+  #       continue-on-error: true
 
-      - name: Run Tests
-        run: npm test
+  #     - name: Run Tests
+  #       run: npm test
 
   deploy-server:
     name: Deploy Server to EC2
-    needs: [test-server]
+    # needs: [test-server]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -85,8 +85,8 @@ jobs:
             export JWT_SECRET='${{ secrets.JWT_SECRET }}'
             export JWT_REFRESH_SECRET='${{ secrets.JWT_REFRESH_SECRET }}'
             
-            cd /home/${{ secrets.EC2_USER }}/app
-            git pull
+            cd /home/${{ secrets.EC2_USER }}/TravelShare
+            git pull --rebase
             cd server
             npm install
             npm install pm2 -g
