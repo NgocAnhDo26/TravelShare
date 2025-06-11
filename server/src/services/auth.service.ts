@@ -1,14 +1,21 @@
-import { Request, Response } from 'express';
+import e, { Request, Response } from 'express';
 import jwt, { Secret, JwtPayload } from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import User from '../models/user.model';
-const saltRounds = 15;
+import Token from '../models/token.model';
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+const saltRounds = 20;
 dotenv.config();
 
 interface IAuthenticationService {
   register(req: Request, res: Response): Promise<void>;
   login(req: Request, res: Response): Promise<void>;
+  forgotPassword(req: Request, res: Response): Promise<void>;
+  resetPassword(req: Request, res: Response): Promise<void>;
   verifyToken(req: Request, res: Response): Promise<void>;
 }
 
@@ -18,6 +25,44 @@ interface RegisterData {
   password: string;
   fileUrl?: string; // Optional URL for the uploaded file
   profilePhoto?: Express.Multer.File;
+}
+
+interface forgotPasswordData {
+  email: string;
+}
+
+interface resetPasswordData {
+  token: string;
+  newPassword: string;
+}
+// Use ethereal first because I cannot find a free SMTP server that allows sending emails without verification
+    // ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
+
+
+async function createMailingService() {
+  if(!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('SMTP configuration is not set. Using Ethereal email service for testing.');
+    const testAccount = await nodemailer.createTestAccount();
+    return nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: testAccount.user, // generated ethereal user
+        pass: testAccount.pass, // generated ethereal password
+      },
+    });
+  } else {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
 }
 
 export function createToken(userId: string, type: string): string {
@@ -33,7 +78,9 @@ export function createToken(userId: string, type: string): string {
   } else if (type === 'refresh') {
     const refreshSecret = process.env.JWT_REFRESH_SECRET;
     if (!refreshSecret) {
-      throw new Error('JWT_REFRESH_SECRET is not defined in environment variables');
+      throw new Error(
+        'JWT_REFRESH_SECRET is not defined in environment variables',
+      );
     }
     token = jwt.sign({ userId }, refreshSecret, {
       expiresIn: '30d',
@@ -55,12 +102,14 @@ const AuthService: IAuthenticationService = {
       return;
     }
 
-    const { email, username, password, fileUrl}: RegisterData = req.body;
+    const { email, username, password, fileUrl }: RegisterData = req.body;
     const avatar = req.file;
 
     // Validate required fields
     if (!email || !username || !password) {
-      res.status(400).json({ error: 'Email, username, and password are required.' });
+      res
+        .status(400)
+        .json({ error: 'Email, username, and password are required.' });
       return;
     }
 
@@ -69,8 +118,8 @@ const AuthService: IAuthenticationService = {
       const existingUser = await User.findOne({
         $or: [
           { email: email.trim().toLowerCase() },
-          { username: username.trim().toLowerCase() }
-        ]
+          { username: username.trim().toLowerCase() },
+        ],
       });
 
       if (existingUser) {
@@ -90,17 +139,17 @@ const AuthService: IAuthenticationService = {
         avatarUrl: fileUrl || (avatar ? avatar.path : undefined),
         registrationDate: new Date(),
       });
-      
+
       await newUser.save();
-      
-      res.status(201).json({ 
+
+      res.status(201).json({
         message: 'User registered successfully.',
         userId: newUser._id,
-        username: newUser.username
+        username: newUser.username,
       });
     } catch (error) {
       console.error('Registration error:', error);
-      
+
       res.status(500).json({ error: 'Internal server error.' });
     }
   },
@@ -114,7 +163,11 @@ const AuthService: IAuthenticationService = {
     }
 
     try {
-      const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+passwordHash');
+      // +passwordHash to override the default select behavior of mongoose and include the passwordHash field in the query result
+      // This is necessary to compare the password with the hashed password stored in the database
+      const user = await User.findOne({
+        email: email.trim().toLowerCase(),
+      }).select('+passwordHash');
       if (!user) {
         res.status(401).json({ error: 'Invalid email or password.' });
         return;
@@ -128,25 +181,25 @@ const AuthService: IAuthenticationService = {
 
       const accessToken = createToken(user._id.toString(), 'access');
       const refreshToken = createToken(user._id.toString(), 'refresh');
-      
+
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'strict'
+        sameSite: 'strict',
       });
-      
+
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 3 * 60 * 60 * 1000, // 3 hours
-        sameSite: 'strict'
+        sameSite: 'strict',
       });
 
-      res.status(200).json({ 
+      res.status(200).json({
         message: 'Login successful.',
         userId: user._id,
-        username: user.username
+        username: user.username,
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -158,34 +211,150 @@ const AuthService: IAuthenticationService = {
     const accessToken = req.cookies.accessToken;
     const refreshToken = req.cookies.refreshToken;
     try {
-      if(!accessToken && !refreshToken) {
+      if (!accessToken && !refreshToken) {
         res.status(401).json({ error: 'No token provided.' });
         return;
       }
       let decoded: JwtPayload | string;
       if (accessToken) {
         decoded = jwt.verify(accessToken, process.env.JWT_SECRET as Secret);
-        res.status(200).json({ valid: true, userId: (decoded as JwtPayload).userId });
+        res
+          .status(200)
+          .json({ valid: true, userId: (decoded as JwtPayload).userId });
         return;
       }
       if (refreshToken) {
-        decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as Secret);
+        decoded = jwt.verify(
+          refreshToken,
+          process.env.JWT_REFRESH_SECRET as Secret,
+        );
         const userId = (decoded as JwtPayload).userId;
         const newAccessToken = createToken(userId, 'access');
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           maxAge: 3 * 60 * 60 * 1000, // 3 hours
-          sameSite: 'strict'
+          sameSite: 'strict',
         });
         res.status(200).json({ valid: true, userId });
         return;
       }
       res.status(401).json({ valid: false, error: 'Invalid token.' });
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Token verification error:', error);
       res.status(401).json({ valid: false, error: 'Invalid token.' });
+    }
+  },
+  forgotPassword: async (req: Request, res: Response) => {
+    // forgot password is to create an expirable link to reset password,
+    // reset password is to change the password using that link
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ error: 'Email is required.' });
+      return;
+    }
+    try {
+      const user = await User.findOne({ email: email.trim().toLowerCase() });
+      if (!user) {
+        res.status(404).json({ error: 'User not found.' });
+        return;
+      }
+      const OTP_token = crypto.randomBytes(32).toString('hex'); // 64 characters OTP token
+      const existingToken = await Token.findOne({
+        userId: user._id,
+        purpose: 'password-reset',
+      });
+      if (existingToken) {
+        // If a token already exists, update it
+        existingToken.token = OTP_token;
+        existingToken.expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiration
+        await existingToken.save();
+      } else {
+        // Create a new token
+        const token = new Token({
+          userId: user._id,
+          token: OTP_token,
+          purpose: 'password-reset',
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour expiration
+        });
+        const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${OTP_token}`;
+        const templatePath = path.join(
+          __dirname,
+          '../public/reset-password-mail.html',
+        );
+        let HTMLcontent = fs.readFileSync(templatePath, 'utf8');
+        HTMLcontent = HTMLcontent.replace(
+          '{{resetLink}}',
+          resetLink,
+        );
+        const mailOptions = {
+          from: "Travel Share <noreply@travelshare.com>",
+          to: user.email,
+          subject: 'No Reply - Travel Share Password Reset',
+          html: HTMLcontent,
+          importance: 'high',
+        }
+        try {
+          console.log('Attempting to send email to:', user.email);
+          const mailingService = await createMailingService();
+          const info = await mailingService.sendMail(mailOptions);
+          console.log('Email sent successfully:', info.response);
+          console.log('Reset link:', resetLink);
+          await token.save();
+          res.status(200).json({
+            message: 'Password reset link sent to your email.',
+            resetLink, // Might want to remove this from production for security
+          });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({ error: 'Failed to send reset email.' });
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ error: 'Internal server error.' });
+      return;
+    }
+  },
+  resetPassword: async (req: Request, res: Response) => {
+    const { token, newPassword }: resetPasswordData = req.body;
+
+    if (!token || !newPassword) {
+      res.status(400).json({ error: 'Token and new password are required.' });
+      return;
+    }
+
+    try {
+      const existingToken = await Token.findOne({
+        token,
+        purpose: 'password-reset',
+      });
+      if (
+        !existingToken ||
+        existingToken.isUsed
+      ) {
+        res.status(400).json({ error: 'Invalid or expired token.' });
+        return;
+      }
+
+      const user = await User.findById(existingToken.userId);
+      if (!user) {
+        res.status(404).json({ error: 'User not found.' });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+      user.passwordHash = passwordHash;
+      await user.save();
+
+      existingToken.isUsed = true;
+      await existingToken.save();
+
+      res.status(200).json({ message: 'Password reset successfully.' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ error: 'Internal server error.' });
     }
   },
 };
