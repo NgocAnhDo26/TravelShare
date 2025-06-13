@@ -3,6 +3,9 @@ import errorHandler from './middlewares/errorHandler';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRouter from './routes/auth.routes';
+import cookieParser from 'cookie-parser';
+import { logger, morganStream } from './utils/logger';
+import morgan from 'morgan';
 dotenv.config();
 
 const app = express();
@@ -12,9 +15,13 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Allow cookies to be sent with requests
 };
+const morganFormat = ':method :url :status :res[content-length] - :response-time ms';
 
+app.use(morgan(morganFormat, { stream: morganStream }));
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Routes
 // app.use("/api/items", itemRoutes);
