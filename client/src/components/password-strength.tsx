@@ -20,7 +20,7 @@ export function getCrackTime(password: string) {
 
 export function customPasswordStrength(password: string) {
   // at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&#]{8,}$/;
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
   return regex.test(password); // boolean
 }
 
