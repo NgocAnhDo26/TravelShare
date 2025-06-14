@@ -1,8 +1,10 @@
 import mongoose from 'mongoose';
 import config from './config';
 
-if (!config.mongoUri) {
+const mongoUri = config.nodeEnv === 'development' ? config.mongoUriDev : config.mongoUriProd;
+
+if (!mongoUri) {
   throw new Error('MONGO_URI environment variable is not defined');
 }
 
-mongoose.connect(config.mongoUri);
+mongoose.connect(mongoUri);

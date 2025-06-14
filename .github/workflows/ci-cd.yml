@@ -120,16 +120,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.client == 'true' && github.event_name == 'push'
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Deploy to Vercel
-        uses: vercel/vercel-action@v3
-        with:
-          # If the push is to 'main', it creates a Production Deployment.
-          # If the push is to 'dev', it creates a Preview (development) Deployment.
-          vercel-prod: ${{ github.ref == 'refs/heads/main' }} 
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./client
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel
+
+      - name: Pull Vercel Environment Information
+        # This command pulls 'production' env for the main branch, and 'preview' for others.
+        run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./client
+
+      - name: Build Project Artifacts
+        # The '--prod' flag is added for production builds on the main branch.
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }} ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
+        working-directory: ./client
+
+      - name: Deploy Project Artifacts to Vercel
+        # The '--prod' flag is added for production deploys on the main branch.
+        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
+        working-directory: ./client
