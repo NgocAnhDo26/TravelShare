@@ -2,7 +2,7 @@ import axios from "axios";
 
 type EnvMode = "local" | "dev" | "prod";
 
-const env = process.env.REACT_APP_ENV as EnvMode | undefined;
+const env = import.meta.env.REACT_APP_ENV as EnvMode | undefined;
 let baseURL: string;
 
 switch (env) {
