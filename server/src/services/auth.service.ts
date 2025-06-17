@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-const saltRounds = 20;
+const saltRounds = 12;
 dotenv.config();
 
 interface IAuthenticationService {
