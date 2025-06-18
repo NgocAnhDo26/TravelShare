@@ -28,7 +28,7 @@ describe('AuthService.login', () => {
   let mockResponse: Partial<Response>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
 
     // Create the mock objects. They only need the properties and methods
     // that are actually used by the function under test.
@@ -71,4 +71,58 @@ describe('AuthService.login', () => {
       username: 'testuser',
     });
   });
+
+  it('should return 401 for invalid credentials', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.email = 'wrongemail@example.com';
+      mockRequest.body.password = 'wrongpassword';
+    }
+    (mockedUser.findOne as jest.Mock).mockReturnValue({
+      select: jest.fn().mockResolvedValue(null),
+    });
+
+    // Act
+    await AuthService.login(mockRequest as Request, mockResponse as Response);
+
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(401);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: 'Invalid email or password.',
+    });
+  });
+
+  it('should return 500 for server errors', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.email = 'email@mail.com';
+      mockRequest.body.password = 'password';
+    }
+    (mockedUser.findOne as jest.Mock).mockImplementation(() => {
+      throw new Error('Database error');
+    });
+    
+    // Act
+    await AuthService.login(mockRequest as Request, mockResponse as Response);
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: 'Internal server error.',
+    });
+  });
+  
+  it('should create a JWT token', () => {
+    // Arrange
+    const userId = 'testUserId';
+    const token = createToken(userId, "access");
+    const refreshToken = createToken(userId, "refresh");
+    
+    // Assert
+    expect(token).toBeDefined();
+    expect(typeof token).toBe('string');
+    expect(refreshToken).toBeDefined();
+    expect(typeof refreshToken).toBe('string');
+    expect(token).not.toEqual(refreshToken);
+  });
+  
 });
