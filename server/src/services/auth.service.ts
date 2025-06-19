@@ -36,33 +36,18 @@ interface resetPasswordData {
   newPassword: string;
 }
 // Use ethereal first because I cannot find a free SMTP server that allows sending emails without verification
-    // ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
-
+// ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
 
 async function createMailingService() {
-  if(!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('SMTP configuration is not set. Using Ethereal email service for testing.');
-    const testAccount = await nodemailer.createTestAccount();
-    return nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: testAccount.user, // generated ethereal user
-        pass: testAccount.pass, // generated ethereal password
-      },
-    });
-  } else {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  });
 }
 
 export function createToken(userId: string, type: string): string {
@@ -246,9 +231,7 @@ const AuthService: IAuthenticationService = {
     }
   },
   forgotPassword: async (req: Request, res: Response) => {
-    // forgot password is to create an expirable link to reset password,
-    // reset password is to change the password using that link
-    const { email } = req.body;
+    const { email }: forgotPasswordData = req.body;
     if (!email) {
       res.status(400).json({ error: 'Email is required.' });
       return;
@@ -256,65 +239,56 @@ const AuthService: IAuthenticationService = {
     try {
       const user = await User.findOne({ email: email.trim().toLowerCase() });
       if (!user) {
-        res.status(404).json({ error: 'User not found.' });
+        // To prevent user enumeration, we send a success response even if the user doesn't exist.
+        console.log(`Password reset requested for non-existent user: ${email}`);
+        res.status(200).json({
+          message:
+            'If an account with that email exists, a password reset link has been sent.',
+        });
         return;
       }
-      const OTP_token = crypto.randomBytes(32).toString('hex'); // 64 characters OTP token
-      const existingToken = await Token.findOne({
-        userId: user._id,
-        purpose: 'password-reset',
-      });
-      if (existingToken) {
-        // If a token already exists, update it
-        existingToken.token = OTP_token;
-        existingToken.expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiration
-        await existingToken.save();
-      } else {
-        // Create a new token
-        const token = new Token({
-          userId: user._id,
-          token: OTP_token,
-          purpose: 'password-reset',
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour expiration
+
+      const OTP_token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiration
+
+      // Upsert the token: update if exists, insert if not.
+      await Token.findOneAndUpdate(
+        { userId: user._id, purpose: 'password-reset' },
+        { token: OTP_token, expiresAt, isUsed: false },
+        { upsert: true, new: true },
+      );
+
+      const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${OTP_token}`;
+      const templatePath = path.join(
+        __dirname,
+        '../public/reset-password-mail.html',
+      );
+      let HTMLcontent = fs.readFileSync(templatePath, 'utf8');
+      HTMLcontent = HTMLcontent.replace(/{{resetLink}}/g, resetLink);
+
+      const mailOptions = {
+        from: 'Travel Share <noreply@travelshare.com>',
+        to: user.email,
+        subject: 'No Reply - Travel Share Password Reset',
+        html: HTMLcontent,
+        importance: 'high',
+      };
+
+      try {
+        const mailingService = await createMailingService();
+        const info = await mailingService.sendMail(mailOptions);
+        console.log('Email sent successfully:', info.response);
+
+        res.status(200).json({
+          message: 'Password reset link sent to your email.',
         });
-        const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${OTP_token}`;
-        const templatePath = path.join(
-          __dirname,
-          '../public/reset-password-mail.html',
-        );
-        let HTMLcontent = fs.readFileSync(templatePath, 'utf8');
-        HTMLcontent = HTMLcontent.replace(
-          '{{resetLink}}',
-          resetLink,
-        );
-        const mailOptions = {
-          from: "Travel Share <noreply@travelshare.com>",
-          to: user.email,
-          subject: 'No Reply - Travel Share Password Reset',
-          html: HTMLcontent,
-          importance: 'high',
-        }
-        try {
-          console.log('Attempting to send email to:', user.email);
-          const mailingService = await createMailingService();
-          const info = await mailingService.sendMail(mailOptions);
-          console.log('Email sent successfully:', info.response);
-          console.log('Reset link:', resetLink);
-          await token.save();
-          res.status(200).json({
-            message: 'Password reset link sent to your email.',
-            resetLink, // Might want to remove this from production for security
-          });
-        } catch (error) {
-          console.error(error);
-          res.status(500).json({ error: 'Failed to send reset email.' });
-          return;
-        }
+      } catch (mailError) {
+        console.error('Failed to send reset email:', mailError);
+        res.status(500).json({ error: 'Failed to send reset email.' });
       }
-    } catch (error) {
-      console.error('Forgot password error:', error);
+    } catch (dbError) {
+      console.error('Forgot password database error:', dbError);
       res.status(500).json({ error: 'Internal server error.' });
-      return;
     }
   },
   resetPassword: async (req: Request, res: Response) => {
@@ -330,10 +304,7 @@ const AuthService: IAuthenticationService = {
         token,
         purpose: 'password-reset',
       });
-      if (
-        !existingToken ||
-        existingToken.isUsed
-      ) {
+      if (!existingToken || existingToken.isUsed) {
         res.status(400).json({ error: 'Invalid or expired token.' });
         return;
       }
