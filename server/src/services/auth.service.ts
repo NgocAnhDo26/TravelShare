@@ -11,6 +11,7 @@ import path from 'path';
 const saltRounds = 20;
 dotenv.config();
 
+let emailTransporter: nodemailer.Transporter | null = null; // singleton
 interface IAuthenticationService {
   register(req: Request, res: Response): Promise<void>;
   login(req: Request, res: Response): Promise<void>;
@@ -27,8 +28,12 @@ interface RegisterData {
   profilePhoto?: Express.Multer.File;
 }
 
-interface forgotPasswordData {
-  email: string;
+interface EmailJob {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string; // Optional HTML content
+  retries?: number; // Number of retries if sending fails
 }
 
 interface resetPasswordData {
@@ -40,29 +45,72 @@ interface resetPasswordData {
 
 
 async function createMailingService() {
-  if(!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('SMTP configuration is not set. Using Ethereal email service for testing.');
-    const testAccount = await nodemailer.createTestAccount();
-    return nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: testAccount.user, // generated ethereal user
-        pass: testAccount.pass, // generated ethereal password
-      },
-    });
-  } else {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+  if (emailTransporter) {
+    return emailTransporter;
   }
+  try{
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      const etherealCredentials = await nodemailer.createTestAccount();
+      const transporter = nodemailer.createTransport({
+        host: etherealCredentials.smtp.host,
+        port: etherealCredentials.smtp.port,
+        secure: etherealCredentials.smtp.secure,
+        auth: {
+          user: etherealCredentials.user,
+          pass: etherealCredentials.pass,
+        },
+        // Performance optimizations
+          pool: true,
+          maxConnections: 5,
+          maxMessages: 100,
+          connectionTimeout: 30000, // 30 seconds
+          greetingTimeout: 30000,
+          socketTimeout: 60000, // 60 seconds
+      });
+      emailTransporter = transporter;
+      console.log('Using Ethereal SMTP server for testing emails.');
+    }
+    else{
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        // Performance optimizations
+          pool: true,
+          maxConnections: 5,
+          maxMessages: 100,
+          connectionTimeout: 30000, // 30 seconds
+          greetingTimeout: 30000,
+          socketTimeout: 60000, // 60 seconds
+      });
+      emailTransporter = transporter;
+      console.log('Using configured SMTP server for sending emails.');
+    }
+    await emailTransporter.verify();
+    console.log('Mailing service is ready to send emails.');
+    return emailTransporter;
+  }
+  catch (error) {
+    console.error('Error creating mailing service:', error);
+    throw new Error('Failed to create mailing service');
+  }
+}
+
+const emailQueue: EmailJob[] = [];
+
+export function addEmailToQueue(emailJob: EmailJob) {
+  emailQueue.push(emailJob);
+  processEmailQueue();
+}
+
+async function processEmailQueue() {
+  if (emailQueue.length === 0 || !emailTransporter) return; 
+  const emailJob = emailQueue.shift();
+  if (!emailJob) return;
 }
 
 export function createToken(userId: string, type: string): string {
@@ -259,58 +307,32 @@ const AuthService: IAuthenticationService = {
         res.status(404).json({ error: 'User not found.' });
         return;
       }
-      const OTP_token = crypto.randomBytes(32).toString('hex'); // 64 characters OTP token
-      const existingToken = await Token.findOne({
+      const OTP_token = crypto.randomBytes(32).toString('hex'); // 64 characters OTP token, might not necessary to check for uniqueness
+      const token = new Token({
         userId: user._id,
+        token: OTP_token,
         purpose: 'password-reset',
+        isUsed: false,
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour expiration
       });
-      if (existingToken) {
-        // If a token already exists, update it
-        existingToken.token = OTP_token;
-        existingToken.expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiration
-        await existingToken.save();
-      } else {
-        // Create a new token
-        const token = new Token({
-          userId: user._id,
-          token: OTP_token,
-          purpose: 'password-reset',
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour expiration
-        });
-        const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${OTP_token}`;
-        const templatePath = path.join(
-          __dirname,
-          '../public/reset-password-mail.html',
-        );
-        let HTMLcontent = fs.readFileSync(templatePath, 'utf8');
-        HTMLcontent = HTMLcontent.replace(
-          '{{resetLink}}',
-          resetLink,
-        );
-        const mailOptions = {
-          from: "Travel Share <noreply@travelshare.com>",
-          to: user.email,
-          subject: 'No Reply - Travel Share Password Reset',
-          html: HTMLcontent,
-          importance: 'high',
-        }
-        try {
-          console.log('Attempting to send email to:', user.email);
-          const mailingService = await createMailingService();
-          const info = await mailingService.sendMail(mailOptions);
-          console.log('Email sent successfully:', info.response);
-          console.log('Reset link:', resetLink);
-          await token.save();
-          res.status(200).json({
-            message: 'Password reset link sent to your email.',
-            resetLink, // Might want to remove this from production for security
-          });
-        } catch (error) {
-          console.error(error);
-          res.status(500).json({ error: 'Failed to send reset email.' });
-          return;
-        }
-      }
+      await token.save();
+
+      const transporter = await createMailingService();
+      const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${OTP_token}`;
+      const mailOptions = {
+        from: process.env.SMTP_USER,
+        to: email.trim().toLowerCase(),
+        subject: 'Password Reset Request',
+        text: `You requested a password reset. Click the link below to reset your password:\n\n${resetLink}\n\nThis link will expire in 1 hour.`,
+      };
+
+      res.status(200).json({
+        message: 'Password reset link sent to your email.',
+        resetLink,
+      });
+      await transporter.sendMail(mailOptions);
+      console.log('Password reset email sent successfully.');
+      return;
     } catch (error) {
       console.error('Forgot password error:', error);
       res.status(500).json({ error: 'Internal server error.' });
