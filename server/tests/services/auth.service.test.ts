@@ -101,7 +101,7 @@ describe('AuthService.login', () => {
     (mockedUser.findOne as jest.Mock).mockImplementation(() => {
       throw new Error('Database error');
     });
-    
+
     // Act
     await AuthService.login(mockRequest as Request, mockResponse as Response);
     // Assert
@@ -110,13 +110,13 @@ describe('AuthService.login', () => {
       error: 'Internal server error.',
     });
   });
-  
+
   it('should create a JWT token', () => {
     // Arrange
     const userId = 'testUserId';
-    const token = createToken(userId, "access");
-    const refreshToken = createToken(userId, "refresh");
-    
+    const token = createToken(userId, 'access');
+    const refreshToken = createToken(userId, 'refresh');
+
     // Assert
     expect(token).toBeDefined();
     expect(typeof token).toBe('string');
@@ -124,5 +124,155 @@ describe('AuthService.login', () => {
     expect(typeof refreshToken).toBe('string');
     expect(token).not.toEqual(refreshToken);
   });
-  
+
+  it('should return 400 for missing email or password', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.email = '';
+      mockRequest.body.password = '';
+    }
+
+    // Act
+    await AuthService.login(mockRequest as Request, mockResponse as Response);
+
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: 'Email and password are required.',
+    });
+  });
+});
+
+describe('AuthService.register', () => {
+  let mockRequest: Partial<Request>;
+  let mockResponse: Partial<Response>;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    // Create the mock objects. They only need the properties and methods
+    // that are actually used by the function under test.
+    mockRequest = {
+      body: {},
+    };
+    mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+      cookie: jest.fn(),
+    };
+  });
+
+  it('should register a new user successfully', async () => {
+    // --- ARRANGE ---
+
+    // 1. Set up the request body for the new user.
+    if (mockRequest.body) {
+      mockRequest.body.username = 'newuser';
+      mockRequest.body.email = 'email@mail.com';
+      mockRequest.body.password = 'validpassword123!H';
+    }
+
+    // 2. CRITICAL: Mock findOne to return null, simulating that the user does not exist.
+    (mockedUser.findOne as jest.Mock).mockResolvedValue(null);
+
+    // 3. Mock the result of the password hashing.
+    const hashedPassword = 'a-very-secure-hash';
+    (mockedBcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
+
+    // 4. Mock the .save() method that will be called on the new user instance.
+    const mockSave = jest.fn().mockResolvedValue(true);
+    // Mock the User constructor to return an object that has our mock .save() method.
+    (mockedUser as unknown as jest.Mock).mockImplementation(() => ({
+      save: mockSave,
+    }));
+
+    // --- ACT ---
+    await AuthService.register(
+      mockRequest as Request,
+      mockResponse as Response,
+    );
+
+    // --- ASSERT ---
+
+    // 5. Assert that the password was hashed with the correct salt rounds.
+    expect(mockedBcrypt.hash).toHaveBeenCalledWith('validpassword123!H', 20);
+
+    // 6. Assert that the User constructor was called with the correct data.
+    expect(User).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: 'newuser',
+        email: 'email@mail.com',
+        passwordHash: hashedPassword,
+      }),
+    );
+
+    // 7. Assert that the .save() method was called on the new user instance.
+    expect(mockSave).toHaveBeenCalled();
+
+    // 8. Assert that the correct success response was sent.
+    expect(mockResponse.status).toHaveBeenCalledWith(201);
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'User registered successfully.',
+      }),
+    );
+  });
+
+  it('should return 400 for missing username, email, or password', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.username = '';
+      mockRequest.body.email = '';
+      mockRequest.body.password = '';
+    }
+
+    // Act
+    await AuthService.register(mockRequest as Request, mockResponse as Response);
+
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: 'Email, username, and password are required.',
+    });
+  });
+
+  it('should return 409 for existing email or username', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.username = 'existinguser';
+      mockRequest.body.email = 'existingemail@mail.com'
+      mockRequest.body.password = 'password123';
+    }
+    // Mock findOne to simulate that the user already exists.
+    (mockedUser.findOne as jest.Mock).mockResolvedValue({
+      select: jest.fn().mockResolvedValue({}),
+    });
+    // Act
+    await AuthService.register(mockRequest as Request, mockResponse as Response);
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(409);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: 'Username already exists.',
+    });
+  });
+
+  it('should return 500 for server errors', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.username = 'newuser';
+      mockRequest.body.email = 'email@mail.com';
+      mockRequest.body.password = 'validpassword123!H';
+    }
+    (mockedUser.findOne as jest.Mock).mockImplementation(() => {
+      throw new Error('Database error');
+    }
+    );
+    // Act
+    await AuthService.register(mockRequest as Request, mockResponse as Response);
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: 'Internal server error.',
+    });
+  });
 });
