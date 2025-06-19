@@ -276,3 +276,48 @@ describe('AuthService.register', () => {
     });
   });
 });
+
+describe('AuthService.forgotPassword', () => {
+  let mockRequest: Partial<Request>;
+  let mockResponse: Partial<Response>;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    // Create the mock objects. They only need the properties and methods
+    // that are actually used by the function under test.
+    mockRequest = {
+      body: {},
+    };
+    mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+      cookie: jest.fn(),
+    };
+  });
+
+  it('should handle forgot password request', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.email = 'test@example.com'
+    }
+    // Mock findOne to simulate that the user exists.
+    const mockUser = {
+      _id: 'someUserId',
+      email: 'test@example.com',
+      save: jest.fn().mockResolvedValue(true),
+    };
+    (mockedUser.findOne as jest.Mock).mockResolvedValue(mockUser);
+    
+    // Act
+    await AuthService.forgotPassword(mockRequest as Request, mockResponse as Response);
+    
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(200);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      message: 'Password reset link sent to your email.',
+    });
+    expect(mockResponse.json).toHaveBeenCalledTimes(1);
+  });
+  
+})

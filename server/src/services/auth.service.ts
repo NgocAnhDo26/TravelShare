@@ -11,12 +11,17 @@ import path from 'path';
 const saltRounds = 12;
 dotenv.config();
 
+let emailTransporter: nodemailer.Transporter | null = null; // singleton
 interface IAuthenticationService {
   register(req: Request, res: Response): Promise<void>;
   login(req: Request, res: Response): Promise<void>;
   forgotPassword(req: Request, res: Response): Promise<void>;
   resetPassword(req: Request, res: Response): Promise<void>;
   verifyToken(req: Request, res: Response): Promise<void>;
+}
+
+interface forgotPasswordData {
+  email: string;
 }
 
 interface RegisterData {
@@ -27,8 +32,12 @@ interface RegisterData {
   profilePhoto?: Express.Multer.File;
 }
 
-interface forgotPasswordData {
-  email: string;
+interface EmailJob {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string; // Optional HTML content
+  retries?: number; // Number of retries if sending fails
 }
 
 interface resetPasswordData {
@@ -39,15 +48,74 @@ interface resetPasswordData {
 // ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
 
 async function createMailingService() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
-  });
+  if (emailTransporter) {
+    return emailTransporter;
+  }
+  try {
+    if (
+      !process.env.SMTP_HOST ||
+      !process.env.SMTP_USER ||
+      !process.env.SMTP_PASS
+    ) {
+      const etherealCredentials = await nodemailer.createTestAccount();
+      const transporter = nodemailer.createTransport({
+        host: etherealCredentials.smtp.host,
+        port: etherealCredentials.smtp.port,
+        secure: etherealCredentials.smtp.secure,
+        auth: {
+          user: etherealCredentials.user,
+          pass: etherealCredentials.pass,
+        },
+        // Performance optimizations
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        connectionTimeout: 30000, // 30 seconds
+        greetingTimeout: 30000,
+        socketTimeout: 60000, // 60 seconds
+      });
+      emailTransporter = transporter;
+      console.log('Using Ethereal SMTP server for testing emails.');
+    } else {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        // Performance optimizations
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        connectionTimeout: 30000, // 30 seconds
+        greetingTimeout: 30000,
+        socketTimeout: 60000, // 60 seconds
+      });
+      emailTransporter = transporter;
+      console.log('Using configured SMTP server for sending emails.');
+    }
+    await emailTransporter.verify();
+    console.log('Mailing service is ready to send emails.');
+    return emailTransporter;
+  } catch (error) {
+    console.error('Error creating mailing service:', error);
+    throw new Error('Failed to create mailing service');
+  }
+}
+
+const emailQueue: EmailJob[] = [];
+
+export function addEmailToQueue(emailJob: EmailJob) {
+  emailQueue.push(emailJob);
+  processEmailQueue();
+}
+
+async function processEmailQueue() {
+  if (emailQueue.length === 0 || !emailTransporter) return;
+  const emailJob = emailQueue.shift();
+  if (!emailJob) return;
 }
 
 export function createToken(userId: string, type: string): string {
@@ -276,7 +344,7 @@ const AuthService: IAuthenticationService = {
 
       try {
         const mailingService = await createMailingService();
-        const info = await mailingService.sendMail(mailOptions);
+        const info = await mailingService.sendMail(mailOptions); // MAYBE: change to fire-and-forget behavior to avoid blocking the system when await sending
         console.log('Email sent successfully:', info.response);
 
         res.status(200).json({
