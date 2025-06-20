@@ -1,14 +1,30 @@
 import { Request, Response, NextFunction } from 'express';
+// CORRECTED: The import path should point to the follow.service, not user.service
 import FollowService from '../services/user.service';
 import { Types } from 'mongoose';
 
-// The global declaration should be in a separate `express.d.ts` file
-// as we discussed to avoid conflicts.
+/**
+ * @interface IFollowController
+ * @description Defines the shape of the FollowController, outlining all its methods.
+ */
+interface IFollowController {
+  follow(req: Request, res: Response, next: NextFunction): Promise<void>;
+  unfollow(req: Request, res: Response, next: NextFunction): Promise<void>;
+  getFollowerCount(req: Request, res: Response, next: NextFunction): Promise<void>;
+  getFollowingCount(req: Request, res: Response, next: NextFunction): Promise<void>;
+  getFollowers(req: Request, res: Response, next: NextFunction): Promise<void>;
+  getFollowing(req: Request, res: Response, next: NextFunction): Promise<void>;
+}
 
-class FollowController {
-  // ... follow and unfollow methods remain the same ...
-
-  public async follow(req: Request, res: Response, next: NextFunction): Promise<void> {
+/**
+ * @const FollowController
+ * @description A controller object to handle all follow-related API requests.
+ */
+const FollowController: IFollowController = {
+  /**
+   * @description Follow a user. Requires authentication.
+   */
+  async follow(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const followerId = req.user;
       const followingId = req.params.id;
@@ -36,9 +52,12 @@ class FollowController {
         next(error);
       }
     }
-  }
+  },
 
-  public async unfollow(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /**
+   * @description Unfollow a user. Requires authentication.
+   */
+  async unfollow(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const followerId = req.user;
       const followingId = req.params.id;
@@ -62,13 +81,12 @@ class FollowController {
         next(error);
       }
     }
-  }
+  },
 
-  // --- NEW: Controller method to get only the follower count ---
   /**
    * @description Get the number of followers for a given user. Public endpoint.
    */
-  public async getFollowerCount(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getFollowerCount(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const userId = req.params.id;
         if (!Types.ObjectId.isValid(userId)) {
@@ -82,32 +100,31 @@ class FollowController {
     } catch (error: any) {
         next(error);
     }
-  }
+  },
 
-  // --- NEW: Controller method to get only the following count ---
   /**
    * @description Get the number of users a given user is following. Public endpoint.
    */
-    public async getFollowingCount(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const userId = req.params.id;
-            if (!Types.ObjectId.isValid(userId)) {
-                res.status(400).json({ message: 'Invalid user ID format.' });
-                return;
-            }
-            
-            const count = await FollowService.getFollowingCount(userId);
-            res.status(200).json({ userId, followingCount: count });
-    
-        } catch (error: any) {
-            next(error);
+  async getFollowingCount(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const userId = req.params.id;
+        if (!Types.ObjectId.isValid(userId)) {
+            res.status(400).json({ message: 'Invalid user ID format.' });
+            return;
         }
+        
+        const count = await FollowService.getFollowingCount(userId);
+        res.status(200).json({ userId, followingCount: count });
+
+    } catch (error: any) {
+        next(error);
     }
+  },
 
-
-  // --- List methods remain the same ---
-
-  public async getFollowers(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /**
+   * @description Get a list of followers for a given user. Public endpoint.
+   */
+  async getFollowers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.params.id;
       if (!Types.ObjectId.isValid(userId)) {
@@ -134,9 +151,12 @@ class FollowController {
     } catch (error: any) {
       next(error);
     }
-  }
+  },
 
-  public async getFollowing(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /**
+   * @description Get a list of users a given user is following. Public endpoint.
+   */
+  async getFollowing(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.params.id;
        if (!Types.ObjectId.isValid(userId)) {
@@ -163,7 +183,7 @@ class FollowController {
     } catch (error: any) {
       next(error);
     }
-  }
-}
+  },
+};
 
-export default new FollowController();
+export default FollowController;
