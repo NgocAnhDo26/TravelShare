@@ -49,4 +49,5 @@ const AuthJwtMiddleware: IAuthJwtMiddleware = {
     }
   },
 };
+
 export default AuthJwtMiddleware;

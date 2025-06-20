@@ -1,19 +1,37 @@
 import { Router } from 'express';
-import UserController from '../controllers/user.controllers';
+import { FollowController, UserController } from '../controllers/user.controllers';
 import AuthJwtMiddleware from '../middlewares/authJwt';
+import uploadUseCases from '../middlewares/upload';
 
 const router = Router();
 
 // --- Authenticated Routes ---
-router.post('/:id/follow', AuthJwtMiddleware.verifyToken, UserController.follow);
-router.delete('/:id/follow', AuthJwtMiddleware.verifyToken, UserController.unfollow);
+router.post('/:id/follow', AuthJwtMiddleware.verifyToken, FollowController.follow);
+router.delete('/:id/follow', AuthJwtMiddleware.verifyToken, FollowController.unfollow);
 
 // --- Public Routes ---
-router.get('/:id/followers', UserController.getFollowers);
-router.get('/:id/following', UserController.getFollowing);
+router.get('/:id/followers', FollowController.getFollowers);
+router.get('/:id/following', FollowController.getFollowing);
 
 // --- Routes for Counts ---
-router.get('/:id/followers/count', UserController.getFollowerCount);
-router.get('/:id/following/count', UserController.getFollowingCount);
+router.get('/:id/followers/count', FollowController.getFollowerCount);
+router.get('/:id/following/count', FollowController.getFollowingCount);
+
+router.get(
+  '/edit-profile',
+  AuthJwtMiddleware.verifyToken, 
+  UserController.getEditProfile
+);
+
+
+router.put(
+  '/profile',
+  [
+    AuthJwtMiddleware.verifyToken,
+    uploadUseCases.uploadMiddleware.single('avatar'),
+  uploadUseCases.uploadToSupabase,
+  ],
+  UserController.updateProfile
+);
 
 export default router;
