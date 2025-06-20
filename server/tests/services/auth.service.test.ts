@@ -1,16 +1,21 @@
 /**
  * @jest-environment node
  */
-import { Request, Response } from 'express'; // Ensure Request and Response are imported
+import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import User from '../../src/models/user.model';
-import AuthService, { createToken } from '../../src/services/auth.service';
+import Token from '../../src/models/token.model';
+import { createMailingService, createToken } from '../../src/services/auth.service';
+import * as authServiceModule from '../../src/services/auth.service';
 
 // --- MOCK SETUP ---
+const AuthService = authServiceModule.default;
 jest.mock('../../src/models/user.model');
+jest.mock('../../src/models/token.model');
 jest.mock('bcrypt', () => ({ compare: jest.fn(), hash: jest.fn() }));
 
 const mockedUser = User as jest.Mocked<typeof User>;
+const mockedToken = Token as jest.Mocked<typeof Token>;
 const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
 describe('AuthService.login', () => {
@@ -308,16 +313,98 @@ describe('AuthService.forgotPassword', () => {
       save: jest.fn().mockResolvedValue(true),
     };
     (mockedUser.findOne as jest.Mock).mockResolvedValue(mockUser);
+    const mockTokenSave = jest.fn().mockResolvedValue(true);
+    // Mock the Token model to simulate creating a reset token.
+    (mockedToken as unknown as jest.Mock).mockImplementation(() => ({
+      userId: mockUser._id,
+      token: 'resetToken',
+      expires: new Date(Date.now() + 3600000), // 1 hour from now
+      save: mockTokenSave,
+    }));
+    const mailingServiceSpy = jest.spyOn(authServiceModule, 'createMailingService');
+    const mockSendMail = jest.fn().mockResolvedValue(true);
+    // Mock the mailing service to simulate sending an email.
+    mailingServiceSpy.mockReturnValue({
+      sendMail: mockSendMail,
+    } as unknown as ReturnType<typeof createMailingService>);
     
     // Act
     await AuthService.forgotPassword(mockRequest as Request, mockResponse as Response);
     
     // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(200);
-    expect(mockResponse.json).toHaveBeenCalledWith({
+    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
       message: 'Password reset link sent to your email.',
-    });
+    }));
     expect(mockResponse.json).toHaveBeenCalledTimes(1);
   });
   
 })
+
+describe('AuthService.resetPassword', () => {
+  let mockRequest: Partial<Request>;
+  let mockResponse: Partial<Response>;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    // Create the mock objects. They only need the properties and methods
+    // that are actually used by the function under test.
+    mockRequest = {
+      body: {},
+      params: {},
+    };
+    mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+      cookie: jest.fn(),
+    };
+  });
+
+  it('should reset password successfully', async () => {
+    // Arrange
+    if (mockRequest.body) {
+      mockRequest.body.token = 'valid-reset-token';
+      mockRequest.body.newPassword = 'newpassword123';
+    }
+    
+    // Mock findOne to simulate that the token exists and is valid.
+    const mockToken = {
+      userId: 'someUserId',
+      token: 'valid-reset-token',
+      purpose: 'password-reset',
+      isUsed: false,
+      expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+      save: jest.fn().mockResolvedValue(true),
+    };
+    (mockedToken.findOne as jest.Mock).mockResolvedValue(mockToken);
+    
+    // Mock findById to simulate that the user exists.
+    const mockUser = {
+      _id: 'someUserId',
+      passwordHash: 'old-hash',
+      save: jest.fn().mockResolvedValue(true),
+    };
+    (mockedUser.findById as jest.Mock).mockResolvedValue(mockUser);
+    
+    // Mock the result of the password hashing.
+    const hashedPassword = 'new-hashed-password';
+    (mockedBcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
+    
+    // Act
+    await AuthService.resetPassword(mockRequest as Request, mockResponse as Response);
+    
+    // Assert
+    expect(mockedToken.findOne).toHaveBeenCalledWith({ 
+      token: 'valid-reset-token',
+      purpose: 'password-reset'
+    });
+    expect(mockedUser.findById).toHaveBeenCalledWith('someUserId');
+    expect(mockedBcrypt.hash).toHaveBeenCalledWith('newpassword123', 20);
+    expect(mockUser.save).toHaveBeenCalled();
+    expect(mockResponse.status).toHaveBeenCalledWith(200);
+    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Password reset successfully.',
+    }));
+  });
+});

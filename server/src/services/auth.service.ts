@@ -6,8 +6,6 @@ import User from '../models/user.model';
 import Token from '../models/token.model';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 const saltRounds = 20;
 dotenv.config();
 
@@ -44,7 +42,7 @@ interface resetPasswordData {
     // ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
 
 
-async function createMailingService() {
+export async function createMailingService() {
   if (emailTransporter) {
     return emailTransporter;
   }
@@ -330,7 +328,7 @@ const AuthService: IAuthenticationService = {
         message: 'Password reset link sent to your email.',
         resetLink,
       });
-      await transporter.sendMail(mailOptions);
+      transporter.sendMail(mailOptions);
       console.log('Password reset email sent successfully.');
       return;
     } catch (error) {
@@ -379,6 +377,8 @@ const AuthService: IAuthenticationService = {
       res.status(500).json({ error: 'Internal server error.' });
     }
   },
+
+
 };
 
 export default AuthService;
