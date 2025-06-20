@@ -11,14 +11,14 @@ interface UpdateProfileData {
 }
 
 interface IUserService {
-  getProfile(req: Request, res: Response): Promise<void>;
+  getEditProfile(req: Request, res: Response): Promise<void>;
   updateProfile(req: Request, res: Response): Promise<void>;
 }
 
 
 const UserService: IUserService = {
  
-  getProfile: async (req: Request, res: Response): Promise<void> => {
+  getEditProfile: async (req: Request, res: Response): Promise<void> => {
     const userId = req.user as string;
     if (!mongoose.Types.ObjectId.isValid(userId)) {
         res.status(400).json({ error: 'Invalid user ID format.' });

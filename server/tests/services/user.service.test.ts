@@ -1,17 +1,16 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import app from '../../src/app'; 
-import User from '../../src/models/user.model'; 
-import bcrypt from 'bcrypt'; 
+import app from '../../src/app';
+import User from '../../src/models/user.model';
+import bcrypt from 'bcrypt';
 
 let mongoServer: MongoMemoryServer;
-let authenticatedUserId: string; 
-let authenticatedToken: string; 
+let authenticatedUserId: string;
+let authenticatedToken: string;
 
 
-jest.setTimeout(60000);
-
+jest.setTimeout(60000); // Increased timeout for MongoDB operations
 
 
 beforeAll(async () => {
@@ -20,26 +19,26 @@ beforeAll(async () => {
     const uri = mongoServer.getUri();
     await mongoose.connect(uri);
     console.log('Finished beforeAll hook: MongoMemoryServer connected.');
-}, 60000); 
+}, 60000);
 
 afterAll(async () => {
     console.log('Starting afterAll hook: Disconnecting Mongoose and stopping MongoMemoryServer...');
     await mongoose.disconnect();
     await mongoServer.stop();
     console.log('Finished afterAll hook.');
-}, 30000); 
+}, 30000);
 
 beforeEach(async () => {
     console.log('Starting beforeEach hook: Clearing collections and creating test user directly...');
-   
+
     const collections = mongoose.connection.collections;
     for (const key in collections) {
         await collections[key].deleteMany({});
     }
     console.log('Collections cleared.');
 
-   
-    const saltRounds = 10; 
+
+    const saltRounds = 10;
     const passwordHash = await bcrypt.hash('Password123!', saltRounds);
 
     const createdUser = await User.create({
@@ -47,13 +46,12 @@ beforeEach(async () => {
         username: 'testuser',
         passwordHash: passwordHash,
         registrationDate: new Date(),
-        displayName: 'Test User', 
+        displayName: 'Test User',
         avatarUrl: 'http://example.com/default_avatar.png',
     });
-    authenticatedUserId = createdUser._id.toString(); 
-    
-  
-    authenticatedToken = 'mock_token'; 
+    authenticatedUserId = createdUser._id.toString();
+
+    authenticatedToken = 'mock_token';
 
     console.log('User created directly in beforeEach. Ready for test execution.');
 });
@@ -61,19 +59,19 @@ beforeEach(async () => {
 
 jest.mock('../../src/middlewares/authJwt', () => ({
     verifyToken: (req: any, res: any, next: any) => {
-    
+        // Mock the user ID being attached to the request by the middleware
         req.user = authenticatedUserId;
-        next(); 
+        next();
     },
 }));
 
 // --- Test Suites ---
 
 describe('User Service Unit Tests', () => {
-    describe('GET /api/users/profile', () => {
+    describe('GET /api/users/edit-profile', () => { // Updated route name
         it('should return the profile of the authenticated user', async () => {
             const res = await request(app)
-                .get('/api/users/profile')
+                .get('/api/users/edit-profile') // Updated route
                 // Although the token is mocked, including it makes the test intent clearer
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
@@ -92,7 +90,7 @@ describe('User Service Unit Tests', () => {
             await User.findByIdAndDelete(authenticatedUserId);
 
             const res = await request(app)
-                .get('/api/users/profile')
+                .get('/api/users/edit-profile') // Updated route
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
             expect(res.statusCode).toBe(404);
@@ -104,7 +102,7 @@ describe('User Service Unit Tests', () => {
             authenticatedUserId = 'invalid-id-format'; // Temporarily set an invalid ID
 
             const res = await request(app)
-                .get('/api/users/profile')
+                .get('/api/users/edit-profile') // Updated route
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
             expect(res.statusCode).toBe(400);
@@ -120,7 +118,7 @@ describe('User Service Unit Tests', () => {
             });
 
             const res = await request(app)
-                .get('/api/users/profile')
+                .get('/api/users/edit-profile') // Updated route
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
             expect(res.statusCode).toBe(500);
@@ -130,7 +128,7 @@ describe('User Service Unit Tests', () => {
         });
     });
 
-    describe('PUT /api/users/profile', () => {
+    describe('PUT /api/users/profile', () => { // This route remains unchanged
         it('should update the authenticated user\'s profile successfully with multiple fields', async () => {
             const updateData = {
                 displayName: 'Test User New Display',
@@ -196,7 +194,7 @@ describe('User Service Unit Tests', () => {
             expect(res.statusCode).toBe(409);
             expect(res.body).toHaveProperty('error', 'Username already exists.');
         });
-        
+
         it('should allow updating username to the same username as the current user', async () => {
             const initialUser = await User.findById(authenticatedUserId);
             const updateData = {

@@ -8,9 +8,9 @@ const router = Router();
 
 
 router.get(
-  '/profile',
+  '/edit-profile',
   AuthJwtMiddleware.verifyToken, 
-  UserController.getProfile
+  UserController.getEditProfile
 );
 
 
