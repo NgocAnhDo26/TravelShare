@@ -47,7 +47,7 @@ interface resetPasswordData {
 // Use ethereal first because I cannot find a free SMTP server that allows sending emails without verification
 // ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
 
-async function createMailingService() {
+export async function createMailingService() { // need export for testing purposes
   if (emailTransporter) {
     return emailTransporter;
   }
@@ -396,6 +396,8 @@ const AuthService: IAuthenticationService = {
       res.status(500).json({ error: 'Internal server error.' });
     }
   },
+
+
 };
 
 export default AuthService;
