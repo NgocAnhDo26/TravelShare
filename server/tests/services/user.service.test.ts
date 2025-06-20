@@ -9,9 +9,7 @@ let mongoServer: MongoMemoryServer;
 let authenticatedUserId: string;
 let authenticatedToken: string;
 
-
-jest.setTimeout(60000); // Increased timeout for MongoDB operations
-
+jest.setTimeout(60000); 
 
 beforeAll(async () => {
     console.log('Starting beforeAll hook: Initializing MongoMemoryServer and connecting Mongoose...');
@@ -37,7 +35,6 @@ beforeEach(async () => {
     }
     console.log('Collections cleared.');
 
-
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash('Password123!', saltRounds);
 
@@ -50,16 +47,14 @@ beforeEach(async () => {
         avatarUrl: 'http://example.com/default_avatar.png',
     });
     authenticatedUserId = createdUser._id.toString();
-
     authenticatedToken = 'mock_token';
 
     console.log('User created directly in beforeEach. Ready for test execution.');
 });
 
-
 jest.mock('../../src/middlewares/authJwt', () => ({
     verifyToken: (req: any, res: any, next: any) => {
-        // Mock the user ID being attached to the request by the middleware
+       
         req.user = authenticatedUserId;
         next();
     },
@@ -68,29 +63,28 @@ jest.mock('../../src/middlewares/authJwt', () => ({
 // --- Test Suites ---
 
 describe('User Service Unit Tests', () => {
-    describe('GET /api/users/edit-profile', () => { // Updated route name
+    describe('GET /api/users/edit-profile', () => {
         it('should return the profile of the authenticated user', async () => {
             const res = await request(app)
-                .get('/api/users/edit-profile') // Updated route
-                // Although the token is mocked, including it makes the test intent clearer
+                .get('/api/users/edit-profile') 
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
             expect(res.statusCode).toBe(200);
             expect(res.body.email).toBe('testuser@example.com');
             expect(res.body.username).toBe('testuser');
             expect(res.body).toHaveProperty('displayName');
-            expect(res.body.displayName).toBe('Test User'); // Add specific assertion
+            expect(res.body.displayName).toBe('Test User');
             expect(res.body).toHaveProperty('avatarUrl');
-            expect(res.body.avatarUrl).toBe('http://example.com/default_avatar.png'); // Add specific assertion
+            expect(res.body.avatarUrl).toBe('http://example.com/default_avatar.png'); 
             expect(res.body._id).toBe(authenticatedUserId);
         });
 
         it('should return 404 if the user is not found (post-deletion scenario)', async () => {
-            // Delete the user to simulate a 'not found' scenario
+        
             await User.findByIdAndDelete(authenticatedUserId);
 
             const res = await request(app)
-                .get('/api/users/edit-profile') // Updated route
+                .get('/api/users/edit-profile') 
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
             expect(res.statusCode).toBe(404);
@@ -98,37 +92,37 @@ describe('User Service Unit Tests', () => {
         });
 
         it('should return 400 if authenticated user ID format is invalid (mocked scenario)', async () => {
-            const originalUserId = authenticatedUserId; // Save original ID
-            authenticatedUserId = 'invalid-id-format'; // Temporarily set an invalid ID
+            const originalUserId = authenticatedUserId; 
+            authenticatedUserId = 'invalid-id-format'; 
 
             const res = await request(app)
-                .get('/api/users/edit-profile') // Updated route
+                .get('/api/users/edit-profile') 
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
             expect(res.statusCode).toBe(400);
             expect(res.body).toHaveProperty('error', 'Invalid user ID format.');
 
-            authenticatedUserId = originalUserId; // Restore original ID for subsequent tests
+            authenticatedUserId = originalUserId; 
         });
 
         it('should return 500 for internal server errors during profile retrieval', async () => {
-            // Mock a database error
+            
             jest.spyOn(User, 'findById').mockImplementationOnce(() => {
                 throw new Error('Database error');
             });
 
             const res = await request(app)
-                .get('/api/users/edit-profile') // Updated route
+                .get('/api/users/edit-profile') 
                 .set('Authorization', `Bearer ${authenticatedToken}`);
 
             expect(res.statusCode).toBe(500);
             expect(res.body).toHaveProperty('error', 'Internal server error.');
 
-            jest.restoreAllMocks(); // Ensure mocks are restored after this test
+            jest.restoreAllMocks(); 
         });
     });
 
-    describe('PUT /api/users/profile', () => { // This route remains unchanged
+    describe('PUT /api/users/profile', () => { 
         it('should update the authenticated user\'s profile successfully with multiple fields', async () => {
             const updateData = {
                 displayName: 'Test User New Display',
@@ -147,7 +141,6 @@ describe('User Service Unit Tests', () => {
             expect(res.body.user.email).toBe(updateData.email);
             expect(res.body.user.avatarUrl).toBe(updateData.fileUrl);
 
-            // Verify changes in the database
             const userInDb = await User.findById(authenticatedUserId);
             expect(userInDb?.displayName).toBe(updateData.displayName);
             expect(userInDb?.email).toBe(updateData.email);
@@ -155,7 +148,7 @@ describe('User Service Unit Tests', () => {
         });
 
         it('should update only the provided fields and keep others unchanged', async () => {
-            // Get initial user info for comparison
+           
             const initialUser = await User.findById(authenticatedUserId);
             const updateData = {
                 displayName: 'Only Display Name Updated',
@@ -168,22 +161,20 @@ describe('User Service Unit Tests', () => {
 
             expect(res.statusCode).toBe(200);
             expect(res.body.user.displayName).toBe(updateData.displayName);
-            // Ensure other fields remain unchanged
             expect(res.body.user.username).toBe(initialUser?.username);
             expect(res.body.user.email).toBe(initialUser?.email);
-            expect(res.body.user.avatarUrl).toBe(initialUser?.avatarUrl); // Should be undefined or original
+            expect(res.body.user.avatarUrl).toBe(initialUser?.avatarUrl);
         });
 
         it('should return 409 if the new username already exists for another user', async () => {
-            // Create another user to test username conflict
-            await request(app).post('/api/auth/register').send({
+            await User.create({
                 email: 'anotheruser@example.com',
                 username: 'anotheruser',
-                password: 'Password123!',
+                passwordHash: 'some_hash', 
             });
 
             const updateData = {
-                username: 'anotheruser', // This username already exists
+                username: 'anotheruser',
             };
 
             const res = await request(app)
@@ -198,7 +189,7 @@ describe('User Service Unit Tests', () => {
         it('should allow updating username to the same username as the current user', async () => {
             const initialUser = await User.findById(authenticatedUserId);
             const updateData = {
-                username: initialUser?.username, // Same username
+                username: initialUser?.username, 
             };
 
             const res = await request(app)
@@ -212,15 +203,15 @@ describe('User Service Unit Tests', () => {
         });
 
         it('should return 409 if the new email already exists for another user', async () => {
-            // Create another user to test email conflict
-            await request(app).post('/api/auth/register').send({
+            
+            await User.create({
                 email: 'existingemail@example.com',
                 username: 'existingusername',
-                password: 'Password123!',
+                passwordHash: 'some_hash',
             });
 
             const updateData = {
-                email: 'existingemail@example.com', // This email already exists
+                email: 'existingemail@example.com',
             };
 
             const res = await request(app)
@@ -235,7 +226,7 @@ describe('User Service Unit Tests', () => {
         it('should allow updating email to the same email as the current user', async () => {
             const initialUser = await User.findById(authenticatedUserId);
             const updateData = {
-                email: initialUser?.email, // Same email
+                email: initialUser?.email, 
             };
 
             const res = await request(app)
@@ -250,7 +241,7 @@ describe('User Service Unit Tests', () => {
 
 
         it('should return 404 if the user to update is not found (post-deletion scenario)', async () => {
-            // Delete the current user to simulate not found
+     
             await User.findByIdAndDelete(authenticatedUserId);
 
             const updateData = { displayName: 'Non Existent User' };
@@ -266,7 +257,7 @@ describe('User Service Unit Tests', () => {
 
         it('should return 400 if authenticated user ID format is invalid (mocked scenario)', async () => {
             const originalUserId = authenticatedUserId;
-            authenticatedUserId = 'invalid-id-format'; // Assign invalid ID
+            authenticatedUserId = 'invalid-id-format'; 
 
             const updateData = { displayName: 'Test' };
             const res = await request(app)
@@ -277,11 +268,11 @@ describe('User Service Unit Tests', () => {
             expect(res.statusCode).toBe(400);
             expect(res.body).toHaveProperty('error', 'Invalid user ID format.');
 
-            authenticatedUserId = originalUserId; // Restore original ID
+            authenticatedUserId = originalUserId; 
         });
 
         it('should return 500 for internal server errors during update', async () => {
-            // Mock an error during database update
+       
             jest.spyOn(User, 'findByIdAndUpdate').mockImplementationOnce(() => {
                 throw new Error('Database error during update');
             });
@@ -295,7 +286,7 @@ describe('User Service Unit Tests', () => {
             expect(res.statusCode).toBe(500);
             expect(res.body).toHaveProperty('error', 'Internal server error.');
 
-            jest.restoreAllMocks(); // Ensure mocks are restored after this test
+            jest.restoreAllMocks(); 
         });
     });
 });
