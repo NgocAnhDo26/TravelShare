@@ -27,7 +27,7 @@ app.use(cookieParser());
 // Routes
 // app.use("/api/items", itemRoutes);
 app.use('/api/auth', authRouter);
-app.use('/api/user', userRouter);
+app.use('/api/users', userRouter);
 
 // Global error handler (should be after routes)
 app.use(errorHandler);

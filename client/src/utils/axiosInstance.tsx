@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-type EnvMode = 'local' | 'dev' | 'prod';
-
-const env = import.meta.env.REACT_APP_ENV as EnvMode | undefined;
+const env = import.meta.env.VITE_ENV;
+console.warn('VITE_ENV:', env);
 let baseURL: string;
 
 switch (env) {
@@ -10,19 +9,19 @@ switch (env) {
     baseURL = 'http://localhost:3000/api';
     break;
   case 'dev':
-    if (!import.meta.env.API_URL_DEV) {
-      throw new Error('REACT_APP_API_URL is not defined for production mode.');
+    if (!import.meta.env.VITE_API_URL_DEV) {
+      throw new Error('VITE_API_URL_DEV is not defined for dev mode.');
     }
-    baseURL = import.meta.env.API_URL_DEV;
+    baseURL = import.meta.env.VITE_API_URL_DEV;
     break;
   case 'prod':
-    if (!import.meta.env.API_URL_PROD) {
-      throw new Error('REACT_APP_API_URL is not defined for production mode.');
+    if (!import.meta.env.VITE_API_URL_PROD) {
+      throw new Error('VITE_API_URL_PROD is not defined for prod mode.');
     }
-    baseURL = import.meta.env.API_URL_PROD;
+    baseURL = import.meta.env.VITE_API_URL_PROD;
     break;
   default:
-    console.warn('Unknown REACT_APP_ENV. Defaulting to local mode.');
+    console.warn('Unknown VITE_ENV. Defaulting to local mode.');
     baseURL = 'http://localhost:3000/api';
 }
 

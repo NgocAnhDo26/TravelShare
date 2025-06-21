@@ -1,8 +1,9 @@
+// eslint-disable-next-line
 const { createDefaultPreset } = require("ts-jest");
 
 const tsJestTransformCfg = createDefaultPreset().transform;
 
-/** @type {import("jest").Config} **/
+// eslint-disable-next-line
 module.exports = {
   testEnvironment: "node",
   transform: {

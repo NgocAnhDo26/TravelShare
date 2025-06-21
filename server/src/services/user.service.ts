@@ -1,4 +1,5 @@
 import mongoose, { Types } from 'mongoose';
+import { Request, Response, NextFunction } from 'express';
 import Follow, { IFollow } from '../models/follow.model';
 import User from '../models/user.model';
 

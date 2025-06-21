@@ -68,52 +68,52 @@ describe('Follow API Endpoints', () => {
 
   it('should allow userA to follow userB, then unfollow them, updating counts correctly', async () => {
     // === 1. Initial State Verification ===
-    const initialFollowersRes = await request(app).get(`/api/user/${userB._id}/followers/count`);
+    const initialFollowersRes = await request(app).get(`/api/users/${userB._id}/followers/count`);
     expect(initialFollowersRes.body.followerCount).toBe(0);
 
-    const initialFollowingRes = await request(app).get(`/api/user/${userA._id}/following/count`);
+    const initialFollowingRes = await request(app).get(`/api/users/${userA._id}/following/count`);
     expect(initialFollowingRes.body.followingCount).toBe(0);
 
     // === 2. Follow Action ===
     const followRes = await request(app)
-      .post(`/api/user/${userB._id}/follow`)
+      .post(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); 
     
     expect(followRes.status).toBe(201);
     expect(followRes.body.message).toBe('User followed successfully.');
 
     // === 3. State Verification After Follow ===
-    const afterFollowFollowersRes = await request(app).get(`/api/user/${userB._id}/followers/count`);
+    const afterFollowFollowersRes = await request(app).get(`/api/users/${userB._id}/followers/count`);
     expect(afterFollowFollowersRes.body.followerCount).toBe(1);
 
-    const afterFollowFollowingRes = await request(app).get(`/api/user/${userA._id}/following/count`);
+    const afterFollowFollowingRes = await request(app).get(`/api/users/${userA._id}/following/count`);
     expect(afterFollowFollowingRes.body.followingCount).toBe(1);
 
     // === 4. Unfollow Action ===
     const unfollowRes = await request(app)
-      .delete(`/api/user/${userB._id}/follow`)
+      .delete(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); 
     
     expect(unfollowRes.status).toBe(200);
     expect(unfollowRes.body.message).toBe('User unfollowed successfully.');
     
     // === 5. Final State Verification ===
-    const finalFollowersRes = await request(app).get(`/api/user/${userB._id}/followers/count`);
+    const finalFollowersRes = await request(app).get(`/api/users/${userB._id}/followers/count`);
     expect(finalFollowersRes.body.followerCount).toBe(0);
     
-    const finalFollowingRes = await request(app).get(`/api/user/${userA._id}/following/count`);
+    const finalFollowingRes = await request(app).get(`/api/users/${userA._id}/following/count`);
     expect(finalFollowingRes.body.followingCount).toBe(0);
   });
 
   it('should return 409 Conflict when trying to follow a user who is already being followed', async () => {
     // First, follow the user
     await request(app)
-      .post(`/api/user/${userB._id}/follow`)
+      .post(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); // <-- CORRECT: Send the cookie
     
     // Then, try to follow again
     const secondFollowRes = await request(app)
-      .post(`/api/user/${userB._id}/follow`)
+      .post(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); // <-- CORRECT: Send the cookie
     
     expect(secondFollowRes.status).toBe(409);
@@ -122,7 +122,7 @@ describe('Follow API Endpoints', () => {
 
   it('should return 400 Bad Request when a user tries to follow themselves', async () => {
     const res = await request(app)
-      .post(`/api/user/${userA._id}/follow`)
+      .post(`/api/users/${userA._id}/follow`)
       .set('Cookie', authCookies); // <-- CORRECT: Send the cookie
 
     expect(res.status).toBe(400);
@@ -131,7 +131,7 @@ describe('Follow API Endpoints', () => {
 
   it('should return 404 Not Found when trying to unfollow a user who is not being followed', async () => {
     const res = await request(app)
-      .delete(`/api/user/${userB._id}/follow`)
+      .delete(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); // <-- CORRECT: Send the cookie
     
     expect(res.status).toBe(404);
