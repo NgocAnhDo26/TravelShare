@@ -31,7 +31,6 @@ export default tseslint.config(
         'off',
       ],
       // Add any other custom ESLint rules here
-      "@typescript-eslint/no-explicit-any": "off"
     },
   },
 

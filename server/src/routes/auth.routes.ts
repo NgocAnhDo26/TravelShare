@@ -5,7 +5,8 @@ import uploadUseCases from '../middlewares/upload';
 const authRouter: Router = Router();
 authRouter.post(
   '/register',
-  uploadUseCases.singleFileUpload('avatar'),
+  uploadUseCases.uploadMiddleware.single('avatar'),
+  uploadUseCases.uploadToSupabase, // Middleware to handle file upload and upload to Supabase
   authController.register,
 );
 
