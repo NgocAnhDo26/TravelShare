@@ -1,6 +1,13 @@
-// eslint-disable-next-line no-undef
+// eslint-disable-next-line
+const { createDefaultPreset } = require("ts-jest");
+
+const tsJestTransformCfg = createDefaultPreset().transform;
+
+// eslint-disable-next-line
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  testEnvironment: "node",
+  transform: {
+    ...tsJestTransformCfg,
+  },
   testMatch: ['**/tests/**/*.test.ts'],
 };
