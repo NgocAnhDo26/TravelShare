@@ -18,6 +18,7 @@ interface IAuthenticationService {
   forgotPassword(req: Request, res: Response): Promise<void>;
   resetPassword(req: Request, res: Response): Promise<void>;
   verifyToken(req: Request, res: Response): Promise<void>;
+  logout(req: Request, res: Response): Promise<void>;
 }
 
 interface forgotPasswordData {
@@ -397,7 +398,25 @@ const AuthService: IAuthenticationService = {
     }
   },
 
-
+  // logout only need to delete the refresh token and access token cookies
+  logout: async (req: Request, res: Response) => {
+    try {
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+      res.clearCookie('accessToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+      res.status(200).json({ message: 'Logged out successfully.' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ error: 'Internal server error.' });
+    }
+  }
 };
 
 export default AuthService;

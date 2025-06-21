@@ -7,6 +7,7 @@ interface IAuthController {
   verifyToken(req: Request, res: Response): Promise<void>;
   forgotPassword(req: Request, res: Response): Promise<void>;
   resetPassword(req: Request, res: Response): Promise<void>;
+  logout(req: Request, res: Response): Promise<void>;
 }
 
 const AuthController: IAuthController = {
@@ -26,6 +27,9 @@ const AuthController: IAuthController = {
   },
   resetPassword: async (req: Request, res: Response) => {
     await AuthService.resetPassword(req, res);
+  },
+  logout: async (req: Request, res: Response) => {
+    await AuthService.logout(req, res);
   }
 };
 
