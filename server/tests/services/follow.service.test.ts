@@ -1,3 +1,20 @@
+jest.mock('../../src/models/file.client', () => ({
+  __esModule: true,
+  default: {
+    storage: {
+      from: jest.fn().mockReturnThis(),
+      upload: jest
+        .fn()
+        .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
+      getPublicUrl: jest
+        .fn()
+        .mockReturnValue({
+          data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
+        }),
+    },
+  },
+}));
+
 /**
  * @fileoverview Integration tests for Authentication and Follow features.
  * @description This file uses mongodb-memory-server to create an isolated, in-memory
@@ -9,7 +26,7 @@ import mongoose, { Document } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../../src/app';
 import User from '../../src/models/user.model';
-import Follow from '../../src/models/follow.model'; 
+import Follow from '../../src/models/follow.model';
 
 let mongoServer: MongoMemoryServer;
 
@@ -42,15 +59,25 @@ describe('Follow API Endpoints', () => {
   beforeEach(async () => {
     // 1. Create users directly in the database
     [userA, userB] = await User.create([
-      { email: 'userA@example.com', username: 'userA', passwordHash: '$2a$12$WlOPZ0WTZJxh79cTLbm5V.icQGb0WLpYJWv7jU3LQCOwacdwEKOCG' },
-      { email: 'userB@example.com', username: 'userB', passwordHash: '$2a$12$KdZ1q8RwN8RZeUCludC/Yu2BWXLfpw14IujZtCR6fVV7VZxO6Qj1e' }
+      {
+        email: 'userA@example.com',
+        username: 'userA',
+        passwordHash:
+          '$2a$12$WlOPZ0WTZJxh79cTLbm5V.icQGb0WLpYJWv7jU3LQCOwacdwEKOCG',
+      },
+      {
+        email: 'userB@example.com',
+        username: 'userB',
+        passwordHash:
+          '$2a$12$KdZ1q8RwN8RZeUCludC/Yu2BWXLfpw14IujZtCR6fVV7VZxO6Qj1e',
+      },
     ]);
 
     // 2. Log in as userA and capture the cookies from the response headers.
     const loginResponse = await request(app)
       .post('/api/auth/login')
       .send({ email: 'userA@example.com', password: 'PasswordA@123' });
-    
+
     // The 'set-cookie' header contains the authentication cookies we need.
     authCookies = loginResponse.headers['set-cookie'];
   });
@@ -68,40 +95,52 @@ describe('Follow API Endpoints', () => {
 
   it('should allow userA to follow userB, then unfollow them, updating counts correctly', async () => {
     // === 1. Initial State Verification ===
-    const initialFollowersRes = await request(app).get(`/api/users/${userB._id}/followers/count`);
+    const initialFollowersRes = await request(app).get(
+      `/api/users/${userB._id}/followers/count`,
+    );
     expect(initialFollowersRes.body.followerCount).toBe(0);
 
-    const initialFollowingRes = await request(app).get(`/api/users/${userA._id}/following/count`);
+    const initialFollowingRes = await request(app).get(
+      `/api/users/${userA._id}/following/count`,
+    );
     expect(initialFollowingRes.body.followingCount).toBe(0);
 
     // === 2. Follow Action ===
     const followRes = await request(app)
       .post(`/api/users/${userB._id}/follow`)
-      .set('Cookie', authCookies); 
-    
+      .set('Cookie', authCookies);
+
     expect(followRes.status).toBe(201);
     expect(followRes.body.message).toBe('User followed successfully.');
 
     // === 3. State Verification After Follow ===
-    const afterFollowFollowersRes = await request(app).get(`/api/users/${userB._id}/followers/count`);
+    const afterFollowFollowersRes = await request(app).get(
+      `/api/users/${userB._id}/followers/count`,
+    );
     expect(afterFollowFollowersRes.body.followerCount).toBe(1);
 
-    const afterFollowFollowingRes = await request(app).get(`/api/users/${userA._id}/following/count`);
+    const afterFollowFollowingRes = await request(app).get(
+      `/api/users/${userA._id}/following/count`,
+    );
     expect(afterFollowFollowingRes.body.followingCount).toBe(1);
 
     // === 4. Unfollow Action ===
     const unfollowRes = await request(app)
       .delete(`/api/users/${userB._id}/follow`)
-      .set('Cookie', authCookies); 
-    
+      .set('Cookie', authCookies);
+
     expect(unfollowRes.status).toBe(200);
     expect(unfollowRes.body.message).toBe('User unfollowed successfully.');
-    
+
     // === 5. Final State Verification ===
-    const finalFollowersRes = await request(app).get(`/api/users/${userB._id}/followers/count`);
+    const finalFollowersRes = await request(app).get(
+      `/api/users/${userB._id}/followers/count`,
+    );
     expect(finalFollowersRes.body.followerCount).toBe(0);
-    
-    const finalFollowingRes = await request(app).get(`/api/users/${userA._id}/following/count`);
+
+    const finalFollowingRes = await request(app).get(
+      `/api/users/${userA._id}/following/count`,
+    );
     expect(finalFollowingRes.body.followingCount).toBe(0);
   });
 
@@ -110,14 +149,16 @@ describe('Follow API Endpoints', () => {
     await request(app)
       .post(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); // <-- CORRECT: Send the cookie
-    
+
     // Then, try to follow again
     const secondFollowRes = await request(app)
       .post(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); // <-- CORRECT: Send the cookie
-    
+
     expect(secondFollowRes.status).toBe(409);
-    expect(secondFollowRes.body.message).toBe('You are already following this user.');
+    expect(secondFollowRes.body.message).toBe(
+      'You are already following this user.',
+    );
   });
 
   it('should return 400 Bad Request when a user tries to follow themselves', async () => {
@@ -133,7 +174,7 @@ describe('Follow API Endpoints', () => {
     const res = await request(app)
       .delete(`/api/users/${userB._id}/follow`)
       .set('Cookie', authCookies); // <-- CORRECT: Send the cookie
-    
+
     expect(res.status).toBe(404);
     expect(res.body.message).toBe('You are not following this user.');
   });

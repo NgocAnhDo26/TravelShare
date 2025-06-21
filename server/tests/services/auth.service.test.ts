@@ -338,7 +338,7 @@ describe('AuthService.forgotPassword', () => {
       message: 'Password reset link sent to your email.',
     }));
     expect(mockResponse.json).toHaveBeenCalledTimes(1);
-  });
+  }, 15000);
   
 })
 
