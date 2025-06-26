@@ -7,6 +7,8 @@ import OtherProfilePage from "./route/OtherProfilePage/page";
 import TripPlanningPage from "./route/trip-planning/page";
 import ItineraryPage from "./route/itinerary/page";
 import AddItineraryPage from "./route/add-itinerary/page";
+import EditItineraryPage from "./route/edit-itinerary/page";
+import NotFound from "./utils/404";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router";
@@ -43,11 +45,19 @@ function App() {
 						element={<AddItineraryPage></AddItineraryPage>}
 					></Route>
 					<Route
+						path="/itinerary/edit"
+						element={<EditItineraryPage></EditItineraryPage>}
+					></Route>
+					<Route
+						path="/itinerary"
+						element={<ItineraryPage></ItineraryPage>}
+					></Route>
+					{/* Test route for components */}
+					<Route
 						path="/test"
 						element={<ItineraryPage></ItineraryPage>}
 					/>
-					{/* Test route for components */}
-					<Route path="*" element={<div>404 Not Found</div>} />
+					<Route path="*" element={<NotFound />} />
 				</Routes>
 			</BrowserRouter>
 		</>

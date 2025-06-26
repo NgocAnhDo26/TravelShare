@@ -36,7 +36,7 @@ export default function AddItineraryPage() {
 
 	return (
 		<>
-            <Header />
+			<Header />
 			<div className="min-h-screen bg-white py-8 mt-10">
 				<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
