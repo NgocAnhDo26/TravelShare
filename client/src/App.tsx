@@ -4,6 +4,7 @@ import ForgotPasswordPage from './route/forgot-password/page';
 import ResetPasswordPage from './route/reset-password/page';
 import UserProfilePage from './route/UserProfilePage/page';
 import OtherProfilePage from './route/OtherProfilePage/page';
+import PlanEditorPage from './route/PlanEditorPage/page';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -19,6 +20,7 @@ function App() {
           <div>
             <Toaster />
           </div>
+
           <Routes>
             <Route path='/register' element={<RegisterPage />} />
             <Route path='/login' element={<LoginPage />} />
@@ -35,6 +37,10 @@ function App() {
               path='/other-profile/:userId'
               element={<OtherProfilePage />}
             />
+            <Route
+              path='/plans/:id'
+              element={<PlanEditorPage editMode={false} />}
+            ></Route>
             <Route path='/' element={<LoginPage />} />
             <Route path='*' element={<div>404 Not Found</div>} />
           </Routes>
