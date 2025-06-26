@@ -304,4 +304,35 @@ describe('User Service Unit Tests', () => {
       jest.restoreAllMocks();
     });
   });
+
+  describe('GET /api/users/:id', () => {
+    it('should return user info for a valid user ID', async () => {
+      const res = await request(app)
+        .get(`/api/users/${authenticatedUserId}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toHaveProperty('username', 'testuser');
+      expect(res.body).toHaveProperty('email', 'testuser@example.com');
+      expect(res.body).toHaveProperty('displayName', 'Test User');
+      expect(res.body).toHaveProperty('followerCount', 0);
+      expect(res.body).toHaveProperty('followingCount', 0);
+    });
+
+    it('should return 404 if user is not found', async () => {
+      const nonExistentId = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .get(`/api/users/${nonExistentId}`);
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body).toHaveProperty('error', 'User not found.');
+    });
+
+    it('should return 400 for invalid user ID format', async () => {
+      const res = await request(app)
+        .get('/api/users/invalid-id-format');
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toHaveProperty('error', 'Invalid user ID format.');
+    });
+  });
 });
