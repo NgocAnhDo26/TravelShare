@@ -17,6 +17,9 @@ router.get('/:id/following', FollowController.getFollowing);
 router.get('/:id/followers/count', FollowController.getFollowerCount);
 router.get('/:id/following/count', FollowController.getFollowingCount);
 
+// --- Public Route to Get User Info ---
+router.get('/:id', UserController.getUserInfo);
+
 router.get(
   '/edit-profile',
   AuthJwtMiddleware.verifyToken, 
