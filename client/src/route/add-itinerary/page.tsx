@@ -12,7 +12,8 @@ export default function AddItineraryPage() {
 		startTime: "",
 		endTime: "",
 		location: "",
-		category: "attraction",
+		category: "attraction", // all categories are available: // attraction, restaurant, accommodation, transportation, activity, shopping, other
+		budget: "", // float, optional, min 0, max 100k USD
 		notes: "",
 	});
 
@@ -193,6 +194,28 @@ export default function AddItineraryPage() {
 									<option value="shopping">Shopping</option>
 									<option value="other">Other</option>
 								</select>
+							</div>
+
+							{/* Budget */}
+							<div>
+								<label
+									htmlFor="budget"
+									className="block text-sm font-medium text-black mb-2"
+								>
+									Budget (USD)
+								</label>
+								<input
+									type="number"
+									id="budget"
+									name="budget"
+									value={formData.budget}
+									onChange={handleInputChange}
+									min="0"
+									max="100000"
+									step="0.01"
+									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
+									placeholder="Enter estimated budget (optional)"
+								/>
 							</div>
 
 							{/* Notes */}
