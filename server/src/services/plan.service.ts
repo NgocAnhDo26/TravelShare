@@ -11,200 +11,146 @@ interface IPlanService {
 }
 
 const PlanService: IPlanService = {
-
   addItineraryItem: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id: planId } = req.params;
       const userId = req.user as string;
-      const { dayNumber, activityName, timeOfDay, estimatedCost, address, notes } = req.body;
+      const { title, location, category, startTime } = req.body;
 
-  
-      if (!mongoose.Types.ObjectId.isValid(planId)) {
-        res.status(400).json({ error: 'Invalid Plan ID format.' });
-        return;
-      }
-      if (!activityName) {
-        res.status(400).json({ error: 'Activity name is required.' });
-        return;
-      }
-      if (!dayNumber || dayNumber < 1) {
-        res.status(400).json({ error: 'A valid day number is required.' });
-        return;
-      }
-
-
-      const plan = await Plan.findById(planId);
-      if (!plan) {
-        res.status(404).json({ error: 'Plan not found.' });
-        return;
-      }
-
-      if (plan.creator.toString() !== userId) {
-        res.status(403).json({ error: 'You are not authorized to modify this plan.' });
-        return;
-      }
-
-
-      const lastItem = await ItineraryItem.findOne({
-        plan_id: planId,
-        dayNumber: dayNumber,
-      }).sort({ order: -1 });
-
-      const newOrder = lastItem ? lastItem.order + 1 : 1;
-
-  
-      let combinedNotes = notes || '';
-      if (address) {
-        const addressNote = `Địa chỉ: ${address}`;
-        combinedNotes = notes ? `${addressNote}\n\n${notes}` : addressNote;
-      }
-
-  
-      const newItem = new ItineraryItem({
-        plan_id: planId,
-        dayNumber,
-        activityName,
-        timeOfDay,
-        estimatedCost,
-        notes: combinedNotes, 
-        order: newOrder,
-      });
-
-      plan.lastModifiedDate = new Date();
-      await Promise.all([newItem.save(), plan.save()]);
-
-      res.status(201).json({
-        message: 'Item added successfully!',
-        data: newItem,
-      });
-
-    } catch (error) {
-      console.error('Add Itinerary Item Error:', error);
-      res.status(500).json({ error: 'Internal server error.' });
-    }
-  },
-  getItineraryItemById: async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { id: planId, itemId } = req.params;
-      const userId = req.user as string;
-
-      if (!mongoose.Types.ObjectId.isValid(planId) || !mongoose.Types.ObjectId.isValid(itemId)) {
-        res.status(400).json({ error: 'Invalid ID format.' });
-        return;
-      }
-
-      const item = await ItineraryItem.findById(itemId);
-      if (!item || item.plan_id.toString() !== planId) {
-        res.status(404).json({ error: 'Itinerary item not found in this plan.' });
+      if (!title || !location || !category || !startTime) {
+        res.status(400).json({ error: 'Title, location, category, and startTime are required.' });
         return;
       }
 
       const plan = await Plan.findById(planId);
       if (!plan || plan.creator.toString() !== userId) {
-        res.status(403).json({ error: 'You are not authorized to view this item.' });
+        res.status(403).json({ error: 'You are not authorized to modify this plan.' });
+        return;
+      }
+      
+      const itemDate = new Date(startTime);
+      const startOfDay = new Date(itemDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(itemDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      
+      const lastItemOfTheDay = await ItineraryItem.findOne({
+          plan_id: planId,
+          startTime: { $gte: startOfDay, $lt: endOfDay }
+      }).sort({ order: -1 });
+      
+      const newOrder = lastItemOfTheDay ? lastItemOfTheDay.order + 1 : 1;
+
+      const newItem = new ItineraryItem({
+        ...req.body,
+        plan_id: planId,
+        order: newOrder,
+      });
+
+      await newItem.save();
+      plan.lastModifiedDate = new Date();
+      await plan.save();
+      
+      res.status(201).json({ message: 'Item added successfully!', data: newItem });
+    } catch (error) { 
+        console.error('Add Itinerary Item Error:', error);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+  },
+
+  getItineraryItemById: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id: planId, itemId } = req.params; 
+      const userId = req.user as string;
+
+      if (!mongoose.Types.ObjectId.isValid(planId) || !mongoose.Types.ObjectId.isValid(itemId)) {
+        res.status(400).json({ error: 'Invalid ID format.' });
         return;
       }
 
-    
-      res.status(200).json(item);
+      const plan = await Plan.findById(planId);
+      if (!plan || plan.creator.toString() !== userId) {
+        res.status(403).json({ error: 'Unauthorized to view items for this plan.' });
+        return;
+      }
+      
+      const item = await ItineraryItem.findOne({ _id: itemId, plan_id: planId });
+      if (!item) {
+        res.status(404).json({ error: 'Itinerary item not found in this plan.' });
+        return;
+      }
 
+      res.status(200).json(item);
     } catch (error) {
       console.error('Get Itinerary Item Error:', error);
       res.status(500).json({ error: 'Internal server error.' });
     }
   },
-
   
   updateItineraryItem: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id: planId, itemId } = req.params;
       const userId = req.user as string;
-      const updateData = req.body;
 
-      
       if (!mongoose.Types.ObjectId.isValid(planId) || !mongoose.Types.ObjectId.isValid(itemId)) {
         res.status(400).json({ error: 'Invalid ID format.' });
         return;
       }
 
-     
       const plan = await Plan.findById(planId);
-      if (!plan) {
-        res.status(404).json({ error: 'Plan not found.' });
-        return;
-      }
-      if (plan.creator.toString() !== userId) {
+      if (!plan || plan.creator.toString() !== userId) {
         res.status(403).json({ error: 'You are not authorized to modify this plan.' });
         return;
       }
 
-      
-      const itemToUpdate = await ItineraryItem.findOne({ _id: itemId, plan_id: planId });
-      if (!itemToUpdate) {
+      const updatedItem = await ItineraryItem.findOneAndUpdate(
+        { _id: itemId, plan_id: planId },
+        { $set: req.body },
+        { new: true }
+      );
+
+      if (!updatedItem) {
         res.status(404).json({ error: 'Itinerary item not found in this plan.' });
         return;
       }
-
       
-      Object.assign(itemToUpdate, updateData);
-
-      const updatedItem = await itemToUpdate.save();
-
-     
       plan.lastModifiedDate = new Date();
       await plan.save();
-
-     
-      res.status(200).json({
-        message: 'Item updated successfully!',
-        data: updatedItem,
-      });
-
-    } catch (error) {
-      console.error('Update Itinerary Item Error:', error);
-      res.status(500).json({ error: 'Internal server error.' });
+      
+      res.status(200).json({ message: 'Item updated successfully!', data: updatedItem });
+    } catch (error) { 
+        console.error('Update Itinerary Item Error:', error);
+        res.status(500).json({ error: 'Internal server error.' });
     }
   },
+  
   deleteItineraryItem: async (req: Request, res: Response): Promise<void> => {
     try {
-      const { id: planId, itemId } = req.params;
-      const userId = req.user as string;
+        const { id: planId, itemId } = req.params;
+        const userId = req.user as string;
 
-   
-      if (!mongoose.Types.ObjectId.isValid(planId) || !mongoose.Types.ObjectId.isValid(itemId)) {
-        res.status(400).json({ error: 'Invalid ID format.' });
-        return;
-      }
+        if (!mongoose.Types.ObjectId.isValid(planId) || !mongoose.Types.ObjectId.isValid(itemId)) {
+          res.status(400).json({ error: 'Invalid ID format.' });
+          return;
+        }
 
-      
-      const plan = await Plan.findById(planId);
-      if (!plan) {
-        res.status(404).json({ error: 'Plan not found.' });
-        return;
-      }
-      if (plan.creator.toString() !== userId) {
-        res.status(403).json({ error: 'You are not authorized to modify this plan.' });
-        return;
-      }
+        const plan = await Plan.findById(planId);
+        if (!plan || plan.creator.toString() !== userId) {
+            res.status(403).json({ error: 'You are not authorized to delete items from this plan.' });
+            return;
+        }
+        
+        const result = await ItineraryItem.findOneAndDelete({ _id: itemId, plan_id: planId });
 
-     
-      const result = await ItineraryItem.findOneAndDelete({
-        _id: itemId,
-        plan_id: planId,
-      });
+        if (!result) {
+            res.status(404).json({ error: 'Itinerary item not found in this plan.' });
+            return;
+        }
 
-      
-      if (!result) {
-        res.status(404).json({ error: 'Itinerary item not found in this plan.' });
-        return;
-      }
-
-    
-      res.status(200).json({ message: 'Item deleted successfully!' });
-
+        res.status(200).json({ message: 'Item deleted successfully!' });
     } catch (error) {
-      console.error('Delete Itinerary Item Error:', error);
-      res.status(500).json({ error: 'Internal server error.' });
+        console.error('Delete Itinerary Item Error:', error);
+        res.status(500).json({ error: 'Internal server error.' });
     }
   },
 };

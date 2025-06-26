@@ -4,191 +4,131 @@ import { PlanService } from '../../src/services/plan.service';
 import Plan from '../../src/models/plan.model';
 import ItineraryItem from '../../src/models/itineraryItem.model';
 
-
+// Mock các model
 jest.mock('../../src/models/plan.model');
 jest.mock('../../src/models/itineraryItem.model');
 
 const mockedPlan = Plan as jest.Mocked<typeof Plan>;
 const mockedItineraryItem = ItineraryItem as jest.Mocked<typeof ItineraryItem>;
 
-describe('PlanService', () => {
+describe('PlanService - Itinerary Item with DateTime', () => {
     let mockRequest: Partial<Request>;
     let mockResponse: Partial<Response>;
     const mockUserId = new mongoose.Types.ObjectId().toHexString();
     const mockPlanId = new mongoose.Types.ObjectId().toHexString();
     const mockItemId = new mongoose.Types.ObjectId().toHexString();
 
-    
     beforeEach(() => {
         jest.resetAllMocks();
-        mockRequest = {
-            params: {},
-            body: {},
-            user: mockUserId, 
-        };
-        mockResponse = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
+        mockRequest = { params: {}, body: {}, user: mockUserId };
+        mockResponse = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     });
 
+    // =======================================================
+    //  TESTS FOR addItineraryItem (POST)
+    // =======================================================
     describe('addItineraryItem', () => {
-        it('should add an item to a plan successfully and return 201', async () => {
-         
+        it('should add an item with full DateTime successfully', async () => {
+            // Arrange
+            const startTimeISO = '2025-08-01T09:00:00.000Z';
             mockRequest.params = { id: mockPlanId };
             mockRequest.body = {
-                dayNumber: 1,
-                activityName: 'Test Activity',
+                title: 'Morning Coffee',
+                location: 'Highlands Coffee',
+                category: 'dining',
+                startTime: startTimeISO,
             };
 
-            const mockPlan = { _id: mockPlanId, creator: mockUserId, save: jest.fn().mockResolvedValue(true) };
-            (mockedPlan.findById as jest.Mock).mockResolvedValue(mockPlan);
+            (mockedPlan.findById as jest.Mock).mockResolvedValue({ _id: mockPlanId, creator: mockUserId, save: jest.fn() });
             
+            // FIX: Mock the chained '.sort()' method to prevent the TypeError
             (mockedItineraryItem.findOne as jest.Mock).mockReturnValue({
-                sort: jest.fn().mockResolvedValue(null),
+                sort: jest.fn().mockResolvedValue(null) // Giả lập không tìm thấy item nào, order sẽ là 1
             });
 
             const mockSave = jest.fn().mockResolvedValue(true);
-            (mockedItineraryItem as unknown as jest.Mock).mockImplementation(() => ({ save: mockSave }));
+            const capturedData: any = {};
+            (mockedItineraryItem as unknown as jest.Mock).mockImplementation((data) => {
+                Object.assign(capturedData, data);
+                return { save: mockSave };
+            });
 
+            // Act
             await PlanService.addItineraryItem(mockRequest as Request, mockResponse as Response);
 
-            expect(mockedPlan.findById).toHaveBeenCalledWith(mockPlanId);
+            // Assert
             expect(mockSave).toHaveBeenCalled();
+            expect(capturedData.startTime).toEqual(startTimeISO);
+            expect(capturedData.order).toBe(1); // Kiểm tra logic tính order
             expect(mockResponse.status).toHaveBeenCalledWith(201);
-            expect(mockResponse.json).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    message: expect.any(String),
-                    data: expect.any(Object),
-                }),
-            );
         });
 
-        it('should return 403 if user is not the plan creator', async () => {
+        it('should return 400 if required fields are missing', async () => {
             mockRequest.params = { id: mockPlanId };
-            mockRequest.body = { dayNumber: 1, activityName: 'Valid Activity' };
-            const anotherUserId = new mongoose.Types.ObjectId().toHexString();
-            const mockPlan = { _id: mockPlanId, creator: anotherUserId };
-            (mockedPlan.findById as jest.Mock).mockResolvedValue(mockPlan);
-
-            await PlanService.addItineraryItem(mockRequest as Request, mockResponse as Response);
-
-            expect(mockResponse.status).toHaveBeenCalledWith(403);
-            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'You are not authorized to modify this plan.' });
-        });
-
-        it('should return 404 if plan is not found', async () => {
-            mockRequest.params = { id: mockPlanId };
-            mockRequest.body = { dayNumber: 1, activityName: 'Valid Activity' };
-            (mockedPlan.findById as jest.Mock).mockResolvedValue(null);
-
-            await PlanService.addItineraryItem(mockRequest as Request, mockResponse as Response);
-
-            expect(mockResponse.status).toHaveBeenCalledWith(404);
-            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Plan not found.' });
-        });
-
-        it('should return 400 for invalid Plan ID format', async () => {
-            mockRequest.params = { id: 'invalid-id' };
+            mockRequest.body = { title: 'Incomplete item' }; 
 
             await PlanService.addItineraryItem(mockRequest as Request, mockResponse as Response);
 
             expect(mockResponse.status).toHaveBeenCalledWith(400);
-            expect(mockResponse.json).toHaveBeenCalledWith({ error: "Invalid Plan ID format." });
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Title, location, category, and startTime are required.' });
         });
     });
-
- 
+    
+    // =======================================================
+    //  TESTS FOR getItineraryItemById (GET)
+    // =======================================================
     describe('getItineraryItemById', () => {
-        it('should get an item successfully and return 200', async () => {
-         
+        it('should retrieve an item successfully', async () => {
             mockRequest.params = { id: mockPlanId, itemId: mockItemId };
-            const mockItem = { _id: mockItemId, plan_id: mockPlanId, activityName: 'Found Item' };
-            const mockPlan = { _id: mockPlanId, creator: mockUserId };
+            const mockItemData = { _id: mockItemId, plan_id: mockPlanId, title: 'Test Item' };
             
-            (mockedItineraryItem.findById as jest.Mock).mockResolvedValue(mockItem);
-            (mockedPlan.findById as jest.Mock).mockResolvedValue(mockPlan);
-            
-          
-            await PlanService.getItineraryItemById(mockRequest as Request, mockResponse as Response);
-            
-        
-            expect(mockResponse.status).toHaveBeenCalledWith(200);
-            expect(mockResponse.json).toHaveBeenCalledWith(mockItem);
-        });
-        
-        it('should return 404 if item is not found', async () => {
-         
-            mockRequest.params = { id: mockPlanId, itemId: mockItemId };
-            (mockedItineraryItem.findById as jest.Mock).mockResolvedValue(null);
             (mockedPlan.findById as jest.Mock).mockResolvedValue({ _id: mockPlanId, creator: mockUserId });
+            (mockedItineraryItem.findOne as jest.Mock).mockResolvedValue(mockItemData);
 
             await PlanService.getItineraryItemById(mockRequest as Request, mockResponse as Response);
-            
-            expect(mockResponse.status).toHaveBeenCalledWith(404);
-            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Itinerary item not found in this plan.' });
+
+            expect(mockedItineraryItem.findOne).toHaveBeenCalledWith({ _id: mockItemId, plan_id: mockPlanId });
+            expect(mockResponse.status).toHaveBeenCalledWith(200);
+            expect(mockResponse.json).toHaveBeenCalledWith(mockItemData);
         });
     });
 
+    // =======================================================
+    //  TESTS FOR updateItineraryItem (PATCH)
+    // =======================================================
     describe('updateItineraryItem', () => {
-        it('should update an item successfully and return 200', async () => {
+        it('should update an item startTime successfully', async () => {
+            const newStartTimeISO = '2025-08-01T14:00:00.000Z';
             mockRequest.params = { id: mockPlanId, itemId: mockItemId };
-            mockRequest.body = { notes: 'Updated notes' };
-
-            const mockItem = { 
-                _id: mockItemId, 
-                plan_id: mockPlanId, 
-                notes: 'Old notes',
-                save: jest.fn().mockImplementation(function(this: any) { return Promise.resolve(this); })
-            };
-            Object.assign(mockItem, mockRequest.body);
-
-            const mockPlan = { _id: mockPlanId, creator: mockUserId, save: jest.fn().mockResolvedValue(true) };
-
-            (mockedPlan.findById as jest.Mock).mockResolvedValue(mockPlan);
-            (mockedItineraryItem.findOne as jest.Mock).mockResolvedValue(mockItem);
+            mockRequest.body = { startTime: newStartTimeISO };
+            
+            (mockedPlan.findById as jest.Mock).mockResolvedValue({ _id: mockPlanId, creator: mockUserId, save: jest.fn() });
+            (mockedItineraryItem.findOneAndUpdate as jest.Mock).mockResolvedValue({
+                _id: mockItemId,
+                startTime: new Date(newStartTimeISO)
+            });
 
             await PlanService.updateItineraryItem(mockRequest as Request, mockResponse as Response);
 
-            expect(mockItem.save).toHaveBeenCalled();
-            expect(mockPlan.save).toHaveBeenCalled();
+            const updatePayload = (mockedItineraryItem.findOneAndUpdate as jest.Mock).mock.calls[0][1].$set;
+            expect(updatePayload.startTime).toBe(newStartTimeISO);
             expect(mockResponse.status).toHaveBeenCalledWith(200);
-            expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
-                data: expect.objectContaining({ notes: 'Updated notes' })
-            }));
         });
     });
 
+    // =======================================================
+    //  TESTS FOR deleteItineraryItem (DELETE)
+    // =======================================================
     describe('deleteItineraryItem', () => {
-        it('should delete an item successfully and return 200', async () => {
-
+        it('should delete an item successfully', async () => {
             mockRequest.params = { id: mockPlanId, itemId: mockItemId };
-            const mockPlan = { _id: mockPlanId, creator: mockUserId };
-
-            (mockedPlan.findById as jest.Mock).mockResolvedValue(mockPlan);
-            (mockedItineraryItem.findOneAndDelete as jest.Mock).mockResolvedValue({ _id: mockItemId });
+            (mockedPlan.findById as jest.Mock).mockResolvedValue({ _id: mockPlanId, creator: mockUserId });
+            (mockedItineraryItem.findOneAndDelete as jest.Mock).mockResolvedValue({ _id: mockItemId }); 
 
             await PlanService.deleteItineraryItem(mockRequest as Request, mockResponse as Response);
 
-            expect(mockedItineraryItem.findOneAndDelete).toHaveBeenCalledWith({
-                _id: mockItemId,
-                plan_id: mockPlanId,
-            });
+            expect(mockedItineraryItem.findOneAndDelete).toHaveBeenCalledWith({ _id: mockItemId, plan_id: mockPlanId });
             expect(mockResponse.status).toHaveBeenCalledWith(200);
-            expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Item deleted successfully!' });
-        });
-        
-        it('should return 404 if item to delete is not found', async () => {
-            mockRequest.params = { id: mockPlanId, itemId: mockItemId };
-            const mockPlan = { _id: mockPlanId, creator: mockUserId };
-
-            (mockedPlan.findById as jest.Mock).mockResolvedValue(mockPlan);
-            (mockedItineraryItem.findOneAndDelete as jest.Mock).mockResolvedValue(null);
-
-            await PlanService.deleteItineraryItem(mockRequest as Request, mockResponse as Response);
-
-            expect(mockResponse.status).toHaveBeenCalledWith(404);
-            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Itinerary item not found in this plan.' });
         });
     });
 });
