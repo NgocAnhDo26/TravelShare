@@ -133,6 +133,7 @@ interface UserInfo {
   firstName?: string;
   lastName?: string;
   bio?: string;
+  avatarUrl: string;
   followerCount: number;
   followingCount: number;
 }
@@ -238,7 +239,7 @@ const UserService: IUserService = {
     }
 
     const user = await User.findById(userId)
-      .select('username email displayName firstName lastName bio')
+      .select('username email displayName firstName lastName bio avatarUrl')
       .lean();
 
     if (!user) {
@@ -257,6 +258,7 @@ const UserService: IUserService = {
       firstName: user.firstName,
       lastName: user.lastName,
       bio: user.bio,
+      avatarUrl: user.avatarUrl || '',
       followerCount,
       followingCount,
     };
