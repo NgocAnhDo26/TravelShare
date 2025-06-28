@@ -4,9 +4,11 @@ import ForgotPasswordPage from "./route/forgot-password/page";
 import ResetPasswordPage from "./route/reset-password/page";
 import UserProfilePage from "./route/UserProfilePage/page";
 import OtherProfilePage from "./route/OtherProfilePage/page"
+import EditProfilePage from "./route/edit-profile/page";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router";
+import { Edit } from "lucide-react";
 
 function App() {
     return (
@@ -32,6 +34,10 @@ function App() {
                     <Route
                         path="/OtherProfilePage"
                         element={<OtherProfilePage />}
+                    ></Route>
+                    <Route
+                        path="/edit-profile"
+                        element = {<EditProfilePage/>}
                     ></Route>
                     <Route path="/" element={<LoginPage />} />
                     <Route path="*" element={<div>404 Not Found</div>} />

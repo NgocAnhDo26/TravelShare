@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { cn } from "@/lib/utils"; // Assume you have this cn utility
 import { Button } from "@/components/ui/button"; // Assume you have Shadcn Button
+import { useNavigate } from 'react-router-dom';
 
 // --- Header Component (can be a separate file like components/layout/Header.tsx) ---
 const Header: React.FC<{ avatarUrl: string }> = ({ avatarUrl }) => {
@@ -321,10 +322,13 @@ const UserProfilePage: React.FC = () => {
             { question: "Tôi không muốn đi du lịch thì phải làm sao ?", link: "https://example.com/no-travel-motivation" },
         ],
     };
+    
+    const navigate = useNavigate();
 
     const handleEditProfile = () => {
+        navigate("/edit-profile");
         console.log("Edit Profile clicked!");
-        // Logic to navigate to profile edit page
+        
     };
 
     const handleShareProfile = () => {
