@@ -449,23 +449,20 @@ const UserProfilePage: React.FC = () => {
 
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/20">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
-            <button
-              onClick={handleCloseModal}
-              className="absolute top-2 right-2 text-gray-600 hover:text-red-600 text-xl"
-            >
-              &times;
-            </button>
-            <h2 className="text-2xl font-bold mb-4 text-gray-800">
-              Chỉnh sửa hồ sơ
-            </h2>
-            <EditProfileForm
+          
+          <EditProfileForm className="p-6 rounded-lg shadow-xl w-full max-w-md relative"
               user={{
                 username: userData.userName,
                 avatarUrl: userData.avatarUrl,
               }}
             />
-          </div>
+            <button
+              onClick={handleCloseModal}
+              className="relative -top-56 -left-11 text-gray-600 hover:text-red-600 text-xl"
+            >
+              &times;
+            </button>
+          
         </div>
       )}
     </div>

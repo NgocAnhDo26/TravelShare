@@ -54,7 +54,7 @@ const EditProfileForm = ({
     }
 
     try {
-      await API.put("/user/update", formData, {
+      await API.put("/users/profile", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
