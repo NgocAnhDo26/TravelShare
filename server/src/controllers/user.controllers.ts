@@ -188,6 +188,7 @@ const FollowController: IFollowController = {
 interface IUserController {
   getEditProfile(req: Request, res: Response): Promise<void>;
   updateProfile(req: Request, res: Response): Promise<void>;
+  getUserInfo(req: Request, res: Response, next: NextFunction): Promise<void>; // Add next for error handling
 }
 
 const UserController: IUserController = {
@@ -197,6 +198,27 @@ const UserController: IUserController = {
 
   updateProfile: async (req: Request, res: Response) => {
     await UserService.updateProfile(req, res);
+  },
+
+  getUserInfo: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.params.id;
+      if (!Types.ObjectId.isValid(userId)) {
+        res.status(400).json({ error: 'Invalid user ID format.' });
+        return;
+      }
+
+      const userInfo = await UserService.getUserInfo(userId);
+
+      if (!userInfo) {
+        res.status(404).json({ error: 'User not found.' });
+        return;
+      }
+
+      res.status(200).json(userInfo);
+    } catch (error) {
+      next(error);
+    }
   },
 };
 

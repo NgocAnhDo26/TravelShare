@@ -126,11 +126,23 @@ interface UpdateProfileData {
   fileUrl?: string;
 }
 
+interface UserInfo {
+  username: string;
+  email: string;
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  avatarUrl: string;
+  followerCount: number;
+  followingCount: number;
+}
+
 interface IUserService {
   getEditProfile(req: Request, res: Response): Promise<void>;
   updateProfile(req: Request, res: Response): Promise<void>;
+  getUserInfo(userId: string): Promise<UserInfo | null>;
 }
-
 
 const UserService: IUserService = {
  
@@ -219,6 +231,37 @@ const UserService: IUserService = {
       console.error('Update profile error:', error);
       res.status(500).json({ error: 'Internal server error.' });
     }
+  },
+
+  getUserInfo: async (userId: string): Promise<UserInfo | null> => {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return null;
+    }
+
+    const user = await User.findById(userId)
+      .select('username email displayName firstName lastName bio avatarUrl')
+      .lean();
+
+    if (!user) {
+      return null;
+    }
+
+    const [followerCount, followingCount] = await Promise.all([
+      FollowService.getFollowerCount(userId),
+      FollowService.getFollowingCount(userId),
+    ]);
+
+    return {
+      username: user.username,
+      email: user.email,
+      displayName: user.displayName,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl || '',
+      followerCount,
+      followingCount,
+    };
   },
 };
 
