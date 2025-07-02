@@ -5,6 +5,22 @@ import uploadUseCases from '../middlewares/upload';
 
 const router = Router();
 
+router.get(
+  '/edit-profile',
+  AuthJwtMiddleware.verifyToken, 
+  UserController.getEditProfile
+);
+
+router.put(
+  '/profile',
+  [
+    AuthJwtMiddleware.verifyToken,
+    uploadUseCases.uploadMiddleware.single('avatar'),
+  uploadUseCases.uploadToSupabase,
+  ],
+  UserController.updateProfile
+);
+
 // --- Authenticated Routes ---
 router.post('/:id/follow', AuthJwtMiddleware.verifyToken, FollowController.follow);
 router.delete('/:id/follow', AuthJwtMiddleware.verifyToken, FollowController.unfollow);
@@ -19,22 +35,5 @@ router.get('/:id/following/count', FollowController.getFollowingCount);
 
 // --- Public Route to Get User Info ---
 router.get('/:id', UserController.getUserInfo);
-
-router.get(
-  '/edit-profile',
-  AuthJwtMiddleware.verifyToken, 
-  UserController.getEditProfile
-);
-
-
-router.put(
-  '/profile',
-  [
-    AuthJwtMiddleware.verifyToken,
-    uploadUseCases.uploadMiddleware.single('avatar'),
-  uploadUseCases.uploadToSupabase,
-  ],
-  UserController.updateProfile
-);
 
 export default router;

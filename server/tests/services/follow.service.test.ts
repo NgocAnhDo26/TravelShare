@@ -1,3 +1,7 @@
+// Set required environment variables for JWT before any imports
+process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+
 jest.mock('../../src/models/file.client', () => ({
   __esModule: true,
   default: {
