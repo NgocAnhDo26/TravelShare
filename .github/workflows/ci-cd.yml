@@ -122,6 +122,7 @@ jobs:
         if: needs.build-and-deploy-dev-server.result == 'success' || needs.build-and-deploy-prod-server.result == 'success'
         uses: slackapi/slack-github-action@v2.1.0
         with:
+          webhook-type: 'incoming-webhook'
           payload: |
             {
               "blocks": [
@@ -162,6 +163,7 @@ jobs:
         if: needs.build-and-deploy-dev-server.result == 'failure' || needs.build-and-deploy-prod-server.result == 'failure'
         uses: slackapi/slack-github-action@v2.1.0
         with:
+          webhook-type: 'incoming-webhook'
           payload: |
             {
               "blocks": [

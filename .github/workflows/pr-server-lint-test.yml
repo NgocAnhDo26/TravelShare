@@ -42,6 +42,7 @@ jobs:
               if: needs.pr-lint-and-test-server.result == 'success'
               uses: slackapi/slack-github-action@v2.1.0
               with:
+                  webhook-type: 'incoming-webhook'
                   payload: |
                       {
                         "blocks": [
@@ -82,6 +83,7 @@ jobs:
               if: needs.pr-lint-and-test-server.result == 'failure'
               uses: slackapi/slack-github-action@v2.1.0
               with:
+                  webhook-type: 'incoming-webhook'
                   payload: |
                       {
                         "blocks": [
