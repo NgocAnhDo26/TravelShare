@@ -202,12 +202,12 @@ const UserController: IUserController = {
 
   getUserInfo: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.params.id;
+      const userId = req.params.id || req.user;
       if (!Types.ObjectId.isValid(userId)) {
         res.status(400).json({ error: 'Invalid user ID format.' });
         return;
       }
-
+      console.log(userId);
       const userInfo = await UserService.getUserInfo(userId);
 
       if (!userInfo) {

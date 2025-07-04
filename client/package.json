@@ -10,9 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-navigation-menu": "^1.2.13",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/supabase-js": "^2.50.2",
     "@tailwindcss/vite": "^4.1.10",
     "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",
@@ -39,6 +43,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.2.0",
+    "prettier": "^3.6.2",
     "tw-animate-css": "^1.3.4",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.34.1",

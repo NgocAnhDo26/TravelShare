@@ -1,373 +1,428 @@
-'use client';
+import React, { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils'; // Assume you have this cn utility
+import { Button } from '@/components/ui/button'; // Assume you have Shadcn Button
 
-import React, { useState } from 'react';
-import { cn } from "@/lib/utils"; // Assume you have this cn utility
-import { Button } from "@/components/ui/button"; // Assume you have Shadcn Button
-
-// --- Header Component (can be a separate file like components/layout/Header.tsx) ---
-const Header: React.FC<{ avatarUrl: string }> = ({ avatarUrl }) => {
-    return (
-        <header className="flex items-center justify-between p-4 bg-white shadow-sm border-b border-gray-200">
-            {/* Left section: Logo and Main Nav */}
-            <div className="flex items-center space-x-6">
-                <div className="text-xl font-bold text-blue-800">TravelShare</div> {/* Replace with TravelShare logo */}
-                <nav className="hidden md:flex space-x-4">
-                    <a href="/" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Home</a>
-                    <a href="/travel-guides" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Travel guides</a>
-                    <a href="/hotels" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Hotels</a>
-                    <a href="/deals" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Deals</a>
-                </nav>
-            </div>
-
-            {/* Right section: Search, Notifications, Profile */}
-            <div className="flex items-center space-x-4">
-                <div className="relative hidden md:block">
-                    <input
-                        type="text"
-                        placeholder="Enter place or user"
-                        className="pl-10 pr-4 py-2 rounded-full bg-gray-100 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 text-sm"
-                    />
-                    {/* Use Font Awesome icon if installed */}
-                    <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                </div>
-                <button className="relative p-2 text-gray-600 hover:text-blue-700">
-                </button>
-                <button className="p-2 relative"> {/* Add relative for positioning dot */}
-                    <img
-                        src={avatarUrl}
-                        alt="User Avatar"
-                        className="w-8 h-8 rounded-full object-cover border-2 border-blue-400"
-                        onError={(e) => (e.currentTarget.src = 'https://placehold.co/32x32/cccccc/999999?text=A')} // Fallback if image fails to load
-                    />
-                    {/* Small red dot on user's profile picture */}
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                </button>
-            </div>
-        </header>
-    );
-};
+import { Milestone, NotepadText, Share } from 'lucide-react';
+import EditProfileForm from '@/components/edit-profile-form';
+import { useParams } from 'react-router-dom';
+import API from '@/utils/axiosInstance';
+import toast from 'react-hot-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card } from '@/components/ui/card';
 
 // --- ProfileCard Component (can be a separate file like components/profile/ProfileCard.tsx) ---
 interface ProfileCardProps {
-    userName: string;
-    userHandle: string;
-    followers: number;
-    following: number;
-    onEdit: () => void;
-    onShare: () => void;
-    avatarUrl?: string; // Optional avatar
+  userName: string;
+  displayName: string;
+  followers: number;
+  following: number;
+  onShare: () => void;
+  avatarUrl?: string; // Optional avatar
+  isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
 }
 
-const ProfileCard: React.FC<ProfileCardProps> = ({ userName, userHandle, followers, following, onEdit, onShare, avatarUrl }) => {
-    return (
-        <div className="bg-white rounded-xl shadow-md p-6 flex flex-col items-center">
-            {/* Avatar Section */}
-            <div className="relative w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center mb-4 overflow-hidden border border-gray-200">
-                {avatarUrl ? (
-                    <img src={avatarUrl} alt="Profile Avatar" className="w-full h-full object-cover" />
-                ) : (
-                    <i className="fas fa-user text-5xl text-gray-400"></i>
-                )}
-                {/* Text for adding profile picture if no avatarUrl */}
-                {!avatarUrl && (
-                    <span className="absolute bottom-2 text-xs text-gray-500">Add profile picture</span>
-                )}
-            </div>
+const ProfileCard: React.FC<ProfileCardProps> = ({
+  userName,
+  displayName,
+  followers,
+  following,
+  onShare,
+  avatarUrl,
+  isMyProfile,
+}) => {
+  return (
+    <Card className="flex flex-col items-center gap-0 p-6">
+        {/* Avatar Section */}
+        <Avatar className='w-48 h-48 mb-4'>
+          <AvatarImage src={avatarUrl} />
+          <AvatarFallback className='text-3xl font-bold'>
+            {userName.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
 
-            {/* User Info */}
-            <h3 className="text-xl font-bold text-gray-800">{userName}</h3>
-            <p className="text-gray-500 text-sm mb-4">{userHandle}</p>
+        {/* User Info */}
+        <h3 className='text-xl font-bold text-gray-800'>{displayName}</h3>
+        <p className='text-gray-500 text-sm mb-4'>@{userName}</p>
 
-            {/* Follow Stats */}
-            <div className="flex space-x-6 mb-6">
-                <div className="text-center">
-                    <span className="block text-lg font-bold text-gray-800">{followers}</span>
-                    <span className="text-gray-500 text-xs uppercase">Followers</span>
-                </div>
-                <div className="text-center">
-                    <span className="block text-lg font-bold text-gray-800">{following}</span>
-                    <span className="text-gray-500 text-xs uppercase">Following</span>
-                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex space-x-3 w-full">
-                <Button onClick={onEdit} className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-full py-2 font-semibold">
-                    Edit
-                </Button>
-                <Button onClick={onShare} className="flex-1 bg-gray-800 text-white hover:bg-gray-700 rounded-full py-2 font-semibold">
-                    Share
-                </Button>
-            </div>
+        {/* Follow Stats */}
+        <div className='flex space-x-6 mb-6'>
+          <div className='text-center'>
+            <span className='block text-lg font-bold text-gray-800'>
+              {followers}
+            </span>
+            <span className='text-gray-500 text-xs uppercase'>Followers</span>
+          </div>
+          <div className='text-center'>
+            <span className='block text-lg font-bold text-gray-800'>
+              {following}
+            </span>
+            <span className='text-gray-500 text-xs uppercase'>Following</span>
+          </div>
         </div>
-    );
+
+        {/* Action Buttons */}
+        {isMyProfile ? (
+          <div className='flex space-x-3 w-full'>
+            <EditProfileForm
+              user={{
+                username: userName,
+                avatarUrl: avatarUrl ?? '',
+              }}
+            />
+            <Button onClick={onShare} className='flex-1 cursor-pointer'>
+              <Share />
+              Share
+            </Button>
+          </div>
+        ) : (
+          <Button className='cursor-pointer'>Follow</Button>
+        )}
+    </Card>
+  );
 };
 
 // --- TravelLogCard Component (replaces MapOverviewCard, can be components/profile/TravelLogCard.tsx) ---
 interface TravelLogCardProps {
-    countriesVisited: number;
-    citiesVisited: number;
-    regionsVisited: number;
-    rank: string;
-    travelLog: { country: string; cities: string[] }[];
+  countriesVisited: number;
+  citiesVisited: number;
+  regionsVisited: number;
+  rank: string;
+  travelLog: { country: string; cities: string[] }[];
 }
 
-const TravelLogCard: React.FC<TravelLogCardProps> = ({ countriesVisited, citiesVisited, regionsVisited, rank, travelLog }) => {
-    return (
-        <div className="bg-white rounded-xl shadow-md p-6 flex flex-col text-left"> {/* Added text-left here */}
-            {/* Top section: COUNTRIES, CITIES, & REGIONS stats */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex space-x-4 text-gray-700 text-sm font-semibold">
-                    <div>
-                        <span className="block text-xl font-bold">{countriesVisited}</span>
-                        <span>COUNTRIES</span>
-                    </div>
-                    <div>
-                        <span className="block text-xl font-bold">{citiesVisited}</span>
-                        <span>CITIES</span>
-                    </div>
-                    <div>
-                        <span className="block text-xl font-bold">{regionsVisited}</span>
-                        <span>& REGIONS</span>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Rank display */}
-            <div className="flex items-center mb-4 text-gray-700 text-sm">
-                <i className="fas fa-medal text-lg text-blue-500 mr-2"></i>
-                <span className="font-semibold">{rank}</span>
-            </div>
-
-            {/* Travel Log Section with Scrollbar */}
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Nhật kí du lịch</h2>
-            <div className="space-y-3 flex-grow overflow-y-auto custom-scrollbar pr-4" style={{ height: '200px' }}> {/* Fixed height for scroll area */}
-                {travelLog.length > 0 ? (
-                    travelLog.map((entry, index) => (
-                        <div key={index}>
-                            {/* Ensured text alignment is left by default for block elements */}
-                            <p className="text-gray-700 font-semibold">- {entry.country}:</p>
-                            <ul className="list-disc list-inside ml-4 text-gray-600 text-sm">
-                                {entry.cities.map((city, cityIndex) => (
-                                    <li key={cityIndex}>{city}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))
-                ) : (
-                    // Corrected the comment placement outside of the JSX element
-                    <p className="text-gray-500 py-4">Chưa có chuyến đi nào được ghi lại.</p>
-                )}
-            </div>
-            
-            {/* "Thêm địa điểm" button */}
-            <div className="flex justify-end mt-4">
-                <Button className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors">
-                    Thêm địa điểm đã ghé thăm
-                </Button>
-            </div>
+const TravelLogCard: React.FC<TravelLogCardProps> = ({
+  countriesVisited,
+  citiesVisited,
+  regionsVisited,
+  // rank,
+  travelLog,
+}) => {
+  return (
+    <Card className='p-6 text-left gap-0'>
+      {' '}
+      {/* Added text-left here */}
+      {/* Top section: COUNTRIES, CITIES, & REGIONS stats */}
+      <div className='flex items-center justify-between mb-4'>
+        <div className='flex space-x-4 text-gray-700 text-sm font-semibold'>
+          <Card className="gap-2 p-3 bg-blue-400 text-white w-40 rounded-md border-none">
+            <span className='block text-3xl font-bold mb-2'>{countriesVisited}</span>
+            <span>COUNTRIES</span>
+          </Card>
+          <Card className="gap-2 p-3 bg-amber-400 text-white w-40 rounded-md border-none">
+            <span className='block text-3xl font-bold mb-2'>{citiesVisited + regionsVisited}</span>
+            <span>CITIES & REGIONS</span>
+          </Card>
         </div>
-    );
+      </div>
+      {/* Rank display */}
+      {/* <div className='flex items-center mb-4 text-gray-700 text-sm'>
+        <i className='fas fa-medal text-lg text-blue-500 mr-2'></i>
+        <span className='font-semibold'>{rank}</span>
+      </div> */}
+      {/* Travel Log Section with Scrollbar */}
+      <h2 className='text-2xl font-bold my-4'>Travel Log</h2>
+      <div className='overflow-y-auto custom-scrollbar pr-4 max-h-52'>
+        {/* Fixed height for scroll area */}
+        {travelLog.length > 0 ? (
+          travelLog.map((entry, index) => (
+            <div key={index}>
+              {/* Ensured text alignment is left by default for block elements */}
+              <p className='text-gray-700 font-semibold'>{entry.country}: {" "}
+                {entry.cities.map((city, cityIndex) => (
+                  <span key={cityIndex} className='font-normal'>
+                    {city}
+                    {cityIndex < entry.cities.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </p>
+            </div>
+          ))
+        ) : (
+          // Corrected the comment placement outside of the JSX element
+          <p className='text-gray-500 py-4'>
+            Chưa có chuyến đi nào được ghi lại.
+          </p>
+        )}
+      </div>
+    </Card>
+  );
 };
 
 // --- FAQSection Component (can be a separate file like components/profile/FAQSection.tsx) ---
-interface FAQSectionProps {
-    faqs: { question: string; link?: string }[]; // 'answer' changed to 'link' for hyperlink
-}
+// interface FAQSectionProps {
+//   faqs: { question: string; link?: string }[]; // 'answer' changed to 'link' for hyperlink
+// }
 
-const FAQSection: React.FC<FAQSectionProps> = ({ faqs }) => {
-    const [userQuestion, setUserQuestion] = useState(''); // State for the input field
+// const FAQSection: React.FC<FAQSectionProps> = ({ faqs }) => {
+//   const [userQuestion, setUserQuestion] = useState(''); // State for the input field
 
-    const handleQuestionSubmit = () => {
-        if (userQuestion.trim()) {
-            console.log("Câu hỏi người dùng:", userQuestion);
-            // TODO: Gửi câu hỏi này đến backend hoặc xử lý tại đây
-            alert(`Câu hỏi của bạn đã được gửi: "${userQuestion}"`); // Sử dụng alert tạm thời
-            setUserQuestion(''); // Reset input
-        } else {
-            alert("Vui lòng nhập câu hỏi của bạn.");
-        }
-    };
+//   const handleQuestionSubmit = () => {
+//     if (userQuestion.trim()) {
+//       console.log('Câu hỏi người dùng:', userQuestion);
+//       // TODO: Gửi câu hỏi này đến backend hoặc xử lý tại đây
+//       alert(`Câu hỏi của bạn đã được gửi: "${userQuestion}"`); // Sử dụng alert tạm thời
+//       setUserQuestion(''); // Reset input
+//     } else {
+//       alert('Vui lòng nhập câu hỏi của bạn.');
+//     }
+//   };
 
-    return (
-        <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Những câu hỏi thường gặp</h2>
-            <div className="space-y-4 mb-6">
-                {faqs.map((faq, index) => (
-                    <div key={index}>
-                        <a 
-                            href={faq.link || "#"} // Link to specified URL or '#' if no link
-                            className="text-blue-600 hover:text-blue-800 underline block leading-relaxed" // Hyperlink styling
-                            target={faq.link ? "_blank" : "_self"} // Open in new tab if there's a link
-                            rel={faq.link ? "noopener noreferrer" : ""}
-                        >
-                            - {faq.question}
-                        </a>
-                    </div>
-                ))}
-            </div>
-            {/* Input field for user questions */}
-            <div className="mt-4">
-                <input
-                    type="text"
-                    placeholder="Bạn có câu hỏi nào dành cho cộng đồng chúng tôi không ?"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700"
-                    value={userQuestion}
-                    onChange={(e) => setUserQuestion(e.target.value)}
-                    onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                            handleQuestionSubmit();
-                        }
-                    }}
-                />
-                <Button 
-                    onClick={handleQuestionSubmit}
-                    className="w-full mt-3 bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-                >
-                    Gửi câu hỏi
-                </Button>
-            </div>
-        </div>
-    );
-};
+//   return (
+//     <div className='bg-white rounded-xl shadow-md p-6'>
+//       <h2 className='text-xl font-bold text-gray-800 mb-4'>
+//         Những câu hỏi thường gặp
+//       </h2>
+//       <div className='space-y-4 mb-6'>
+//         {faqs.map((faq, index) => (
+//           <div key={index}>
+//             <a
+//               href={faq.link || '#'} // Link to specified URL or '#' if no link
+//               className='text-blue-600 hover:text-blue-800 underline block leading-relaxed' // Hyperlink styling
+//               target={faq.link ? '_blank' : '_self'} // Open in new tab if there's a link
+//               rel={faq.link ? 'noopener noreferrer' : ''}
+//             >
+//               - {faq.question}
+//             </a>
+//           </div>
+//         ))}
+//       </div>
+//       {/* Input field for user questions */}
+//       <div className='mt-4'>
+//         <input
+//           type='text'
+//           placeholder='Bạn có câu hỏi nào dành cho cộng đồng chúng tôi không ?'
+//           className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700'
+//           value={userQuestion}
+//           onChange={(e) => setUserQuestion(e.target.value)}
+//           onKeyPress={(e) => {
+//             if (e.key === 'Enter') {
+//               handleQuestionSubmit();
+//             }
+//           }}
+//         />
+//         <Button
+//           onClick={handleQuestionSubmit}
+//           className='w-full mt-3 bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-md'
+//         >
+//           Gửi câu hỏi
+//         </Button>
+//       </div>
+//     </div>
+//   );
+// };
 
 // --- TabsSection Component (can be a separate file like components/profile/TabsSection.tsx) ---
 interface TabsSectionProps {
-    tripPlansCount: number;
-    guidesCount: number;
+  tripPlansCount: number;
+  guidesCount: number;
+  isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
 }
 
-const TabsSection: React.FC<TabsSectionProps> = ({ tripPlansCount, guidesCount }) => {
-    const [activeTab, setActiveTab] = useState('tripPlans'); // 'tripPlans' or 'guides'
+const TabsSection: React.FC<TabsSectionProps> = ({
+  // tripPlansCount,
+  // guidesCount,
+  isMyProfile = false,
+}) => {
+  const [activeTab, setActiveTab] = useState('tripPlans'); // 'tripPlans' or 'guides'
 
-    return (
-        <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button
-                        onClick={() => setActiveTab('tripPlans')}
-                        className={cn(
-                            'whitespace-nowrap py-3 px-1 border-b-2 font-medium text-lg transition-colors',
-                            activeTab === 'tripPlans'
-                                ? 'border-blue-600 text-blue-700'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        )}
-                    >
-                        Kế hoạch đi du lịch ({tripPlansCount})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('guides')}
-                        className={cn(
-                            'whitespace-nowrap py-3 px-1 border-b-2 font-medium text-lg transition-colors',
-                            activeTab === 'guides'
-                                ? 'border-blue-600 text-blue-700'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        )}
-                    >
-                        Hướng dẫn ({guidesCount})
-                    </button>
-                </nav>
-            </div>
+  return (
+    <Card className='p-6 gap-2'>
+      <div className='border-b border-gray-200 mb-6'>
+        <nav className='-mb-px flex space-x-2 justify-center' aria-label='Tabs'>
+          <Button 
+            variant={'ghost'}
+            onClick={() => setActiveTab('tripPlans')}
+            className={cn(
+              'whitespace-nowrap border-b-2 font-medium text-md transition-colors rounded-b-none',
+              activeTab === 'tripPlans'
+                ? 'border-blue-600 text-blue-700 hover:bg-none'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+            )}
+          >
+            <Milestone/> Trip plans
+          </Button>
+          <Button
+            variant={'ghost'}
+            onClick={() => setActiveTab('guides')}
+            className={cn(
+              'whitespace-nowrap border-b-2 font-medium text-md transition-colors rounded-b-none',
+              activeTab === 'guides'
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+            )}
+          >
+            <NotepadText /> Guides
+          </Button>
+        </nav>
+      </div>
 
-            {/* Tab Content */}
-            <div>
-                {activeTab === 'tripPlans' && (
-                    <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-gray-600 text-lg mb-4">Bạn chưa có kế hoạch nào cả</p>
-                        <Button className="bg-orange-500 text-white font-semibold py-2.5 px-6 rounded-full hover:bg-orange-600 transition-colors shadow-md">
-                            Lên kế hoạch ngay
-                        </Button>
-                    </div>
-                )}
-                {activeTab === 'guides' && (
-                    <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-gray-600 text-lg mb-4">You don't have any guides yet.</p>
-                        <Button className="bg-orange-500 text-white font-semibold py-2.5 px-6 rounded-full hover:bg-orange-600 transition-colors shadow-md">
-                            Create your first guide
-                        </Button>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+      {/* Tab Content */}
+      <div>
+        {activeTab === 'tripPlans' && (
+          <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
+            <p className='text-gray-600 text-lg mb-4'>
+              {isMyProfile ? 'You don\'t have any trip plans yet.' : 'This user doesn\'t have any trip plans yet.'}
+            </p>
+          </div>
+        )}
+        {activeTab === 'guides' && (
+          <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
+            <p className='text-gray-600 text-lg mb-4'>
+              {isMyProfile ? 'You don\'t have any guides yet.' : 'This user doesn\'t have any guides yet.'}
+            </p>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 };
 
+// Define interface for user profile data
+interface UserProfileData {
+  username: string;
+  email: string;
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  avatarUrl: string;
+  followerCount: number;
+  followingCount: number;
+  followers: string[];
+  following: string[];
+  tripPlans: string[];
+  guides: string[];
+  travelLog: string[];
+  faqs: string[];
+}
 
 // --- Main User Profile Page Component ---
 const UserProfilePage: React.FC = () => {
-    // Dữ liệu giả định cho trang profile
-    const userData = {
-        userName: "Phát Nguyễn",
-        userHandle: "@pht5",
-        followers: 0,
-        following: 0,
-        avatarUrl: "https://topanh.com/wp-content/uploads/2025/05/hinh-gai-xinh-tiktok-2.jpg", // Updated avatar URL
-        countriesVisited: 5, // Example data for TravelLogCard
-        citiesVisited: 12, // Example data for TravelLogCard
-        regionsVisited: 3, // Example data for TravelLogCard
-        rank: "Newbie TravelShare", // Rank data
-        tripPlansCount: 0,
-        guidesCount: 0,
-        travelLog: [ // Travel log data
-            { country: "Trung Quốc", cities: ["Thâm Quyến", "Vạn Lý Trường Thành"] },
-            { country: "Việt Nam", cities: ["Biển Lâm Đồng", "Thị trấn Đà Lạt"] },
-            { country: "Nhật Bản", cities: ["Tokyo", "Kyoto"] },
-            { country: "Hàn Quốc", cities: ["Seoul", "Busan", "Đảo Jeju"] },
-            { country: "Thái Lan", cities: ["Bangkok", "Chiang Mai"] },
-        ],
-        faqs: [ // FAQ data with mock links
-            { question: "Bạn thân tôi thường hay chơi với tôi nhưng nay tôi đi du lịch, thì tôi kiếm dịch vụ trông chó ở đâu cho uy tín ?", link: "https://example.com/pet-sitting" },
-            { question: "Tôi có vợ tôi ở nhà nhưng nay tôi đi du lịch cô ấy không muốn đi với tôi và khuyến khích tôi đi một mình để cô ấy trông nhà nhưng tôi hơi cô đơn, có nên ở nhà không ?", link: "https://example.com/solo-travel-loneliness" },
-            { question: "Tôi không muốn đi du lịch thì phải làm sao ?", link: "https://example.com/no-travel-motivation" },
-        ],
+  let { userId } = useParams();
+  const [userData, setUserData] = useState<UserProfileData | undefined>(
+    undefined,
+  );
+  // Use userId prop to fetch user data from API
+  // Call API to fetch user data based on userId
+  useEffect(() => {
+    // Simulate fetching user data from an API
+    const fetchUserData = async () => {
+      const URL = userId ? `/users/${userId}` : '/users/me';
+
+      try {
+        // Replace with actual API call
+        const response = await API.get(URL);
+        const data = response.data;
+        setUserData(data);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        toast.error('Failed to fetch user data');
+      }
     };
 
-    const handleEditProfile = () => {
-        console.log("Edit Profile clicked!");
-        // Logic to navigate to profile edit page
-    };
+    fetchUserData();
+  }, []);
 
-    const handleShareProfile = () => {
-        console.log("Share Profile clicked!");
-        // Logic to share profile
-    };
+  //   // Dữ liệu giả định cho trang profile
+  //   const userData = {
+  //     userName: 'Phát Nguyễn',
+  //     userHandle: '@pht5',
+  //     followers: 0,
+  //     following: 0,
+  //     avatarUrl:
+  //       'https://topanh.com/wp-content/uploads/2025/05/hinh-gai-xinh-tiktok-2.jpg', // Updated avatar URL
+  //     countriesVisited: 5, // Example data for TravelLogCard
+  //     citiesVisited: 12, // Example data for TravelLogCard
+  //     regionsVisited: 3, // Example data for TravelLogCard
+  //     rank: 'Newbie TravelShare', // Rank data
+  //     tripPlansCount: 0,
+  //     guidesCount: 0,
+  //     travelLog: [
+  //       // Travel log data
+  //       { country: 'Trung Quốc', cities: ['Thâm Quyến', 'Vạn Lý Trường Thành'] },
+  //       { country: 'Việt Nam', cities: ['Biển Lâm Đồng', 'Thị trấn Đà Lạt'] },
+  //       { country: 'Nhật Bản', cities: ['Tokyo', 'Kyoto'] },
+  //       { country: 'Hàn Quốc', cities: ['Seoul', 'Busan', 'Đảo Jeju'] },
+  //       { country: 'Thái Lan', cities: ['Bangkok', 'Chiang Mai'] },
+  //     ],
+  //     faqs: [
+  //       // FAQ data with mock links
+  //       {
+  //         question:
+  //           'Bạn thân tôi thường hay chơi với tôi nhưng nay tôi đi du lịch, thì tôi kiếm dịch vụ trông chó ở đâu cho uy tín ?',
+  //         link: 'https://example.com/pet-sitting',
+  //       },
+  //       {
+  //         question:
+  //           'Tôi có vợ tôi ở nhà nhưng nay tôi đi du lịch cô ấy không muốn đi với tôi và khuyến khích tôi đi một mình để cô ấy trông nhà nhưng tôi hơi cô đơn, có nên ở nhà không ?',
+  //         link: 'https://example.com/solo-travel-loneliness',
+  //       },
+  //       {
+  //         question: 'Tôi không muốn đi du lịch thì phải làm sao ?',
+  //         link: 'https://example.com/no-travel-motivation',
+  //       },
+  //     ],
+  //   };
 
-    return (
-        <div className="min-h-screen bg-gray-100 flex flex-col">
-            <Header avatarUrl={userData.avatarUrl} /> {/* Pass avatarUrl to Header */}
-            <main className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
-                {/* Left Column */}
-                <div className="lg:col-span-1 space-y-6"> {/* Add space-y-6 for spacing between cards */}
-                    <ProfileCard 
-                        userName={userData.userName}
-                        userHandle={userData.userHandle}
-                        followers={userData.followers}
-                        following={userData.following}
-                        onEdit={handleEditProfile}
-                        onShare={handleShareProfile}
-                        avatarUrl={userData.avatarUrl}
-                    />
-                    {/* Add FAQSection below ProfileCard */}
-                    <FAQSection faqs={userData.faqs} />
-                </div>
+  const handleShareProfile = () => {
+    console.log('Share Profile clicked!');
+  };
 
-                {/* Right Column (Travel Log and Tabs Section) */}
-                <div className="lg:col-span-2 space-y-6">
-                    <TravelLogCard
-                        countriesVisited={userData.countriesVisited}
-                        citiesVisited={userData.citiesVisited}
-                        regionsVisited={userData.regionsVisited}
-                        rank={userData.rank}
-                        travelLog={userData.travelLog}
-                    />
-                    <TabsSection
-                        tripPlansCount={userData.tripPlansCount}
-                        guidesCount={userData.guidesCount}
-                    />
-                </div>
-            </main>
+  // Ensure userData is defined before rendering components that depend on it
+  if (!userData) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div className='flex flex-col'>
+      <main className='flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full'>
+        {/* Left Column */}
+        <div className='lg:col-span-1 space-y-6'>
+          {' '}
+          {/* Add space-y-6 for spacing between cards */}
+          <ProfileCard
+            userName={userData.username}
+            displayName={userData.displayName ?? userData.username}
+            followers={userData.followerCount}
+            following={userData.followingCount}
+            onShare={handleShareProfile}
+            avatarUrl={userData.avatarUrl}
+            isMyProfile={!userId} // Check if this is the user's own profile
+          />
+          {/* Add FAQSection below ProfileCard */}
+          {/* <FAQSection faqs={userData.faqs} /> */}
         </div>
-    );
+
+        {/* Right Column (Travel Log and Tabs Section) */}
+        <div className='lg:col-span-2 space-y-6'>
+          <TravelLogCard
+            // countriesVisited={userData.countriesVisited}
+            // citiesVisited={userData.citiesVisited}
+            // regionsVisited={userData.regionsVisited}
+            // rank={userData.rank}
+            // travelLog={userData.travelLog}
+            countriesVisited={10}
+            citiesVisited={20}
+            regionsVisited={30}
+            rank={"hehe"}
+            travelLog={[
+              {
+                country: 'Việt Nam',
+                cities: ['Hà Nội', 'Đà Nẵng', 'Hồ Chí Minh'],
+              },
+            ]}
+          />
+          <TabsSection
+            // tripPlansCount={userData.tripPlansCount}
+            // guidesCount={userData.guidesCount}
+            tripPlansCount={0}
+            guidesCount={0}
+            isMyProfile={!userId} // Check if this is the user's own profile
+          />
+        </div>
+      </main>
+    </div>
+  );
 };
 
 export default UserProfilePage;
