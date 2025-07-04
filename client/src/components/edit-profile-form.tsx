@@ -1,25 +1,34 @@
-import React, { useState, useRef } from "react";
-import { Input } from "./ui/input";
-import { Label } from "@/components/ui/label";
-import { Pencil, Upload } from "lucide-react";
-import toast from "react-hot-toast";
-import API from "@/utils/axiosInstance";
-import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "./ui/dialog";
+import React, { useState, useRef } from 'react';
+import { Input } from './ui/input';
+import { Label } from '@/components/ui/label';
+import { Pencil, Upload } from 'lucide-react';
+import { Button } from './ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from './ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import toast from 'react-hot-toast';
+import API from '@/utils/axiosInstance';
 
 type EditProfileFormProps = {
   user: {
     username: string;
     avatarUrl: string;
+    email?: string;
   };
   onSuccess?: () => void;
-} & React.ComponentProps<"div">;
+} & React.ComponentProps<'div'>;
 
-const EditProfileForm = ({
-  user,
-  onSuccess
-}: EditProfileFormProps) => {
+const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
   const [username, setUsername] = useState(user.username);
+  const [email, setEmail] = useState(user.email || '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState(user.avatarUrl);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -36,96 +45,111 @@ const EditProfileForm = ({
     e.preventDefault();
 
     if (!username.trim()) {
-      toast.error("Username cannot be empty.");
+      toast.error('Username cannot be empty.');
       return;
     }
 
     const formData = new FormData();
-    formData.append("username", username);
+    formData.append('username', username);
     if (avatarFile) {
-      formData.append("avatar", avatarFile);
+      formData.append('avatar', avatarFile);
     }
 
     try {
-      await API.put("/users/profile", formData, {
+      await API.put('/users/profile', formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       });
-      toast.success("Profile updated successfully!");
+      toast.success('Profile updated successfully!');
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      console.error("Update error:", error);
-      toast.error("Failed to update profile.");
+      console.error('Update error:', error);
+      toast.error('Failed to update profile.');
     }
   };
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex-1 cursor-pointer">
+        <Button variant='outline' className='flex-1 cursor-pointer'>
           <Pencil />
           Edit
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className='sm:max-w-md'>
         <DialogHeader>
           <DialogTitle>Edit your profile</DialogTitle>
           <DialogDescription>
             Enter your new username and/or change your picture
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <div className="grid gap-3">
-            <Label htmlFor="username">Username</Label>
+        <form onSubmit={handleSubmit} className='flex flex-col gap-6'>
+          <div className='grid gap-3'>
+            <Label htmlFor='username'>Username</Label>
             <Input
-              id="username"
+              id='username'
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
-          <div className="grid gap-3">
-            <Label>Current Avatar</Label>
-            <img
-              src={previewUrl}
-              alt="Current Avatar"
-              className="w-24 h-24 rounded-full object-cover"
+          <div className='grid gap-3'>
+            <Label htmlFor='email'>Email</Label>
+            <Input
+              id='email'
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div className="grid gap-3">
-            <Label htmlFor="avatar">Change Avatar</Label>
-            <div className="flex items-center gap-3">
+          <div className='grid gap-3'>
+            <Label>Current Avatar</Label>
+            <Avatar className="w-24 h-24">
+              <AvatarImage src={previewUrl} />
+              <AvatarFallback className='text-2xl font-bold'>
+                {user.username.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          <div className='grid gap-3'>
+            <Label htmlFor='avatar'>Change Avatar</Label>
+            <div className='flex items-center gap-3'>
               <Input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                className="hidden"
+                id='avatar'
+                type='file'
+                accept='image/*'
+                className='hidden'
                 ref={avatarInputRef}
                 onChange={handlePhotoChange}
               />
               <Button
-                type="button"
-                variant="outline"
+                type='button'
+                variant='outline'
                 onClick={() => avatarInputRef.current?.click()}
-                className="flex items-center gap-2 cursor-pointer"
+                className='flex items-center gap-2 cursor-pointer'
               >
                 <Upload />
                 Upload Photo
               </Button>
               {avatarFile && (
-                <span className="text-sm text-gray-600">
-                  {avatarFile.name}
+                <span className='text-sm text-gray-600'>
+                  {avatarFile.name.length > 20
+                    ? avatarFile.name.slice(0, 17) + '...'
+                    : avatarFile.name}
                 </span>
               )}
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="cursor-pointer">Cancel</Button>
+              <Button variant='outline' className='cursor-pointer'>
+                Cancel
+              </Button>
             </DialogClose>
-            <Button type="submit" className="cursor-pointer">Save changes</Button>
+            <Button type='submit' className='cursor-pointer'>
+              Save changes
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
