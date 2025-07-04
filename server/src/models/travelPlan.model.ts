@@ -1,5 +1,8 @@
 import { Document, Model, model, Schema, Types } from 'mongoose';
 
+/**
+ * Location data schema from Google Maps
+ */
 const locationSchema: Schema = new Schema(
   {
     /** Unique place ID from Google, used for detailed information queries later */
@@ -125,7 +128,9 @@ const travelPlanSchema: Schema<ITravelPlan> = new Schema(
   { timestamps: true },
 );
 
-export const TravelPlan: Model<ITravelPlan> = model<ITravelPlan>(
+const TravelPlan: Model<ITravelPlan> = model<ITravelPlan>(
   'TravelPlan',
   travelPlanSchema,
 );
+
+export default TravelPlan;

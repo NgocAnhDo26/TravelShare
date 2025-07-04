@@ -17,7 +17,8 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Allow cookies to be sent with requests
 };
-const morganFormat = ':method :url :status :res[content-length] - :response-time ms';
+const morganFormat =
+  ':method :url :status :res[content-length] - :response-time ms';
 
 app.use(morgan(morganFormat, { stream: morganStream }));
 app.use(cors(corsOptions));
@@ -29,7 +30,7 @@ app.use(cookieParser());
 // app.use("/api/items", itemRoutes);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
-app.use('/api/plans',travelPlanRouter);
+app.use('/api/plans', travelPlanRouter);
 
 // Global error handler (should be after routes)
 app.use(errorHandler);

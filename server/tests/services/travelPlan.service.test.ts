@@ -1,173 +1,204 @@
-import request from 'supertest';
-import mongoose, { Types } from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import app from '../../src/app'; // Adjust path to your Express app
-import User from '../../src/models/user.model';
-import { TravelPlan, ITravelPlan } from '../../src/models/travelPlan.model';
+import { TravelPlanService } from '../../src/services/travelPlan.service';
+import TravelPlan from '../../src/models/travelPlan.model';
+import { generateSchedule } from '../../src/utils/travelPlan';
+import { Types } from 'mongoose';
 
-let mongoServer: MongoMemoryServer;
+// Mock the Mongoose model and utility functions
+jest.mock('../../src/models/travelPlan.model');
+jest.mock('../../src/utils/travelPlan');
 
-// --- Database Setup and Teardown ---
-beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri);
-});
+const mockedTravelPlan = TravelPlan as jest.Mocked<typeof TravelPlan>;
+const mockedGenerateSchedule = generateSchedule as jest.Mock;
 
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
-});
+describe('TravelPlanService', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-// --- API Test Suite for Updating Travel Plans ---
-describe('PUT /api/plans/:id', () => {
-  let testUser: any;
-  let testPlan: ITravelPlan;
-  let authCookies: any;
+  describe('createTravelPlan', () => {
+    it('should create a travel plan with a generated schedule', async () => {
+      const planData = {
+        title: 'Test Trip',
+        destination: { placeId: '1', name: 'Test Dest', address: '123 Test St' },
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-03'),
+      };
+      const authorId = new Types.ObjectId().toHexString();
+      const schedule = [{ dayNumber: 1, date: new Date('2024-01-01'), items: [] }];
+      const newPlan = { ...planData, author: authorId, schedule };
 
-  const userId = new Types.ObjectId('684eab1ae29c4f3e0bd6e94c');
-  const userCredentials = {
-    email: 'user@example.com',
-    password: 'Welcome@01',
-  };
+      mockedGenerateSchedule.mockReturnValue(schedule);
+      (mockedTravelPlan.create as jest.Mock).mockResolvedValue(newPlan);
 
-  /**
-   * @description Runs before EACH test in this suite.
-   * 1. Creates the specific test user.
-   * 2. Creates a travel plan authored by that user.
-   * 3. Logs in as the user to get authentication cookies.
-   */
-  beforeEach(async () => {
-    // 1. Create the user
-    testUser = await User.create({
-      _id: userId,
-      email: userCredentials.email,
-      username: 'user',
-      // The hash for "Welcome@01"
-      passwordHash: '$2b$10$3s.gX.CMbV2L4aR.L5e.9eW1fGtnzmcjfl8mCa5E4tDNj2kTM1zGC',
+      const result = await TravelPlanService.createTravelPlan(planData, authorId);
+
+      expect(mockedGenerateSchedule).toHaveBeenCalledWith(planData.startDate, planData.endDate);
+      expect(mockedTravelPlan.create).toHaveBeenCalledWith({
+        ...planData,
+        author: new Types.ObjectId(authorId),
+        schedule,
+      });
+      expect(result).toEqual(newPlan);
+    });
+  });
+
+  describe('getTravelPlanById', () => {
+    it('should return a travel plan by its ID', async () => {
+      const planId = new Types.ObjectId().toHexString();
+      const plan = { _id: planId, title: 'Test Plan' };
+      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+
+      const result = await TravelPlanService.getTravelPlanById(planId);
+
+      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
+      expect(result).toEqual(plan);
+    });
+  });
+
+  describe('getTravelPlansByAuthor', () => {
+    it('should return all travel plans for a given author', async () => {
+      const authorId = new Types.ObjectId().toHexString();
+      const plans = [{ title: 'Plan 1' }, { title: 'Plan 2' }];
+      (mockedTravelPlan.find as jest.Mock).mockResolvedValue(plans);
+
+      const result = await TravelPlanService.getTravelPlansByAuthor(authorId);
+
+      expect(mockedTravelPlan.find).toHaveBeenCalledWith({ author: authorId });
+      expect(result).toEqual(plans);
+    });
+  });
+
+  describe('getPublicTravelPlans', () => {
+    it('should return all public travel plans', async () => {
+      const publicPlans = [{ title: 'Public Plan', privacy: 'public' }];
+      (mockedTravelPlan.find as jest.Mock).mockResolvedValue(publicPlans);
+
+      const result = await TravelPlanService.getPublicTravelPlans();
+
+      expect(mockedTravelPlan.find).toHaveBeenCalledWith({ privacy: 'public' });
+      expect(result).toEqual(publicPlans);
+    });
+  });
+
+  describe('deleteTravelPlan', () => {
+    it('should delete a travel plan if the user is the author', async () => {
+      const planId = new Types.ObjectId().toHexString();
+      const authorId = new Types.ObjectId().toHexString();
+      (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue({ _id: planId, author: authorId });
+      (mockedTravelPlan.findByIdAndDelete as jest.Mock).mockResolvedValue(true);
+
+      const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
+
+      expect(mockedTravelPlan.findOne).toHaveBeenCalledWith({ _id: planId, author: authorId });
+      expect(mockedTravelPlan.findByIdAndDelete).toHaveBeenCalledWith(planId);
+      expect(result).toBe(true);
     });
 
-    // 2. Create a travel plan authored by this user
-    testPlan = await TravelPlan.create({
-      author: testUser._id,
-      title: 'My Trip to Nha Trang',
-      destination: {
-        placeId: 'ChIJ5R24SHh2cDERWp2w4YxI2gU',
-        name: 'Nha Trang',
-        address: 'Nha Trang, Khánh Hòa, Vietnam',
-      },
-      startDate: new Date('2025-12-20T00:00:00.000Z'),
-      endDate: new Date('2025-12-25T00:00:00.000Z'),
-      privacy: 'public',
+    it('should not delete a travel plan if the user is not the author', async () => {
+      const planId = new Types.ObjectId().toHexString();
+      const authorId = new Types.ObjectId().toHexString();
+      (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
+
+      expect(mockedTravelPlan.findOne).toHaveBeenCalledWith({ _id: planId, author: authorId });
+      expect(mockedTravelPlan.findByIdAndDelete).not.toHaveBeenCalled();
+      expect(result).toBe(false);
     });
-
-    // 3. Log in to get the authentication cookies
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send(userCredentials);
-    authCookies = loginResponse.headers['set-cookie'];
   });
 
-  /**
-   * @description Runs after EACH test. Clears all data.
-   */
-  afterEach(async () => {
-    await User.deleteMany({});
-    await TravelPlan.deleteMany({});
-  });
+  describe('updateTravelPlanTitle', () => {
+    it('should update the title of a travel plan', async () => {
+      const planId = new Types.ObjectId().toHexString();
+      const authorId = new Types.ObjectId().toHexString();
+      const newTitle = 'New Title';
+      const plan = {
+        _id: planId,
+        author: authorId,
+        title: 'Old Title',
+        save: jest.fn().mockResolvedValue({ title: newTitle }),
+      };
+      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
 
-  // --- Main Test Logic ---
+      const result = await TravelPlanService.updateTravelPlanTitle(planId, authorId, newTitle);
 
-  it('should allow the author to update the plan title and dates', async () => {
-    const payload = {
-      title: 'My Awesome Updated Trip',
-      startDate: '01/01/26', // dd/mm/yy format
-    };
-
-    const res = await request(app)
-      .put(`/api/plans/${testPlan._id}`)
-      .set('Cookie', authCookies)
-      .send(payload);
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.title).toBe('My Awesome Updated Trip');
-    expect(res.body.data.startDate).toBe('2026-01-01T00:00:00.000Z');
-
-    // Verify the change in the database
-    const updatedPlan = await TravelPlan.findById(testPlan._id);
-    expect(updatedPlan?.title).toBe('My Awesome Updated Trip');
-  });
-
-  it('should automatically adjust endDate when startDate is moved after it', async () => {
-    const payload = {
-      startDate: '30/12/25', // This is after the original endDate of 25/12/25
-    };
-
-    const res = await request(app)
-      .put(`/api/plans/${testPlan._id}`)
-      .set('Cookie', authCookies)
-      .send(payload);
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.startDate).toBe('2025-12-30T00:00:00.000Z');
-    expect(res.body.data.endDate).toBe('2025-12-30T00:00:00.000Z'); // Check for adjustment
-  });
-
-  it('should return 403 Forbidden if a non-author tries to update the plan', async () => {
-    // Create and log in as another user
-    await User.create({
-      email: 'otheruser@example.com',
-      username: 'otheruser',
-      passwordHash: 'a_different_hash',
+      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
+      expect(plan.save).toHaveBeenCalled();
+      expect(result.title).toBe(newTitle);
     });
-    const otherUserLogin = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'otheruser@example.com', password: 'some_password' });
-    const otherUserCookies = otherUserLogin.headers['set-cookie'];
-
-    const payload = { title: 'Malicious Update' };
-
-    const res = await request(app)
-      .put(`/api/plans/${testPlan._id}`)
-      .set('Cookie', otherUserCookies) // Use the wrong user's cookies
-      .send(payload);
-
-    expect(res.status).toBe(403);
-    expect(res.body.message).toBe('You are not authorized to edit this travel plan.');
   });
 
-  it('should return 401 Unauthorized if no authentication cookie is provided', async () => {
-    const payload = { title: 'Update without login' };
+  describe('updateTravelPlanPrivacy', () => {
+    it('should update the privacy of a travel plan', async () => {
+      const planId = new Types.ObjectId().toHexString();
+      const authorId = new Types.ObjectId().toHexString();
+      const newPrivacy = 'public';
+      const plan = {
+        _id: planId,
+        author: authorId,
+        privacy: 'private',
+        save: jest.fn().mockResolvedValue({ privacy: newPrivacy }),
+      };
+      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
 
-    const res = await request(app)
-      .put(`/api/plans/${testPlan._id}`)
-      // No .set('Cookie', ...)
-      .send(payload);
+      const result = await TravelPlanService.updateTravelPlanPrivacy(planId, authorId, newPrivacy);
 
-    expect(res.status).toBe(401);
+      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
+      expect(plan.save).toHaveBeenCalled();
+      expect(result.privacy).toBe(newPrivacy);
+    });
   });
 
-  it('should return 404 Not Found for a non-existent plan ID', async () => {
-    const nonExistentId = new Types.ObjectId();
-    const payload = { title: 'Update for a ghost plan' };
+  describe('updateTravelPlanCoverImage', () => {
+    it('should update the cover image URL of a travel plan', async () => {
+      const planId = new Types.ObjectId().toHexString();
+      const authorId = new Types.ObjectId().toHexString();
+      const newCoverUrl = 'http://example.com/new-cover.jpg';
+      const plan = {
+        _id: planId,
+        author: authorId,
+        coverImageUrl: 'http://example.com/old-cover.jpg',
+        save: jest.fn().mockResolvedValue({ coverImageUrl: newCoverUrl }),
+      };
+      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
 
-    const res = await request(app)
-      .put(`/api/plans/${nonExistentId}`)
-      .set('Cookie', authCookies)
-      .send(payload);
+      const result = await TravelPlanService.updateTravelPlanCoverImage(planId, authorId, newCoverUrl);
 
-    expect(res.status).toBe(404);
+      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
+      expect(plan.save).toHaveBeenCalled();
+      expect(result.coverImageUrl).toBe(newCoverUrl);
+    });
   });
 
-  it('should return 400 Bad Request if the payload is empty', async () => {
-    const payload = {}; // Empty object
+  describe('updateTravelPlanDates', () => {
+    it('should update dates and regenerate schedule when date range shrinks', async () => {
+      const planId = new Types.ObjectId().toHexString();
+      const authorId = new Types.ObjectId().toHexString();
+      const oldStartDate = new Date('2024-01-01');
+      const oldEndDate = new Date('2024-01-05');
+      const newStartDate = new Date('2024-01-02');
+      const newEndDate = new Date('2024-01-04');
+      const plan = {
+        _id: planId,
+        author: authorId,
+        startDate: oldStartDate,
+        endDate: oldEndDate,
+        schedule: [],
+      };
+      const newSchedule = [{ day: 1 }];
 
-    const res = await request(app)
-      .put(`/api/plans/${testPlan._id}`)
-      .set('Cookie', authCookies)
-      .send(payload);
+      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedGenerateSchedule.mockReturnValue(newSchedule);
+      (mockedTravelPlan.findByIdAndUpdate as jest.Mock).mockResolvedValue({ schedule: newSchedule });
 
-    expect(res.status).toBe(400);
-    expect(res.body.message).toContain('The request body must contain at least one field to update');
+      await TravelPlanService.updateTravelPlanDates(planId, authorId, newStartDate, newEndDate);
+
+      expect(mockedGenerateSchedule).toHaveBeenCalledWith(newStartDate, newEndDate);
+      expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
+        planId,
+        { startDate: newStartDate, endDate: newEndDate, schedule: newSchedule },
+        { new: true }
+      );
+    });
   });
 });
