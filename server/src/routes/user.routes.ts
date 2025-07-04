@@ -30,11 +30,6 @@ router.get(
   AuthJwtMiddleware.verifyToken,
   FollowController.getFollowing,
 );
-router.get(
-  '/profile',
-  AuthJwtMiddleware.verifyToken,
-  UserController.getProfile,
-);
 
 router.get(
   '/edit-profile',
@@ -48,5 +43,12 @@ router.put(
   uploadUseCases.singleFileUpload('avatar'),
   UserController.updateProfile,
 );
+
+// --- Public Routes ---
+router.get(
+  '/:id/profile',
+  UserController.getProfile,
+);
+
 
 export default router;

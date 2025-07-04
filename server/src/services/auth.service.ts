@@ -283,9 +283,16 @@ const AuthService: IAuthenticationService = {
       let decoded: JwtPayload | string;
       if (accessToken) {
         decoded = jwt.verify(accessToken, process.env.JWT_SECRET as Secret);
+        const userId = (decoded as JwtPayload).userId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+          res.status(401).json({ valid: false, error: 'User not found.' });
+          return;
+        }
         res
           .status(200)
-          .json({ valid: true, userId: (decoded as JwtPayload).userId });
+          .json({ valid: true, userId: userId, username: user.username, avatarUrl: user.avatarUrl });
         return;
       }
       if (refreshToken) {
@@ -294,6 +301,11 @@ const AuthService: IAuthenticationService = {
           process.env.JWT_REFRESH_SECRET as Secret,
         );
         const userId = (decoded as JwtPayload).userId;
+        const user = await User.findById(userId);
+        if (!user) {
+          res.status(401).json({ valid: false, error: 'User not found.' });
+          return;
+        }
         const newAccessToken = createToken(userId, 'access');
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
@@ -301,7 +313,7 @@ const AuthService: IAuthenticationService = {
           maxAge: 3 * 60 * 60 * 1000, // 3 hours
           sameSite: 'strict',
         });
-        res.status(200).json({ valid: true, userId });
+        res.status(200).json({ valid: true, userId: userId, username: user.username, avatarUrl: user.avatarUrl });
         return;
       }
       res.status(401).json({ valid: false, error: 'Invalid token.' });

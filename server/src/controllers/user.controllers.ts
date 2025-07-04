@@ -234,7 +234,7 @@ const UserController: IUserController = {
   },
 
   getProfile: async (req: Request, res: Response) => {
-    const userId = req.user as string;
+    const userId = req.params.id;
     if (!isValidObjectId(userId)) {
       res.status(400).json({ error: 'Invalid user ID format.' });
       return;
