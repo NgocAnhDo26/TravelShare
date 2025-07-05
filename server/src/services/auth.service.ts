@@ -261,7 +261,7 @@ const AuthService: IAuthenticationService = {
         sameSite: 'strict',
       });
 
-       res.status(200).json({
+      res.status(200).json({
         message: 'Login successful.',
         userId: user._id,
         username: user.username,
@@ -290,9 +290,12 @@ const AuthService: IAuthenticationService = {
           res.status(401).json({ valid: false, error: 'User not found.' });
           return;
         }
-        res
-          .status(200)
-          .json({ valid: true, userId: userId, username: user.username, avatarUrl: user.avatarUrl });
+        res.status(200).json({
+          valid: true,
+          userId: userId,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        });
         return;
       }
       if (refreshToken) {
@@ -313,7 +316,12 @@ const AuthService: IAuthenticationService = {
           maxAge: 3 * 60 * 60 * 1000, // 3 hours
           sameSite: 'strict',
         });
-        res.status(200).json({ valid: true, userId: userId, username: user.username, avatarUrl: user.avatarUrl });
+        res.status(200).json({
+          valid: true,
+          userId: userId,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        });
         return;
       }
       res.status(401).json({ valid: false, error: 'Invalid token.' });

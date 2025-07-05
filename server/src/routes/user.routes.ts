@@ -31,12 +31,14 @@ router.get(
   FollowController.getFollowing,
 );
 
+/** Get user (only current user) edit profile */
 router.get(
   '/edit-profile',
   AuthJwtMiddleware.verifyToken,
   UserController.getEditProfile,
 );
 
+/** Update user profile (only current user) */
 router.put(
   '/edit-profile',
   AuthJwtMiddleware.verifyToken,
@@ -45,10 +47,7 @@ router.put(
 );
 
 // --- Public Routes ---
-router.get(
-  '/:id/profile',
-  UserController.getProfile,
-);
-
+/** Get user profile (current user or any user) */
+router.get('/:id/profile', UserController.getProfile);
 
 export default router;

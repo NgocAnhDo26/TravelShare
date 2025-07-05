@@ -16,22 +16,22 @@ interface ITravelPlanController {
   updateTravelPlanTitle(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void>;
   updateTravelPlanPrivacy(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void>;
   updateTravelPlanCoverImage(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void>;
   updateTravelPlanDates(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void>;
 }
 
@@ -46,10 +46,7 @@ const TravelPlanController: ITravelPlanController = {
    * @param req - Express request object
    * @param res - Express response object
    */
-  async createTravelPlan(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
+  async createTravelPlan(req: Request, res: Response): Promise<void> {
     try {
       const authorId = req.user as string;
 
@@ -61,7 +58,11 @@ const TravelPlanController: ITravelPlanController = {
       }
 
       const travelPlan = await TravelPlanService.createTravelPlan(
-        { ...req.body, startDate: new Date(req.body.startDate), endDate: new Date(req.body.endDate) },
+        {
+          ...req.body,
+          startDate: new Date(req.body.startDate),
+          endDate: new Date(req.body.endDate),
+        },
         authorId,
       );
 
@@ -100,10 +101,7 @@ const TravelPlanController: ITravelPlanController = {
    * @param req - Express request object
    * @param res - Express response object
    */
-  async getTravelPlanById(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
+  async getTravelPlanById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const travelPlan = await TravelPlanService.getTravelPlanById(id);
@@ -138,10 +136,7 @@ const TravelPlanController: ITravelPlanController = {
    * @param req - Express request object
    * @param res - Express response object
    */
-  async getTravelPlansByAuthor(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
+  async getTravelPlansByAuthor(req: Request, res: Response): Promise<void> {
     try {
       const { authorId } = req.params;
       const travelPlans =
@@ -168,10 +163,7 @@ const TravelPlanController: ITravelPlanController = {
   /**
    * Get public travel plans
    */
-  async getPublicTravelPlans(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
+  async getPublicTravelPlans(req: Request, res: Response): Promise<void> {
     try {
       const travelPlans = await TravelPlanService.getPublicTravelPlans();
       res.status(HTTP_STATUS.OK).json(travelPlans);
@@ -190,14 +182,11 @@ const TravelPlanController: ITravelPlanController = {
    * @param req - Express request object
    * @param res - Express response object
    */
-  async deleteTravelPlan(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
+  async deleteTravelPlan(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const authorId = req.user as string;
-      
+
       if (!authorId) {
         res.status(HTTP_STATUS.UNAUTHORIZED).json({
           error: 'You are not authorized to perform this action.',
@@ -213,13 +202,13 @@ const TravelPlanController: ITravelPlanController = {
         });
         return;
       }
-      
+
       res.status(HTTP_STATUS.OK).json({
         message: 'Travel plan deleted successfully',
       });
     } catch (error) {
       console.error('Error in deleteTravelPlan controller:', error);
-      
+
       if (error instanceof Error && error.name === 'CastError') {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           error: 'Invalid travel plan ID format',
@@ -246,14 +235,14 @@ const TravelPlanController: ITravelPlanController = {
       const userId = req.user as string;
       const planId = req.params.id;
       const { title } = req.body;
-      
+
       if (!title) {
         res
           .status(HTTP_STATUS.BAD_REQUEST)
           .json({ message: 'Title is required.' });
         return;
       }
-      
+
       const updatedPlan = await TravelPlanService.updateTravelPlanTitle(
         planId,
         userId,
@@ -274,7 +263,7 @@ const TravelPlanController: ITravelPlanController = {
       const userId = req.user as string;
       const planId = req.params.id;
       const { privacy } = req.body;
-      
+
       if (!privacy || !['public', 'private'].includes(privacy)) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           message: 'A valid privacy setting (public/private) is required.',
@@ -336,14 +325,14 @@ const TravelPlanController: ITravelPlanController = {
       const userId = req.user as string;
       const planId = req.params.id;
       const { startDate, endDate } = req.body;
-  
+
       if (!startDate || !endDate) {
         res
           .status(HTTP_STATUS.BAD_REQUEST)
           .json({ message: 'Both startDate and endDate are required.' });
         return;
       }
-  
+
       const updatedPlan = await TravelPlanService.updateTravelPlanDates(
         planId,
         userId,

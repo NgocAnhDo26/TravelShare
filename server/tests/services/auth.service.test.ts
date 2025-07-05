@@ -311,7 +311,12 @@ describe('Auth Service', () => {
         .set('Cookie', `accessToken=${accessToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toEqual({ valid: true, userId: user._id.toString() });
+      expect(res.body).toEqual({
+        valid: true,
+        userId: user._id.toString(),
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      });
     });
 
     it('should use refresh token to issue a new access token if only refresh token is provided', async () => {
@@ -320,7 +325,12 @@ describe('Auth Service', () => {
         .set('Cookie', `refreshToken=${refreshToken}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toEqual({ valid: true, userId: user._id.toString() });
+      expect(res.body).toEqual({
+        valid: true,
+        userId: user._id.toString(),
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      });
       expect(res.headers['set-cookie'][0]).toContain('accessToken');
     });
 

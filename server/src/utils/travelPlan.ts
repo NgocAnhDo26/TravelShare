@@ -23,6 +23,5 @@ export function generateSchedule(startDate: Date, endDate: Date) {
     dayNumber++;
   }
 
- 
   return schedule;
 }

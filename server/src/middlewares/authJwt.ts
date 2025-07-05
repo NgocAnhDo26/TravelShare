@@ -102,9 +102,14 @@ const AuthJwtMiddleware: IAuthJwtMiddleware = {
         return next();
       }
 
-      return res.status(403).json({ error: 'Forbidden: Not the author or public.' });
+      return res
+        .status(403)
+        .json({ error: 'Forbidden: Not the author or public.' });
     } catch (error) {
-      console.error('Authorization error in isAuthorOrPublic middleware:', error);
+      console.error(
+        'Authorization error in isAuthorOrPublic middleware:',
+        error,
+      );
       return res.status(500).json({ error: 'Internal server error.' });
     }
   },
