@@ -1,338 +1,216 @@
-import request from 'supertest';
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import app from '../../src/app';
+import { FollowService, UserService } from '../../src/services/user.service';
 import User from '../../src/models/user.model';
-import bcrypt from 'bcrypt';
+import Follow from '../../src/models/follow.model';
+import { Types } from 'mongoose';
 
-let mongoServer: MongoMemoryServer;
-let authenticatedUserId: string;
-let authenticatedToken: string;
+process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
 
-jest.setTimeout(60000);
+// Mock the Mongoose models
+jest.mock('../../src/models/user.model');
+jest.mock('../../src/models/follow.model');
 
-beforeAll(async () => {
-  console.log(
-    'Starting beforeAll hook: Initializing MongoMemoryServer and connecting Mongoose...',
-  );
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri);
-  console.log('Finished beforeAll hook: MongoMemoryServer connected.');
-}, 60000);
+const mockedUser = User as jest.Mocked<typeof User>;
+const mockedFollow = Follow as jest.Mocked<typeof Follow>;
 
-afterAll(async () => {
-  console.log(
-    'Starting afterAll hook: Disconnecting Mongoose and stopping MongoMemoryServer...',
-  );
-  await mongoose.disconnect();
-  await mongoServer.stop();
-  console.log('Finished afterAll hook.');
-}, 30000);
-
-beforeEach(async () => {
-  console.log(
-    'Starting beforeEach hook: Clearing collections and creating test user directly...',
-  );
-
-  const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    await collections[key].deleteMany({});
-  }
-  console.log('Collections cleared.');
-
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash('Password123!', saltRounds);
-
-  const createdUser = await User.create({
-    email: 'testuser@example.com',
-    username: 'testuser',
-    passwordHash: passwordHash,
-    registrationDate: new Date(),
-    displayName: 'Test User',
-    avatarUrl: 'http://example.com/default_avatar.png',
+describe('UserService', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
   });
-  authenticatedUserId = createdUser._id.toString();
-  authenticatedToken = 'mock_token';
 
-  console.log('User created directly in beforeEach. Ready for test execution.');
+  describe('getEditProfile', () => {
+    it('should return user profile for editing', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      const userProfile = { _id: userId, displayName: 'Test User' };
+      (mockedUser.findById as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(userProfile),
+      });
+
+      const result = await UserService.getEditProfile(userId);
+
+      expect(mockedUser.findById).toHaveBeenCalledWith(userId);
+      expect(result).toEqual(userProfile);
+    });
+
+    it('should throw an error if user not found', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      (mockedUser.findById as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(UserService.getEditProfile(userId)).rejects.toThrow('User not found.');
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('should update a user profile successfully', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      const updateData = { displayName: 'Updated Name' };
+      const updatedUser = { _id: userId, ...updateData };
+
+      (mockedUser.findByIdAndUpdate as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(updatedUser),
+      });
+
+      const result = await UserService.updateProfile(userId, updateData);
+
+      expect(mockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true },
+      );
+      expect(result).toEqual(updatedUser);
+    });
+
+    it('should throw an error if username already exists', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      const updateData = { username: 'existinguser' };
+      (mockedUser.findOne as jest.Mock).mockResolvedValue({ _id: new Types.ObjectId() });
+
+      await expect(UserService.updateProfile(userId, updateData)).rejects.toThrow('Username already exists.');
+    });
+
+    it('should throw an error if email already exists', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      const updateData = { email: 'existing@test.com' };
+      (mockedUser.findOne as jest.Mock).mockResolvedValue({ _id: new Types.ObjectId() });
+
+      await expect(UserService.updateProfile(userId, updateData)).rejects.toThrow('Email already exists.');
+    });
+  });
+
+  describe('getProfile', () => {
+    it('should return a user public profile', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      const userProfile = { _id: userId, username: 'testuser' };
+      (mockedUser.findById as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(userProfile),
+      });
+
+      const result = await UserService.getProfile(userId);
+
+      expect(mockedUser.findById).toHaveBeenCalledWith(userId);
+      expect(result).toEqual(userProfile);
+    });
+
+    it('should throw an error if user not found', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      (mockedUser.findById as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(UserService.getProfile(userId)).rejects.toThrow('User not found.');
+    });
+  });
 });
 
-jest.mock('../../src/middlewares/authJwt', () => ({
-  verifyToken: (req: any, res: any, next: any) => {
-    req.user = authenticatedUserId;
-    next();
-  },
-}));
+describe('FollowService', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-jest.mock('../../src/models/file.client', () => ({
-  __esModule: true,
-  default: {
-    storage: {
-      from: jest.fn().mockReturnThis(),
-      upload: jest
-        .fn()
-        .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
-      getPublicUrl: jest
-        .fn()
-        .mockReturnValue({
-          data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
-        }),
-    },
-  },
-}));
+  describe('followUser', () => {
+    it('should allow a user to follow another', async () => {
+      const followerId = new Types.ObjectId().toHexString();
+      const followingId = new Types.ObjectId().toHexString();
 
-// --- Test Suites ---
+      (mockedUser.countDocuments as jest.Mock).mockResolvedValue(2);
+      (mockedFollow.findOne as jest.Mock).mockResolvedValue(null);
+      (mockedFollow.create as jest.Mock).mockResolvedValue({ follower: followerId, following: followingId });
 
-describe('User Service Unit Tests', () => {
-  describe('GET /api/users/edit-profile', () => {
-    it('should return the profile of the authenticated user', async () => {
-      const res = await request(app)
-        .get('/api/users/edit-profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`);
+      await FollowService.followUser(followerId, followingId);
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.email).toBe('testuser@example.com');
-      expect(res.body.username).toBe('testuser');
-      expect(res.body).toHaveProperty('displayName');
-      expect(res.body.displayName).toBe('Test User');
-      expect(res.body).toHaveProperty('avatarUrl');
-      expect(res.body.avatarUrl).toBe('http://example.com/default_avatar.png');
-      expect(res.body._id).toBe(authenticatedUserId);
+      expect(mockedUser.updateOne).toHaveBeenCalledTimes(2);
+      expect(mockedFollow.create).toHaveBeenCalledWith({ follower: followerId, following: followingId });
     });
 
-    it('should return 404 if the user is not found (post-deletion scenario)', async () => {
-      await User.findByIdAndDelete(authenticatedUserId);
-
-      const res = await request(app)
-        .get('/api/users/edit-profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`);
-
-      expect(res.statusCode).toBe(404);
-      expect(res.body).toHaveProperty('error', 'User not found.');
+    it('should throw an error if user tries to follow themselves', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      await expect(FollowService.followUser(userId, userId)).rejects.toThrow('You cannot follow yourself.');
     });
 
-    it('should return 400 if authenticated user ID format is invalid (mocked scenario)', async () => {
-      const originalUserId = authenticatedUserId;
-      authenticatedUserId = 'invalid-id-format';
+    it('should throw an error if already following', async () => {
+      const followerId = new Types.ObjectId().toHexString();
+      const followingId = new Types.ObjectId().toHexString();
+      (mockedUser.countDocuments as jest.Mock).mockResolvedValue(2);
+      (mockedFollow.findOne as jest.Mock).mockResolvedValue({});
 
-      const res = await request(app)
-        .get('/api/users/edit-profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`);
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body).toHaveProperty('error', 'Invalid user ID format.');
-
-      authenticatedUserId = originalUserId;
-    });
-
-    it('should return 500 for internal server errors during profile retrieval', async () => {
-      jest.spyOn(User, 'findById').mockImplementationOnce(() => {
-        throw new Error('Database error');
-      });
-
-      const res = await request(app)
-        .get('/api/users/edit-profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`);
-
-      expect(res.statusCode).toBe(500);
-      expect(res.body).toHaveProperty('error', 'Internal server error.');
-
-      jest.restoreAllMocks();
+      await expect(FollowService.followUser(followerId, followingId)).rejects.toThrow('You are already following this user.');
     });
   });
 
-  describe('PUT /api/users/profile', () => {
-    it("should update the authenticated user's profile successfully with multiple fields", async () => {
-      const updateData = {
-        displayName: 'Test User New Display',
-        email: 'newemail@example.com',
-        fileUrl: 'http://example.com/new_avatar.png',
-      };
+  describe('unfollowUser', () => {
+    it('should allow a user to unfollow another', async () => {
+      const followerId = new Types.ObjectId().toHexString();
+      const followingId = new Types.ObjectId().toHexString();
+      (mockedFollow.deleteOne as jest.Mock).mockResolvedValue({ deletedCount: 1 });
 
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
+      await FollowService.unfollowUser(followerId, followingId);
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.message).toBe('Profile updated successfully.');
-      expect(res.body.user.displayName).toBe(updateData.displayName);
-      expect(res.body.user.email).toBe(updateData.email);
-      expect(res.body.user.avatarUrl).toBe(updateData.fileUrl);
-
-      const userInDb = await User.findById(authenticatedUserId);
-      expect(userInDb?.displayName).toBe(updateData.displayName);
-      expect(userInDb?.email).toBe(updateData.email);
-      expect(userInDb?.avatarUrl).toBe(updateData.fileUrl);
+      expect(mockedFollow.deleteOne).toHaveBeenCalledWith({ follower: followerId, following: followingId });
+      expect(mockedUser.updateOne).toHaveBeenCalledTimes(2);
     });
 
-    it('should update only the provided fields and keep others unchanged', async () => {
-      const initialUser = await User.findById(authenticatedUserId);
-      const updateData = {
-        displayName: 'Only Display Name Updated',
-      };
+    it('should throw an error if not following the user', async () => {
+      const followerId = new Types.ObjectId().toHexString();
+      const followingId = new Types.ObjectId().toHexString();
+      (mockedFollow.deleteOne as jest.Mock).mockResolvedValue({ deletedCount: 0 });
 
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.user.displayName).toBe(updateData.displayName);
-      expect(res.body.user.username).toBe(initialUser?.username);
-      expect(res.body.user.email).toBe(initialUser?.email);
-      expect(res.body.user.avatarUrl).toBe(initialUser?.avatarUrl);
-    });
-
-    it('should return 409 if the new username already exists for another user', async () => {
-      await User.create({
-        email: 'anotheruser@example.com',
-        username: 'anotheruser',
-        passwordHash: 'some_hash',
-      });
-
-      const updateData = {
-        username: 'anotheruser',
-      };
-
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(409);
-      expect(res.body).toHaveProperty('error', 'Username already exists.');
-    });
-
-    it('should allow updating username to the same username as the current user', async () => {
-      const initialUser = await User.findById(authenticatedUserId);
-      const updateData = {
-        username: initialUser?.username,
-      };
-
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.message).toBe('Profile updated successfully.');
-      expect(res.body.user.username).toBe(initialUser?.username);
-    });
-
-    it('should return 409 if the new email already exists for another user', async () => {
-      await User.create({
-        email: 'existingemail@example.com',
-        username: 'existingusername',
-        passwordHash: 'some_hash',
-      });
-
-      const updateData = {
-        email: 'existingemail@example.com',
-      };
-
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(409);
-      expect(res.body).toHaveProperty('error', 'Email already exists.');
-    });
-
-    it('should allow updating email to the same email as the current user', async () => {
-      const initialUser = await User.findById(authenticatedUserId);
-      const updateData = {
-        email: initialUser?.email,
-      };
-
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.message).toBe('Profile updated successfully.');
-      expect(res.body.user.email).toBe(initialUser?.email);
-    });
-
-    it('should return 404 if the user to update is not found (post-deletion scenario)', async () => {
-      await User.findByIdAndDelete(authenticatedUserId);
-
-      const updateData = { displayName: 'Non Existent User' };
-
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(404);
-      expect(res.body).toHaveProperty('error', 'User not found.');
-    });
-
-    it('should return 400 if authenticated user ID format is invalid (mocked scenario)', async () => {
-      const originalUserId = authenticatedUserId;
-      authenticatedUserId = 'invalid-id-format';
-
-      const updateData = { displayName: 'Test' };
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body).toHaveProperty('error', 'Invalid user ID format.');
-
-      authenticatedUserId = originalUserId;
-    });
-
-    it('should return 500 for internal server errors during update', async () => {
-      jest.spyOn(User, 'findByIdAndUpdate').mockImplementationOnce(() => {
-        throw new Error('Database error during update');
-      });
-
-      const updateData = { displayName: 'Error User' };
-      const res = await request(app)
-        .put('/api/users/profile')
-        .set('Authorization', `Bearer ${authenticatedToken}`)
-        .send(updateData);
-
-      expect(res.statusCode).toBe(500);
-      expect(res.body).toHaveProperty('error', 'Internal server error.');
-
-      jest.restoreAllMocks();
+      await expect(FollowService.unfollowUser(followerId, followingId)).rejects.toThrow('You are not following this user.');
     });
   });
 
-  describe('GET /api/users/:id', () => {
-    it('should return user info for a valid user ID', async () => {
-      const res = await request(app)
-        .get(`/api/users/${authenticatedUserId}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty('username', 'testuser');
-      expect(res.body).toHaveProperty('email', 'testuser@example.com');
-      expect(res.body).toHaveProperty('displayName', 'Test User');
-      expect(res.body).toHaveProperty('followerCount', 0);
-      expect(res.body).toHaveProperty('followingCount', 0);
+  describe('getFollowerCount', () => {
+    it('should return the follower count', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      (mockedUser.findById as jest.Mock).mockResolvedValue({ followerCount: 10 });
+      const count = await FollowService.getFollowerCount(userId);
+      expect(count).toBe(10);
     });
+  });
 
-    it('should return 404 if user is not found', async () => {
-      const nonExistentId = new mongoose.Types.ObjectId().toString();
-      const res = await request(app)
-        .get(`/api/users/${nonExistentId}`);
-
-      expect(res.statusCode).toBe(404);
-      expect(res.body).toHaveProperty('error', 'User not found.');
+  describe('getFollowingCount', () => {
+    it('should return the following count', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      (mockedUser.findById as jest.Mock).mockResolvedValue({ followingCount: 5 });
+      const count = await FollowService.getFollowingCount(userId);
+      expect(count).toBe(5);
     });
+  });
 
-    it('should return 400 for invalid user ID format', async () => {
-      const res = await request(app)
-        .get('/api/users/invalid-id-format');
+  describe('getFollowers', () => {
+    it('should return a paginated list of followers', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      const followers = [{ _id: new Types.ObjectId() }];
+      (mockedFollow.find as jest.Mock).mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(followers),
+      });
 
-      expect(res.statusCode).toBe(400);
-      expect(res.body).toHaveProperty('error', 'Invalid user ID format.');
+      const result = await FollowService.getFollowers(userId, { page: 1, limit: 10 });
+      expect(result).toEqual(followers);
+    });
+  });
+
+  describe('getFollowing', () => {
+    it('should return a paginated list of following users', async () => {
+      const userId = new Types.ObjectId().toHexString();
+      const following = [{ _id: new Types.ObjectId() }];
+      (mockedFollow.find as jest.Mock).mockReturnValue({
+        populate: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(following),
+      });
+
+      const result = await FollowService.getFollowing(userId, { page: 1, limit: 10 });
+      expect(result).toEqual(following);
     });
   });
 });

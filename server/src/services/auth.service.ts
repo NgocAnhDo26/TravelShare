@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-const saltRounds = 12;
+const saltRounds = 10;
 dotenv.config();
 
 let emailTransporter: nodemailer.Transporter | null = null; // singleton
@@ -47,7 +47,8 @@ interface resetPasswordData {
 // Use ethereal first because I cannot find a free SMTP server that allows sending emails without verification
 // ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
 
-export async function createMailingService() { // need export for testing purposes
+export async function createMailingService() {
+  // need export for testing purposes
   if (emailTransporter) {
     return emailTransporter;
   }
@@ -138,6 +139,16 @@ export function createToken(userId: string, type: string): string {
     token = jwt.sign({ userId }, refreshSecret, {
       expiresIn: '30d',
     });
+  } else if (type === 'password-reset') {
+    const passwordResetSecret = process.env.JWT_PASSWORD_RESET_SECRET;
+    if (!passwordResetSecret) {
+      throw new Error(
+        'JWT_PASSWORD_RESET_SECRET is not defined in environment variables',
+      );
+    }
+    token = jwt.sign({ userId }, passwordResetSecret, {
+      expiresIn: '15m',
+    });
   } else {
     throw new Error('Invalid token type');
   }
@@ -187,6 +198,7 @@ const AuthService: IAuthenticationService = {
       const passwordHash = await bcrypt.hash(password, saltRounds);
       const newUser = new User({
         email: email.trim().toLowerCase(),
+        displayName: username.trim(),
         username: username.trim().toLowerCase(),
         passwordHash,
         avatarUrl: fileUrl || (avatar ? avatar.path : undefined),
@@ -232,8 +244,8 @@ const AuthService: IAuthenticationService = {
         return;
       }
 
-      const accessToken = createToken(user._id.toString(), 'access');
-      const refreshToken = createToken(user._id.toString(), 'refresh');
+      const accessToken = createToken(user._id as string, 'access');
+      const refreshToken = createToken(user._id as string, 'refresh');
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -278,9 +290,12 @@ const AuthService: IAuthenticationService = {
           res.status(401).json({ valid: false, error: 'User not found.' });
           return;
         }
-        res
-          .status(200)
-          .json({ valid: true, userId: userId, username: user.username, avatarUrl: user.avatarUrl });
+        res.status(200).json({
+          valid: true,
+          userId: userId,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        });
         return;
       }
       if (refreshToken) {
@@ -301,7 +316,12 @@ const AuthService: IAuthenticationService = {
           maxAge: 3 * 60 * 60 * 1000, // 3 hours
           sameSite: 'strict',
         });
-        res.status(200).json({ valid: true, userId: userId, username: user.username, avatarUrl: user.avatarUrl });
+        res.status(200).json({
+          valid: true,
+          userId: userId,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        });
         return;
       }
       res.status(401).json({ valid: false, error: 'Invalid token.' });
@@ -408,8 +428,6 @@ const AuthService: IAuthenticationService = {
       res.status(500).json({ error: 'Internal server error.' });
     }
   },
-
-
 };
 
 export default AuthService;

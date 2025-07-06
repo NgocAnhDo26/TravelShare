@@ -26,7 +26,7 @@ const AuthController: IAuthController = {
   },
   resetPassword: async (req: Request, res: Response) => {
     await AuthService.resetPassword(req, res);
-  }
+  },
 };
 
 export default AuthController;

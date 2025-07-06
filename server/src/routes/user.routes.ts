@@ -1,40 +1,53 @@
 import { Router } from 'express';
-import { FollowController, UserController } from '../controllers/user.controllers';
+import {
+  FollowController,
+  UserController,
+} from '../controllers/user.controllers';
 import AuthJwtMiddleware from '../middlewares/authJwt';
 import uploadUseCases from '../middlewares/upload';
 
 const router = Router();
 
+// --- Authenticated Routes ---
+router.post(
+  '/:id/follow',
+  AuthJwtMiddleware.verifyToken,
+  FollowController.follow,
+);
+router.delete(
+  '/:id/unfollow',
+  AuthJwtMiddleware.verifyToken,
+  FollowController.unfollow,
+);
+
+router.get(
+  '/followers',
+  AuthJwtMiddleware.verifyToken,
+  FollowController.getFollowers,
+);
+router.get(
+  '/following',
+  AuthJwtMiddleware.verifyToken,
+  FollowController.getFollowing,
+);
+
+/** Get user (only current user) edit profile */
 router.get(
   '/edit-profile',
-  AuthJwtMiddleware.verifyToken, 
-  UserController.getEditProfile
+  AuthJwtMiddleware.verifyToken,
+  UserController.getEditProfile,
 );
 
+/** Update user profile (only current user) */
 router.put(
-  '/profile',
-  [
-    AuthJwtMiddleware.verifyToken,
-    uploadUseCases.uploadMiddleware.single('avatar'),
-  uploadUseCases.uploadToSupabase,
-  ],
-  UserController.updateProfile
+  '/edit-profile',
+  AuthJwtMiddleware.verifyToken,
+  uploadUseCases.singleFileUpload('avatar'),
+  UserController.updateProfile,
 );
-
-// --- Authenticated Routes ---
-router.post('/:id/follow', AuthJwtMiddleware.verifyToken, FollowController.follow);
-router.delete('/:id/follow', AuthJwtMiddleware.verifyToken, FollowController.unfollow);
 
 // --- Public Routes ---
-router.get('/:id/followers', FollowController.getFollowers);
-router.get('/:id/following', FollowController.getFollowing);
-
-// --- Routes for Counts ---
-router.get('/:id/followers/count', FollowController.getFollowerCount);
-router.get('/:id/following/count', FollowController.getFollowingCount);
-
-// --- Public Route to Get User Info ---
-router.get('/me', AuthJwtMiddleware.verifyToken, UserController.getUserInfo);
-router.get('/:id', UserController.getUserInfo);
+/** Get user profile (current user or any user) */
+router.get('/:id/profile', UserController.getProfile);
 
 export default router;

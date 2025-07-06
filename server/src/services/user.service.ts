@@ -1,7 +1,6 @@
-import mongoose, { Types } from 'mongoose';
-import { Request, Response, NextFunction } from 'express';
 import Follow, { IFollow } from '../models/follow.model';
-import User from '../models/user.model';
+import User, { IUser } from '../models/user.model';
+import { isValidObjectId } from 'mongoose';
 
 /**
  * @interface IFollowService
@@ -9,11 +8,20 @@ import User from '../models/user.model';
  */
 interface IFollowService {
   followUser(followerId: string, followingId: string): Promise<IFollow>;
-  unfollowUser(followerId: string, followingId: string): Promise<{ deletedCount?: number }>;
+  unfollowUser(
+    followerId: string,
+    followingId: string,
+  ): Promise<{ deletedCount?: number }>;
   getFollowerCount(userId: string): Promise<number>;
   getFollowingCount(userId: string): Promise<number>;
-  getFollowers(userId: string, options: { page: number; limit: number }): Promise<IFollow[]>;
-  getFollowing(userId: string, options: { page: number; limit: number }): Promise<IFollow[]>;
+  getFollowers(
+    userId: string,
+    options: { page: number; limit: number },
+  ): Promise<IFollow[]>;
+  getFollowing(
+    userId: string,
+    options: { page: number; limit: number },
+  ): Promise<IFollow[]>;
 }
 
 /**
@@ -25,51 +33,64 @@ const FollowService: IFollowService = {
    * Creates a follow relationship between two users.
    */
   async followUser(followerId: string, followingId: string): Promise<IFollow> {
-    // 1. Prevent a user from following themselves
+    // Prevent a user from following themselves
     if (followerId === followingId) {
       throw new Error('You cannot follow yourself.');
     }
 
-    // 2. Verify both users exist in the database
-    const usersExist = await User.countDocuments({
-      _id: { $in: [followerId, followingId] },
-    });
+    // Verify both users exist and the follow relationship doesn't already exist
+    const [usersExist, existingFollow] = await Promise.all([
+      User.countDocuments({
+        _id: { $in: [followerId, followingId] },
+      }),
+      Follow.findOne({
+        follower: followerId,
+        following: followingId,
+      }),
+    ]);
 
     if (usersExist !== 2) {
       throw new Error('One or both users do not exist.');
     }
 
-    // 3. Check if the follow relationship already exists
-    const existingFollow = await Follow.findOne({
-      follower_id: followerId,
-      following_id: followingId,
-    });
-
     if (existingFollow) {
       throw new Error('You are already following this user.');
     }
 
-    // 4. Create and save the new follow document
-    const follow = new Follow({
-      follower_id: followerId,
-      following_id: followingId,
-    });
+    // Use Promise.all to run updates concurrently
+    const [, , newFollow] = await Promise.all([
+      User.updateOne({ _id: followerId }, { $inc: { followingCount: 1 } }),
+      User.updateOne({ _id: followingId }, { $inc: { followerCount: 1 } }),
+      Follow.create({
+        follower: followerId,
+        following: followingId,
+      }),
+    ]);
 
-    return follow.save();
+    return newFollow;
   },
 
   /**
    * Deletes a follow relationship between two users.
    */
-  async unfollowUser(followerId: string, followingId: string): Promise<{ deletedCount?: number }> {
+  async unfollowUser(
+    followerId: string,
+    followingId: string,
+  ): Promise<{ deletedCount?: number }> {
     const result = await Follow.deleteOne({
-      follower_id: followerId,
-      following_id: followingId,
+      follower: followerId,
+      following: followingId,
     });
 
     if (result.deletedCount === 0) {
       throw new Error('You are not following this user.');
     }
+
+    // Use Promise.all to run updates concurrently
+    await Promise.all([
+      User.updateOne({ _id: followerId }, { $inc: { followingCount: -1 } }),
+      User.updateOne({ _id: followingId }, { $inc: { followerCount: -1 } }),
+    ]);
 
     return result;
   },
@@ -78,26 +99,38 @@ const FollowService: IFollowService = {
    * Gets the total number of followers for a specific user.
    */
   async getFollowerCount(userId: string): Promise<number> {
-    return Follow.countDocuments({ following_id: userId });
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+    return user.followerCount;
   },
 
   /**
    * Gets the total number of users a specific user is following.
    */
   async getFollowingCount(userId: string): Promise<number> {
-    return Follow.countDocuments({ follower_id: userId });
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+    return user.followingCount;
   },
 
   /**
    * Retrieves a paginated list of a user's followers.
    */
-  async getFollowers(userId: string, options: { page: number; limit: number }): Promise<IFollow[]> {
+  async getFollowers(
+    userId: string,
+    options: { page: number; limit: number },
+  ): Promise<IFollow[]> {
     const { page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
-    return Follow.find({ following_id: userId })
-      .populate('follower_id', 'username displayName avatarUrl')
-      .sort({ created_date: -1 })
+    return Follow.find({ following: userId })
+      .populate('follower', 'username displayName avatarUrl')
+      .select('follower, createdDate')
+      .sort({ createdDate: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
@@ -106,13 +139,17 @@ const FollowService: IFollowService = {
   /**
    * Retrieves a paginated list of users a user is following.
    */
-  async getFollowing(userId: string, options: { page: number; limit: number }): Promise<IFollow[]> {
+  async getFollowing(
+    userId: string,
+    options: { page: number; limit: number },
+  ): Promise<IFollow[]> {
     const { page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
-    return Follow.find({ follower_id: userId })
-      .populate('following_id', 'username displayName avatarUrl')
-      .sort({ created_date: -1 })
+    return Follow.find({ follower: userId })
+      .populate('following', 'username displayName avatarUrl')
+      .select('following, createdDate')
+      .sort({ createdDate: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
@@ -126,142 +163,77 @@ interface UpdateProfileData {
   fileUrl?: string;
 }
 
-interface UserInfo {
-  username: string;
-  email: string;
-  displayName?: string;
-  firstName?: string;
-  lastName?: string;
-  bio?: string;
-  avatarUrl: string;
-  followerCount: number;
-  followingCount: number;
-}
-
 interface IUserService {
-  getEditProfile(req: Request, res: Response): Promise<void>;
-  updateProfile(req: Request, res: Response): Promise<void>;
-  getUserInfo(userId: string): Promise<UserInfo | null>;
+  getEditProfile(userId: string): Promise<IUser | null>;
+  updateProfile(userId: string, data: UpdateProfileData): Promise<IUser | null>;
+  getProfile(userId: string): Promise<IUser | null>;
 }
 
 const UserService: IUserService = {
- 
-  getEditProfile: async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user as string;
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(400).json({ error: 'Invalid user ID format.' });
-        return;
+  getEditProfile: async (userId: string): Promise<IUser | null> => {
+    const userProfile = await User.findById(userId).select(
+      'displayName username email avatarUrl',
+    );
+
+    if (!userProfile) {
+      throw new Error('User not found.');
     }
-
-    try {
-     
-      const userProfile = await User.findById(userId).select('displayName username email avatarUrl');
-
-      if (!userProfile) {
-        res.status(404).json({ error: 'User not found.' });
-        return;
-      }
-
-      res.status(200).json(userProfile);
-
-    } catch (error) {
-      console.error('Get profile error:', error);
-      res.status(500).json({ error: 'Internal server error.' });
-    }
+    return userProfile;
   },
 
-  
-  updateProfile: async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user as string;
-    const { displayName, username, email, fileUrl }: UpdateProfileData = req.body;
+  updateProfile: async (
+    userId: string,
+    data: UpdateProfileData,
+  ): Promise<IUser | null> => {
+    const { displayName, username, email, fileUrl } = data;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(400).json({ error: 'Invalid user ID format.' });
-        return;
-    }
-    
-    try {
-    
-      if (username) {
-        const existingUserByUsername = await User.findOne({ 
-          username: username.trim().toLowerCase(),
-          _id: { $ne: userId }
-        });
-        if (existingUserByUsername) {
-          res.status(409).json({ error: 'Username already exists.' });
-          return;
-        }
-      }
-      if (email) {
-        const existingUserByEmail = await User.findOne({ 
-          email: email.trim().toLowerCase(),
-          _id: { $ne: userId } 
-        });
-        if (existingUserByEmail) {
-          res.status(409).json({ error: 'Email already exists.' });
-          return;
-        }
-      }
-
-      const updateFields: any = {};
-      if (displayName) updateFields.displayName = displayName;
-      if (username) updateFields.username = username.trim().toLowerCase();
-      if (email) updateFields.email = email.trim().toLowerCase();
-      if (fileUrl) updateFields.avatarUrl = fileUrl;
-
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { $set: updateFields },
-        { new: true, runValidators: true }
-      )
-    
-      .select('displayName username email avatarUrl');
-
-      if (!updatedUser) {
-        res.status(404).json({ error: 'User not found.' });
-        return;
-      }
-
-      res.status(200).json({
-        message: 'Profile updated successfully.',
-        user: updatedUser,
+    if (username) {
+      const existingUserByUsername = await User.findOne({
+        username: username.trim().toLowerCase(),
+        _id: { $ne: userId },
       });
-
-    } catch (error) {
-      console.error('Update profile error:', error);
-      res.status(500).json({ error: 'Internal server error.' });
+      if (existingUserByUsername) {
+        throw new Error('Username already exists.');
+      }
     }
+    if (email) {
+      const existingUserByEmail = await User.findOne({
+        email: email.trim().toLowerCase(),
+        _id: { $ne: userId },
+      });
+      if (existingUserByEmail) {
+        throw new Error('Email already exists.');
+      }
+    }
+
+    const updateFields: any = {};
+    if (displayName) updateFields.displayName = displayName;
+    if (username) updateFields.username = username.trim().toLowerCase();
+    if (email) updateFields.email = email.trim().toLowerCase();
+    if (fileUrl) updateFields.avatarUrl = fileUrl;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateFields },
+      { new: true, runValidators: true },
+    ).select('displayName username email avatarUrl');
+
+    if (!updatedUser) {
+      throw new Error('User not found.');
+    }
+
+    return updatedUser;
   },
 
-  getUserInfo: async (userId: string): Promise<UserInfo | null> => {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return null;
+  getProfile: async (userId: string): Promise<IUser | null> => {
+    const userProfile = await User.findById(userId).select(
+      'displayName username avatarUrl bio followerCount followingCount',
+    );
+
+    if (!userProfile) {
+      throw new Error('User not found.');
     }
-
-    const user = await User.findById(userId)
-      .select('username email displayName firstName lastName bio avatarUrl')
-      .lean();
-
-    if (!user) {
-      return null;
-    }
-
-    const [followerCount, followingCount] = await Promise.all([
-      FollowService.getFollowerCount(userId),
-      FollowService.getFollowingCount(userId),
-    ]);
-
-    return {
-      username: user.username,
-      email: user.email,
-      displayName: user.displayName,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl || '',
-      followerCount,
-      followingCount,
-    };
+    return userProfile;
   },
 };
 

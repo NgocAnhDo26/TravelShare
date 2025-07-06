@@ -25,9 +25,7 @@ const format = winston.format.combine(
     (info) => `${info.timestamp} ${info.level}: ${info.message}`,
   ),
 );
-const transports = [
-  new winston.transports.Console(),
-];
+const transports = [new winston.transports.Console()];
 
 export const logger = winston.createLogger({
   level: level(),
