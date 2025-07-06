@@ -8,6 +8,9 @@ import bcrypt from 'bcrypt';
 import * as AuthService from '../../src/services/auth.service';
 import jwt from 'jsonwebtoken';
 
+process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+
 // Mock external services
 jest.mock('../../src/config/supabase.config', () => ({
   __esModule: true,

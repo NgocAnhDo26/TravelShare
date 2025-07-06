@@ -4,8 +4,10 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../../src/app';
 import User from '../../src/models/user.model';
 import Follow from '../../src/models/follow.model';
-
 let mongoServer: MongoMemoryServer;
+
+process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
 
 // --- Mock Supabase ---
 jest.mock('../../src/config/supabase.config', () => ({

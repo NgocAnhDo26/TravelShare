@@ -3,6 +3,9 @@ import User from '../../src/models/user.model';
 import Follow from '../../src/models/follow.model';
 import { Types } from 'mongoose';
 
+process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+
 // Mock the Mongoose models
 jest.mock('../../src/models/user.model');
 jest.mock('../../src/models/follow.model');

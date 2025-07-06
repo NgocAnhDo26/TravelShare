@@ -22,7 +22,6 @@ router.post(
  */
 router.get(
   '/public',
-  AuthJwtMiddleware.verifyToken,
   TravelPlanController.getPublicTravelPlans,
 );
 
