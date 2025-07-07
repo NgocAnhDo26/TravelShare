@@ -108,4 +108,51 @@ router.put(
   TravelPlanController.updateTravelPlanDates,
 );
 
+/**
+ * @route   POST /api/plans/:planId/days/:dayNumber/items
+ * @desc    Add a new item to a specific day in a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.post(
+    '/:id/days/:dayNumber/items', 
+    AuthJwtMiddleware.verifyToken,
+    AuthJwtMiddleware.isAuthor,
+    TravelPlanController.addPlanItem
+);
+
+/**
+ * @route   GET /api/plans/:planId/items/:itemId
+ * @desc    Get a specific item from a travel plan
+ * @access  Private (Author or Public Plan)
+ */
+router.get(
+    '/:id/items/:itemId',
+    AuthJwtMiddleware.verifyToken,
+    AuthJwtMiddleware.isAuthorOrPublic,
+    TravelPlanController.getPlanItem
+);
+
+/**
+ * @route   PUT /api/plans/:planId/items/:itemId
+ * @desc    Update a specific item in a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.put(
+    '/:id/items/:itemId',
+    AuthJwtMiddleware.verifyToken,
+    AuthJwtMiddleware.isAuthor,
+    TravelPlanController.updatePlanItem
+);
+
+/**
+ * @route   DELETE /api/plans/:planId/items/:itemId
+ * @desc    Delete a specific item from a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.delete(
+    '/:id/items/:itemId',
+    AuthJwtMiddleware.verifyToken,
+    AuthJwtMiddleware.isAuthor,
+    TravelPlanController.deletePlanItem
+);
 export default router;

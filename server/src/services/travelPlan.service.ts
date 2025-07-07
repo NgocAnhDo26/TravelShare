@@ -1,5 +1,5 @@
-import { Types } from 'mongoose';
-import TravelPlan, { ITravelPlan, ILocation } from '../models/travelPlan.model';
+import  mongoose, { Types } from 'mongoose';
+import TravelPlan, { ITravelPlan,IPlanItem, ILocation } from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
 
 /**
@@ -7,6 +7,11 @@ import { generateSchedule } from '../utils/travelPlan';
  * @description Outlines the methods available in the TravelPlanService.
  */
 interface ITravelPlanService {
+    addPlanItem(planId: string, dayNumber: number, itemData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem>;
+  getPlanItem(planId: string, itemId: string, authorId: string): Promise<IPlanItem | null>;
+  updatePlanItem(planId: string, itemId: string, updateData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem | null>;
+  deletePlanItem(planId: string, itemId: string, authorId: string): Promise<boolean>;
+
   createTravelPlan(planData: any, authorId: string): Promise<any>;
   getTravelPlanById(planId: string): Promise<any | null>;
   getTravelPlansByAuthor(authorId: string): Promise<any[]>;
@@ -45,6 +50,8 @@ interface CreateTravelPlanRequest {
   startDate: Date;
   endDate: Date;
 }
+
+
 
 /**
  * @const TravelPlanService
@@ -330,6 +337,87 @@ const TravelPlanService: ITravelPlanService = {
       throw new Error('Failed to update travel plan dates.');
     }
     return updatedPlan;
+  },
+
+    /**
+   * Adds an item to a specific day in the schedule.
+   */
+  async addPlanItem(planId: string, dayNumber: number, itemData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem> {
+    const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
+    if (!plan) throw new Error('Plan not found or user not authorized.');
+
+    const daySchedule = plan.schedule.find(d => d.dayNumber === dayNumber);
+    if (!daySchedule) throw new Error('Day not found in schedule.');
+
+    const lastItem = daySchedule.items[daySchedule.items.length - 1];
+    const newOrder = lastItem ? lastItem.order + 1 : 1;
+
+    const newItem = {
+      ...itemData,
+      _id: new mongoose.Types.ObjectId(),
+      order: newOrder,
+    } as IPlanItem;
+
+    daySchedule.items.push(newItem);
+    await plan.save();
+    return newItem;
+  },
+  
+  /**
+   * Retrieves a specific plan item from a plan.
+   */
+  async getPlanItem(planId: string, itemId: string, authorId: string): Promise<IPlanItem | null> {
+    const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
+    if (!plan) return null;
+
+    for (const day of plan.schedule) {
+      const item = day.items.find(it => it._id.toString() === itemId);
+      if (item) return item;
+    }
+    return null;
+  },
+
+  /**
+   * Updates a specific plan item.
+   */
+  async updatePlanItem(planId: string, itemId: string, updateData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem | null> {
+    const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
+    if (!plan) throw new Error('Plan not found or user not authorized.');
+    
+    let itemToUpdate: IPlanItem | undefined;
+    for (const day of plan.schedule) {
+      itemToUpdate = day.items.find(it => it._id.toString() === itemId);
+      if (itemToUpdate) break;
+    }
+    
+    if (!itemToUpdate) return null;
+
+    Object.assign(itemToUpdate, updateData);
+    await plan.save();
+    return itemToUpdate;
+  },
+
+  /**
+   * Deletes a specific plan item.
+   */
+  async deletePlanItem(planId: string, itemId: string, authorId: string): Promise<boolean> {
+    const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
+    if (!plan) return false;
+    
+    let itemDeleted = false;
+    for (const day of plan.schedule) {
+      const itemIndex = day.items.findIndex(it => it._id.toString() === itemId);
+      if (itemIndex > -1) {
+        day.items.splice(itemIndex, 1);
+        itemDeleted = true;
+        break;
+      }
+    }
+
+    if (itemDeleted) {
+      await plan.save();
+    }
+    return itemDeleted;
   },
 };
 
