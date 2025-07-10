@@ -49,7 +49,14 @@ const AuthJwtMiddleware: IAuthJwtMiddleware = {
               return res.status(401).json({ error: 'User not found.' });
             }
             const newAccessToken = createToken(user._id as string, 'access');
-            res.cookie('accessToken', newAccessToken, { httpOnly: true });
+            const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
+            
+            res.cookie('accessToken', newAccessToken, {
+              httpOnly: true,
+              secure: !isLocalDev,
+              maxAge: 3 * 60 * 60 * 1000, // 3 hours
+              sameSite: isLocalDev ? 'lax' : 'none',
+            });
             req.user = user._id as string;
             next();
           })

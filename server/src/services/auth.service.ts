@@ -248,18 +248,20 @@ const AuthService: IAuthenticationService = {
       const accessToken = createToken(user._id as string, 'access');
       const refreshToken = createToken(user._id as string, 'refresh');
 
+      const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
+      
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
+        secure: !isLocalDev,
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'strict',
+        sameSite: isLocalDev ? 'lax' : 'none',
       });
 
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
+        secure: !isLocalDev,
         maxAge: 3 * 60 * 60 * 1000, // 3 hours
-        sameSite: 'strict',
+        sameSite: isLocalDev ? 'lax' : 'none',
       });
 
       res.status(200).json({
@@ -311,11 +313,13 @@ const AuthService: IAuthenticationService = {
           return;
         }
         const newAccessToken = createToken(userId, 'access');
+        const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
+        
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
+          secure: !isLocalDev,
           maxAge: 3 * 60 * 60 * 1000, // 3 hours
-          sameSite: 'strict',
+          sameSite: isLocalDev ? 'lax' : 'none',
         });
         res.status(200).json({
           valid: true,
@@ -433,15 +437,17 @@ const AuthService: IAuthenticationService = {
   // logout only need to delete the refresh token and access token cookies
   logout: async (req: Request, res: Response) => {
     try {
+      const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
+      
       res.clearCookie('refreshToken', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
-        sameSite: 'strict',
+        secure: !isLocalDev,
+        sameSite: isLocalDev ? 'lax' : 'none',
       });
       res.clearCookie('accessToken', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
-        sameSite: 'strict',
+        secure: !isLocalDev,
+        sameSite: isLocalDev ? 'lax' : 'none',
       });
       res.status(200).json({ message: 'Logged out successfully.' });
     } catch (error) {
