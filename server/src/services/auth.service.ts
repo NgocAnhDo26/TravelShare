@@ -18,6 +18,7 @@ interface IAuthenticationService {
   forgotPassword(req: Request, res: Response): Promise<void>;
   resetPassword(req: Request, res: Response): Promise<void>;
   verifyToken(req: Request, res: Response): Promise<void>;
+  logout(req: Request, res: Response): Promise<void>;
 }
 
 interface forgotPasswordData {
@@ -249,14 +250,14 @@ const AuthService: IAuthenticationService = {
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         sameSite: 'strict',
       });
 
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
         maxAge: 3 * 60 * 60 * 1000, // 3 hours
         sameSite: 'strict',
       });
@@ -312,7 +313,7 @@ const AuthService: IAuthenticationService = {
         const newAccessToken = createToken(userId, 'access');
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
           maxAge: 3 * 60 * 60 * 1000, // 3 hours
           sameSite: 'strict',
         });
@@ -428,6 +429,26 @@ const AuthService: IAuthenticationService = {
       res.status(500).json({ error: 'Internal server error.' });
     }
   },
+
+  // logout only need to delete the refresh token and access token cookies
+  logout: async (req: Request, res: Response) => {
+    try {
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
+        sameSite: 'strict',
+      });
+      res.clearCookie('accessToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
+        sameSite: 'strict',
+      });
+      res.status(200).json({ message: 'Logged out successfully.' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ error: 'Internal server error.' });
+    }
+  }
 };
 
 export default AuthService;
