@@ -8,6 +8,10 @@ import { HTTP_STATUS } from '../constants/http';
  * @description Outlines the methods for the TravelPlanController.
  */
 interface ITravelPlanController {
+  addPlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
+  getPlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
+  updatePlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
+  deletePlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
   createTravelPlan(req: Request, res: Response): Promise<void>;
   getTravelPlanById(req: Request, res: Response): Promise<void>;
   getTravelPlansByAuthor(req: Request, res: Response): Promise<void>;
@@ -341,6 +345,62 @@ const TravelPlanController: ITravelPlanController = {
       );
       res.status(HTTP_STATUS.OK).json(updatedPlan);
     } catch (error: any) {
+      next(error);
+    }
+  },
+
+  async addPlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, dayNumber } = req.params;
+      const authorId = req.user as string;
+      const newItem = await TravelPlanService.addPlanItem(id, parseInt(dayNumber, 10), req.body, authorId);
+      res.status(HTTP_STATUS.CREATED).json({ message: 'Item added successfully!', data: newItem });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getPlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, itemId } = req.params;
+      const authorId = req.user as string;
+      const item = await TravelPlanService.getPlanItem(id, itemId, authorId);
+      if (!item) {
+        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found in this plan.' });
+        return;
+      }
+      res.status(HTTP_STATUS.OK).json(item);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updatePlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, itemId } = req.params;
+      const authorId = req.user as string;
+      const updatedItem = await TravelPlanService.updatePlanItem(id, itemId, req.body, authorId);
+       if (!updatedItem) {
+        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found or not authorized.' });
+        return;
+      }
+      res.status(HTTP_STATUS.OK).json({ message: 'Item updated successfully!', data: updatedItem });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async deletePlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, itemId } = req.params;
+      const authorId = req.user as string;
+      const deleted = await TravelPlanService.deletePlanItem(id, itemId, authorId);
+      if (!deleted) {
+        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found or not authorized.' });
+        return;
+      }
+      res.status(HTTP_STATUS.OK).json({ message: 'Item deleted successfully!' });
+    } catch (error) {
       next(error);
     }
   },
