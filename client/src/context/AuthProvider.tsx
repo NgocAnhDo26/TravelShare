@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthContext, type User } from './AuthContext';
 import API from '@/utils/axiosInstance';
+import toast from 'react-hot-toast';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -10,10 +11,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
-    // You might want to call a logout API endpoint here
-    // API.post('/auth/logout');
+    const response = await API.post('/auth/logout');
+    if (response.status != 200) {
+      toast.error("Error occured while logging out. Please try again.");
+    } else {
+      toast.success("Logged out successfully!");
+      window.location.reload();
+    }
   };
 
   // This effect runs only once when the component mounts

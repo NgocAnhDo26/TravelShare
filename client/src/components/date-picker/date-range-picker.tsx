@@ -26,13 +26,13 @@ export default function DateRangePicker({
             id={id}
             variant="outline"
             className={cn(
-              "w-full justify-start text-left font-normal h-14 pt-5 pb-1 relative text-lg",
+              "w-full justify-start text-left font-normal h-15 pt-5 pb-3 relative text-lg",
               !date && "text-muted-foreground"
             )}
           >
             <span
               className={cn(
-                "absolute left-4 top-1 text-sm text-black-600 transition-all pointer-events-none"
+                "absolute left-4 top-1.5 text-sm text-black-600 transition-all pointer-events-none"
               )}
             >
               Dates (optional)
@@ -41,18 +41,18 @@ export default function DateRangePicker({
             <span className="flex items-center mt-3 text-lg">
               <CalendarIcon className="mr-2 h-4 w-4" />
               {date?.from ? (
-                <span>{format(date.from, "LLL dd, y")}</span>
+                <span className="text-sm">{format(date.from, "LLL dd, y")}</span>
               ) : (
-                <span className="text-gray-400">Start date</span>
+                <span className="text-gray-400 text-sm">Start date</span>
               )}
             </span>
-            <span className="mx-2 text-gray-300 mt-3 text-lg">|</span>
+            <span className="mx-2 text-gray-300 mt-3 text-md">|</span>
             <span className="flex items-center mt-3 text-lg">
               <CalendarIcon className="mr-2 h-4 w-4" />
               {date?.to ? (
-                <span>{format(date.to, "LLL dd, y")}</span>
+                <span className="text-sm">{format(date.to, "LLL dd, y")}</span>
               ) : (
-                <span className="text-gray-400">End date</span>
+                <span className="text-gray-400 text-sm">End date</span>
               )}
             </span>
           </Button>

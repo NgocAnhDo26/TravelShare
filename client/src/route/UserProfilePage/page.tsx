@@ -9,6 +9,7 @@ import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { useAuth } from '@/context/AuthContext';
 
 // --- ProfileCard Component (can be a separate file like components/profile/ProfileCard.tsx) ---
 interface ProfileCardProps {
@@ -298,16 +299,19 @@ interface UserProfileData {
 
 // --- Main User Profile Page Component ---
 const UserProfilePage: React.FC = () => {
+  const { user } = useAuth();
   let { userId } = useParams();
   const [userData, setUserData] = useState<UserProfileData | undefined>(
     undefined,
   );
+
   // Use userId prop to fetch user data from API
   // Call API to fetch user data based on userId
   useEffect(() => {
     // Simulate fetching user data from an API
     const fetchUserData = async () => {
-      const URL = userId ? `/users/${userId}` : '/users/me';
+      if (!user && !userId) return;
+      const URL = userId ? `/users/${userId}/profile` : `/users/${user?.userId}/profile`;
 
       try {
         // Replace with actual API call
@@ -321,7 +325,7 @@ const UserProfilePage: React.FC = () => {
     };
 
     fetchUserData();
-  }, []);
+  }, [user, userId]);
 
   //   // Dữ liệu giả định cho trang profile
   //   const userData = {

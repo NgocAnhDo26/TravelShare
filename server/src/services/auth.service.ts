@@ -250,14 +250,14 @@ const AuthService: IAuthenticationService = {
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         sameSite: 'strict',
       });
 
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
         maxAge: 3 * 60 * 60 * 1000, // 3 hours
         sameSite: 'strict',
       });
@@ -313,7 +313,7 @@ const AuthService: IAuthenticationService = {
         const newAccessToken = createToken(userId, 'access');
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
           maxAge: 3 * 60 * 60 * 1000, // 3 hours
           sameSite: 'strict',
         });
@@ -435,12 +435,12 @@ const AuthService: IAuthenticationService = {
     try {
       res.clearCookie('refreshToken', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
         sameSite: 'strict',
       });
       res.clearCookie('accessToken', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development',
         sameSite: 'strict',
       });
       res.status(200).json({ message: 'Logged out successfully.' });

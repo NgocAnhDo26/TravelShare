@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useRef, useEffect } from "react";
 import { Eye, EyeOff, Upload } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import PswStrength, { customPasswordStrength } from "./password-strength";
 import toast from "react-hot-toast";
 import API from "@/utils/axiosInstance";
@@ -29,6 +31,15 @@ export function RegisterForm({
 	const passwordRef = useRef<HTMLInputElement>(null);
 	const confirmPasswordRef = useRef<HTMLInputElement>(null);
 	const profilePhotoRef = useRef<HTMLInputElement>(null);
+	const navigate = useNavigate();
+	const { user } = useAuth();
+
+	// Redirect if already logged in
+	useEffect(() => {
+		if (user) {
+			navigate('/');
+		}
+	}, [user, navigate]);
 
 	const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -99,31 +110,14 @@ export function RegisterForm({
 				if (profilePhotoRef.current) {
 					profilePhotoRef.current.value = ""; // Clear the file input
 				}
+				// Redirect to login page after successful registration
+				navigate('/login');
 			})
 			.catch((error) => {
 				console.error("Error creating account:", error);
 				toast.error("Failed to create account. Please try again.");
 			});
 	};
-
-	useEffect(() => {
-		API.post("/auth/verify-token")
-			.then((response) => {
-				if (response.data.valid) {
-					toast.success("Token is valid. You are already logged in.");
-					// Redirect to dashboard or home page
-					window.location.href = "/dashboard"; // TODO: Change to HOME
-				}
-			})
-			.catch((error) => {
-				console.error("Token verification failed:", error);
-				if (error.response?.status === 401) {
-					toast.error("You are not logged in. Please login.");
-				} else {
-					toast.error("An error occurred while verifying token.");
-				}
-			});
-	}, []);
 
 	return (
 		<div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -282,12 +276,12 @@ export function RegisterForm({
 						</div>
 						<div className="mt-4 text-center text-sm">
 							Already have an account?{" "}
-							<a
-								href="/"
+							<Link
+								to="/login"
 								className="underline underline-offset-4"
 							>
 								Sign in
-							</a>
+							</Link>
 						</div>
 					</form>
 				</CardContent>
