@@ -6,7 +6,6 @@ import { AvatarImage } from '@radix-ui/react-avatar';
 import {
   NavigationMenu,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
@@ -21,7 +20,7 @@ import {
 import { Calendar, Heart, LogOut, Settings, User } from 'lucide-react';
 
 const GlobalNavigation = () => {
-  const { user, isLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   return (

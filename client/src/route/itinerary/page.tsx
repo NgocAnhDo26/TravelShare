@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Plus, Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router";
-import Header from "@/components/header";
 
 interface Itinerary {
 	id: string;

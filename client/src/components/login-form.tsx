@@ -25,7 +25,7 @@ export function LoginForm({
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {

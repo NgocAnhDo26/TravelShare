@@ -1,6 +1,5 @@
 // Edit itinerary will be a copy of add itinerary page with pre-filled data
 import React, { useState } from 'react';
-import Header from '@/components/header';
 import { Calendar, Clock, MapPin, Plus, X } from 'lucide-react';
 
 export default function EditItineraryPage() {
