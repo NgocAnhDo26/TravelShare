@@ -1,125 +1,97 @@
-name: CI/CD Pipeline for Client and Server
+name: CI/CD Pipeline for Server
 
 on:
   push:
     branches: [ "main", "dev" ]
+    paths:
+      - 'server/**'
 
 jobs:
   # =================================================================
-  #  JOB 0: Detect Changes
-  #  This job runs first to determine if server or client files changed.
-  #  Its output is used to conditionally run the other jobs.
-  # =================================================================
-  changes:
-    name: Detect File Changes
-    runs-on: ubuntu-latest
-    outputs:
-      server: ${{ steps.filter.outputs.server }}
-      client: ${{ steps.filter.outputs.client }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            server:
-              - 'server/**'
-            client:
-              - 'client/**'
-
-  # =================================================================
-  #  SERVER JOBS
-  # =================================================================
-
   #  JOB 1: Run Linting and Tests for Server
+  # =================================================================
   test-and-lint-server:
     name: Run Server Linter and Tests
     runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.server == 'true'
     defaults:
       run:
         working-directory: ./server
     steps:
-      - name: Checkout code
+      - name: Checkout code (sparse)
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            server
+          sparse-checkout-cone-mode: false
+      
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
           cache-dependency-path: server/package-lock.json
+      
       - name: Install server dependencies
         run: npm ci
+      
       - name: Run server linter
         run: npm run lint
+      
       - name: Run server tests
         run: npm test
 
-  #  JOB 2: Build, Push, and Deploy Server to Development
-  build-and-deploy-dev-server:
-    name: Deploy Server to Development (Render)
+  # =================================================================
+  #  JOB 2: Build, Push, and Deploy Server
+  # =================================================================
+  build-and-deploy-server:
+    name: Deploy Server to Render
     runs-on: ubuntu-latest
-    needs: [changes, test-and-lint-server]
-    if: needs.changes.outputs.server == 'true' && github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    needs: test-and-lint-server
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
     steps:
-      - name: Checkout code
+      - name: Checkout code (sparse)
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            server
+          sparse-checkout-cone-mode: false
+      
+      - name: Set environment variables
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "DOCKER_TAG=latest" >> $GITHUB_ENV
+            echo "DEPLOY_HOOK=${{ secrets.RENDER_DEPLOY_HOOK_PROD }}" >> $GITHUB_ENV
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          else
+            echo "DOCKER_TAG=development" >> $GITHUB_ENV
+            echo "DEPLOY_HOOK=${{ secrets.RENDER_DEPLOY_HOOK_DEV }}" >> $GITHUB_ENV
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
+      
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and push Docker image for Dev
+      
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./server
           file: ./server/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/travel-share:development
-      - name: Trigger Render Deploy for Development
-        run: curl -X GET ${{ secrets.RENDER_DEPLOY_HOOK_DEV }}
-
-  #  JOB 3: Build, Push, and Deploy Server to Production
-  build-and-deploy-prod-server:
-    name: Deploy Server to Production (Render)
-    runs-on: ubuntu-latest
-    needs: [changes, test-and-lint-server]
-    if: needs.changes.outputs.server == 'true' && github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build and push Docker image for Prod
-        uses: docker/build-push-action@v5
-        with:
-          context: ./server
-          file: ./server/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/travel-share:latest
-      - name: Trigger Render Deploy for Production
-        run: curl -X GET ${{ secrets.RENDER_DEPLOY_HOOK_PROD }}
-
-  # =================================================================
-  #  JOB 4: Send Slack Notification
-  #  This job runs after server deployments to notify the team.
-  # =================================================================
-  notify-slack:
-    name: Send Slack Notification
-    runs-on: ubuntu-latest
-    needs: [build-and-deploy-dev-server, build-and-deploy-prod-server]
-    if: always()
-    steps:
-      - name: Send Slack Notification on Success
-        if: needs.build-and-deploy-dev-server.result == 'success' || needs.build-and-deploy-prod-server.result == 'success'
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/travel-share:${{ env.DOCKER_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Trigger Render Deploy
+        run: curl -X GET ${{ env.DEPLOY_HOOK }}
+      
+      - name: Send Slack Notification
+        if: always()
         uses: slackapi/slack-github-action@v2.1.0
         with:
           webhook-type: 'incoming-webhook'
@@ -130,61 +102,12 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "✅ *CI/CD Pipeline Successful*\n*Repository*: `${{ github.repository }}`\n*Branch*: `${{ github.ref_name }}`\n*Commit*: `${{ github.sha }}` by `${{ github.actor }}`"
+                    "text": "${{ job.status == 'success' && '✅' || '❌' }} *Server Deploy ${{ job.status == 'success' && 'Successful' || 'Failed' }}*\n*Environment*: `${{ env.ENVIRONMENT }}`\n*Branch*: `${{ github.ref_name }}`\n*Commit*: `${{ github.sha }}` by `${{ github.actor }}`"
                   }
                 },
                 {
                   "type": "actions",
                   "elements": [
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "View Commit"
-                      },
-                      "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-                    },
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "View Workflow Run"
-                      },
-                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Send Slack Notification on Failure
-        if: needs.build-and-deploy-dev-server.result == 'failure' || needs.build-and-deploy-prod-server.result == 'failure'
-        uses: slackapi/slack-github-action@v2.1.0
-        with:
-          webhook-type: 'incoming-webhook'
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "❌ *CI/CD Pipeline Failed*\n*Repository*: `${{ github.repository }}`\n*Branch*: `${{ github.ref_name }}`\n*Commit*: `${{ github.sha }}` by `${{ github.actor }}`"
-                  }
-                },
-                {
-                  "type": "actions",
-                  "elements": [
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "View Commit"
-                      },
-                      "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-                    },
                     {
                       "type": "button",
                       "text": {
