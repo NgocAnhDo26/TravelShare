@@ -15,10 +15,6 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
-            - name: Set test environment variables
-              run: |
-                  echo "SUPABASE_URL=http://dummy-url" >> .env
-                  echo "SUPABASE_KEY=dummy-key" >> .env
             - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
@@ -31,3 +27,95 @@ jobs:
               run: npm run lint
             - name: Run server tests
               run: npm test
+
+    # =================================================================
+    #  JOB 2: Send Slack Notification for PR
+    #  This job runs after the lint and test job to notify the team.
+    # =================================================================
+    notify-slack-pr:
+        name: Send PR Slack Notification
+        runs-on: ubuntu-latest
+        needs: pr-lint-and-test-server
+        if: always() # Ensures this job runs even if the previous one fails
+        steps:
+            - name: Send Slack Notification on Success
+              if: needs.pr-lint-and-test-server.result == 'success'
+              uses: slackapi/slack-github-action@v2.1.0
+              with:
+                  webhook-type: 'incoming-webhook'
+                  payload: |
+                      {
+                        "blocks": [
+                          {
+                            "type": "section",
+                            "text": {
+                              "type": "mrkdwn",
+                              "text": "✅ *Pull Request Checks Passed*\n*Repository*: `${{ github.repository }}`\n*Pull Request*: <${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>\n*Author*: `${{ github.actor }}`"
+                            }
+                          },
+                          {
+                            "type": "actions",
+                            "elements": [
+                              {
+                                "type": "button",
+                                "text": {
+                                  "type": "plain_text",
+                                  "text": "View Pull Request"
+                                },
+                                "url": "${{ github.event.pull_request.html_url }}"
+                              },
+                              {
+                                "type": "button",
+                                "text": {
+                                  "type": "plain_text",
+                                  "text": "View Workflow Run"
+                                },
+                                "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+              env:
+                  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+            - name: Send Slack Notification on Failure
+              if: needs.pr-lint-and-test-server.result == 'failure'
+              uses: slackapi/slack-github-action@v2.1.0
+              with:
+                  webhook-type: 'incoming-webhook'
+                  payload: |
+                      {
+                        "blocks": [
+                          {
+                            "type": "section",
+                            "text": {
+                              "type": "mrkdwn",
+                              "text": "❌ *Pull Request Checks Failed*\n*Repository*: `${{ github.repository }}`\n*Pull Request*: <${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>\n*Author*: `${{ github.actor }}`"
+                            }
+                          },
+                          {
+                            "type": "actions",
+                            "elements": [
+                              {
+                                "type": "button",
+                                "text": {
+                                  "type": "plain_text",
+                                  "text": "View Pull Request"
+                                },
+                                "url": "${{ github.event.pull_request.html_url }}"
+                              },
+                              {
+                                "type": "button",
+                                "text": {
+                                  "type": "plain_text",
+                                  "text": "View Workflow Run"
+                                },
+                                "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+              env:
+                  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

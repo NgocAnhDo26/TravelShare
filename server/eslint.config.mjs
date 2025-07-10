@@ -23,15 +23,13 @@ export default tseslint.config(
           },
         },
       ],
-      'no-unused-vars': [
-        'off',
-      ],
+      'no-unused-vars': ['off'],
       '@typescript-eslint/no-unused-vars': [
         // Configure the TypeScript-specific rule
         'off',
       ],
       // Add any other custom ESLint rules here
-      "@typescript-eslint/no-explicit-any": "off"
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 
