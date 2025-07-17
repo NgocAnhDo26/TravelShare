@@ -1,6 +1,7 @@
 import Follow, { IFollow } from '../models/follow.model';
 import User, { IUser } from '../models/user.model';
 import { isValidObjectId } from 'mongoose';
+import { TravelPlanService } from './travelPlan.service';
 
 /**
  * @interface IFollowService
@@ -225,7 +226,7 @@ const UserService: IUserService = {
     return updatedUser;
   },
 
-  getProfile: async (userId: string): Promise<IUser | null> => {
+  getProfile: async (userId: string): Promise<any> => {
     const userProfile = await User.findById(userId).select(
       'displayName username avatarUrl bio followerCount followingCount',
     );
@@ -233,7 +234,28 @@ const UserService: IUserService = {
     if (!userProfile) {
       throw new Error('User not found.');
     }
-    return userProfile;
+
+    // Fetch user's trip plans (light summary)
+    const tripPlans = await TravelPlanService.getTravelPlansByAuthor(userId);
+    const tripPlansSummary = tripPlans.map(plan => ({
+      _id: plan._id,
+      title: plan.title,
+      destination: plan.destination,
+      coverImageUrl: plan.coverImageUrl,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      author: plan.author, // include author for permission checks
+    }));
+
+    return {
+      username: userProfile.username,
+      displayName: userProfile.displayName,
+      avatarUrl: userProfile.avatarUrl,
+      bio: userProfile.bio,
+      followerCount: userProfile.followerCount,
+      followingCount: userProfile.followingCount,
+      tripPlans: tripPlansSummary,
+    };
   },
 };
 

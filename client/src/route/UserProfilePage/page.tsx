@@ -1,10 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils'; // Assume you have this cn utility
 import { Button } from '@/components/ui/button'; // Assume you have Shadcn Button
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '@/components/ui/dialog';
 
-import { Milestone, NotepadText, Share } from 'lucide-react';
+import { EllipsisVerticalIcon, EyeIcon, Milestone, NotepadText, PencilIcon, Share, TrashIcon } from 'lucide-react';
 import EditProfileForm from '@/components/edit-profile-form';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,52 +47,52 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   isMyProfile,
 }) => {
   return (
-    <Card className="flex flex-col items-center gap-0 p-6">
-        {/* Avatar Section */}
-        <Avatar className='w-48 h-48 mb-4'>
-          <AvatarImage src={avatarUrl} />
-          <AvatarFallback className='text-3xl font-bold'>
-            {userName.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+    <Card className='flex flex-col items-center gap-0 p-6'>
+      {/* Avatar Section */}
+      <Avatar className='w-48 h-48 mb-4'>
+        <AvatarImage src={avatarUrl} />
+        <AvatarFallback className='text-3xl font-bold'>
+          {userName.charAt(0).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
 
-        {/* User Info */}
-        <h3 className='text-xl font-bold text-gray-800'>{displayName}</h3>
-        <p className='text-gray-500 text-sm mb-4'>@{userName}</p>
+      {/* User Info */}
+      <h3 className='text-xl font-bold text-gray-800'>{displayName}</h3>
+      <p className='text-gray-500 text-sm mb-4'>@{userName}</p>
 
-        {/* Follow Stats */}
-        <div className='flex space-x-6 mb-6'>
-          <div className='text-center'>
-            <span className='block text-lg font-bold text-gray-800'>
-              {followers}
-            </span>
-            <span className='text-gray-500 text-xs uppercase'>Followers</span>
-          </div>
-          <div className='text-center'>
-            <span className='block text-lg font-bold text-gray-800'>
-              {following}
-            </span>
-            <span className='text-gray-500 text-xs uppercase'>Following</span>
-          </div>
+      {/* Follow Stats */}
+      <div className='flex space-x-6 mb-6'>
+        <div className='text-center'>
+          <span className='block text-lg font-bold text-gray-800'>
+            {followers}
+          </span>
+          <span className='text-gray-500 text-xs uppercase'>Followers</span>
         </div>
+        <div className='text-center'>
+          <span className='block text-lg font-bold text-gray-800'>
+            {following}
+          </span>
+          <span className='text-gray-500 text-xs uppercase'>Following</span>
+        </div>
+      </div>
 
-        {/* Action Buttons */}
-        {isMyProfile ? (
-          <div className='flex space-x-3 w-full'>
-            <EditProfileForm
-              user={{
-                username: userName,
-                avatarUrl: avatarUrl ?? '',
-              }}
-            />
-            <Button onClick={onShare} className='flex-1 cursor-pointer'>
-              <Share />
-              Share
-            </Button>
-          </div>
-        ) : (
-          <Button className='cursor-pointer'>Follow</Button>
-        )}
+      {/* Action Buttons */}
+      {isMyProfile ? (
+        <div className='flex space-x-3 w-full'>
+          <EditProfileForm
+            user={{
+              username: userName,
+              avatarUrl: avatarUrl ?? '',
+            }}
+          />
+          <Button onClick={onShare} className='flex-1 cursor-pointer'>
+            <Share />
+            Share
+          </Button>
+        </div>
+      ) : (
+        <Button className='cursor-pointer'>Follow</Button>
+      )}
     </Card>
   );
 };
@@ -105,12 +120,16 @@ const TravelLogCard: React.FC<TravelLogCardProps> = ({
       {/* Top section: COUNTRIES, CITIES, & REGIONS stats */}
       <div className='flex items-center justify-between mb-4'>
         <div className='flex space-x-4 text-gray-700 text-sm font-semibold'>
-          <Card className="gap-2 p-3 bg-blue-400 text-white w-40 rounded-md border-none">
-            <span className='block text-3xl font-bold mb-2'>{countriesVisited}</span>
+          <Card className='gap-2 p-3 bg-blue-400 text-white w-40 rounded-md border-none'>
+            <span className='block text-3xl font-bold mb-2'>
+              {countriesVisited}
+            </span>
             <span>COUNTRIES</span>
           </Card>
-          <Card className="gap-2 p-3 bg-amber-400 text-white w-40 rounded-md border-none">
-            <span className='block text-3xl font-bold mb-2'>{citiesVisited + regionsVisited}</span>
+          <Card className='gap-2 p-3 bg-amber-400 text-white w-40 rounded-md border-none'>
+            <span className='block text-3xl font-bold mb-2'>
+              {citiesVisited + regionsVisited}
+            </span>
             <span>CITIES & REGIONS</span>
           </Card>
         </div>
@@ -128,7 +147,8 @@ const TravelLogCard: React.FC<TravelLogCardProps> = ({
           travelLog.map((entry, index) => (
             <div key={index}>
               {/* Ensured text alignment is left by default for block elements */}
-              <p className='text-gray-700 font-semibold'>{entry.country}: {" "}
+              <p className='text-gray-700 font-semibold'>
+                {entry.country}:{' '}
                 {entry.cities.map((city, cityIndex) => (
                   <span key={cityIndex} className='font-normal'>
                     {city}
@@ -214,23 +234,63 @@ const TravelLogCard: React.FC<TravelLogCardProps> = ({
 
 // --- TabsSection Component (can be a separate file like components/profile/TabsSection.tsx) ---
 interface TabsSectionProps {
-  tripPlansCount: number;
+  tripPlans: any[];
   guidesCount: number;
   isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
 }
 
 const TabsSection: React.FC<TabsSectionProps> = ({
-  // tripPlansCount,
-  // guidesCount,
+  tripPlans = [],
   isMyProfile = false,
 }) => {
-  const [activeTab, setActiveTab] = useState('tripPlans'); // 'tripPlans' or 'guides'
+  const [activeTab, setActiveTab] = useState('tripPlans');
+  const [plans, setPlans] = useState(tripPlans);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<any>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setPlans(tripPlans);
+  }, [tripPlans]);
+
+  const handleDeletePlan = async () => {
+    if (!planToDelete) return;
+    try {
+      await API.delete(`/plans/${planToDelete._id}`);
+      setPlans((prev) => prev.filter((p) => p._id !== planToDelete._id));
+      toast.success('Plan deleted successfully');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to delete plan');
+    } finally {
+      setDeleteDialogOpen(false);
+      setPlanToDelete(null);
+    }
+  };
 
   return (
     <Card className='p-6 gap-2'>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Plan</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the plan "{planToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant='outline'>Cancel</Button>
+            </DialogClose>
+            <Button variant='destructive' onClick={handleDeletePlan} autoFocus>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className='border-b border-gray-200 mb-6'>
         <nav className='-mb-px flex space-x-2 justify-center' aria-label='Tabs'>
-          <Button 
+          <Button
             variant={'ghost'}
             onClick={() => setActiveTab('tripPlans')}
             className={cn(
@@ -240,7 +300,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
             )}
           >
-            <Milestone/> Trip plans
+            <Milestone /> Trip plans
           </Button>
           <Button
             variant={'ghost'}
@@ -256,20 +316,99 @@ const TabsSection: React.FC<TabsSectionProps> = ({
           </Button>
         </nav>
       </div>
-
       {/* Tab Content */}
       <div>
-        {activeTab === 'tripPlans' && (
-          <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
-            <p className='text-gray-600 text-lg mb-4'>
-              {isMyProfile ? 'You don\'t have any trip plans yet.' : 'This user doesn\'t have any trip plans yet.'}
-            </p>
-          </div>
-        )}
+        {activeTab === 'tripPlans' &&
+          (plans.length === 0 ? (
+            <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
+              <p className='text-gray-600 text-lg mb-4'>
+                {isMyProfile
+                  ? "You don't have any trip plans yet."
+                  : "This user doesn't have any trip plans yet."}
+              </p>
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+              {plans.map((plan) => (
+                <Card
+                  key={plan._id}
+                  className='relative p-0 overflow-hidden group gap-0'
+                >
+                  <div className="relative w-full h-20">
+                    <img
+                      src={plan.coverImageUrl}
+                      alt={plan.title}
+                      className='w-full h-20 object-cover'
+                    />
+                    <div className="absolute top-2 right-2 z-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size='icon' variant='ghost' className="w-7 h-7">
+                            <EllipsisVerticalIcon />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end'>
+                          <DropdownMenuItem
+                            onClick={() => navigate(`/plans/${plan._id}`)}
+                          >
+                            <EyeIcon />
+                            View plan
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => navigate(`/plans/${plan._id}/edit`)}
+                          >
+                            <PencilIcon />
+                            Edit plan
+                          </DropdownMenuItem>
+                          {user && plan.author && user.userId === plan.author.toString() && (
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-700"
+                              onClick={() => {
+                                setPlanToDelete(plan);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <TrashIcon className="text-red-600" />
+                              Delete plan
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div
+                      className="pointer-events-none absolute bottom-0 left-0 w-full h-1/2"
+                      style={{
+                        background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)',
+                      }}
+                    />
+                  </div>
+                  <div className='px-4 mt-0 pb-2'>
+                    <h3 className='text-lg font-bold mb-1 text-left'>{plan.title}</h3>
+                    <p className='text-gray-500 text-sm mb-2 text-left'>
+                      {plan.destination?.name}
+                    </p>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-xs text-gray-400'>
+                        {plan.startDate
+                          ? new Date(plan.startDate).toLocaleDateString()
+                          : ''}{' '}
+                        -{' '}
+                        {plan.endDate
+                          ? new Date(plan.endDate).toLocaleDateString()
+                          : ''}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ))}
         {activeTab === 'guides' && (
           <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
             <p className='text-gray-600 text-lg mb-4'>
-              {isMyProfile ? 'You don\'t have any guides yet.' : 'This user doesn\'t have any guides yet.'}
+              {isMyProfile
+                ? "You don't have any guides yet."
+                : "This user doesn't have any guides yet."}
             </p>
           </div>
         )}
@@ -311,7 +450,9 @@ const UserProfilePage: React.FC = () => {
     // Simulate fetching user data from an API
     const fetchUserData = async () => {
       if (!user && !userId) return;
-      const URL = userId ? `/users/${userId}/profile` : `/users/${user?.userId}/profile`;
+      const URL = userId
+        ? `/users/${userId}/profile`
+        : `/users/${user?.userId}/profile`;
 
       try {
         // Replace with actual API call
@@ -408,7 +549,7 @@ const UserProfilePage: React.FC = () => {
             countriesVisited={10}
             citiesVisited={20}
             regionsVisited={30}
-            rank={"hehe"}
+            rank={'hehe'}
             travelLog={[
               {
                 country: 'Việt Nam',
@@ -417,11 +558,9 @@ const UserProfilePage: React.FC = () => {
             ]}
           />
           <TabsSection
-            // tripPlansCount={userData.tripPlansCount}
-            // guidesCount={userData.guidesCount}
-            tripPlansCount={0}
+            tripPlans={userData.tripPlans || []}
             guidesCount={0}
-            isMyProfile={!userId} // Check if this is the user's own profile
+            isMyProfile={!userId}
           />
         </div>
       </main>
