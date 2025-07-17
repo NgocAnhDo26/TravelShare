@@ -56,7 +56,7 @@ const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
     }
 
     try {
-      await API.put('/users/profile', formData, {
+      await API.put('/users/profiles', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
