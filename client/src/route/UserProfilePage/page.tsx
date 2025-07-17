@@ -462,7 +462,6 @@ const UserProfilePage: React.FC = () => {
         // Replace with actual API call
         const response = await API.get(URL);
         const data = response.data;
-        console.log('Fetched user data:', data);
         setUserData(data);
       } catch (error) {
         console.error('Error fetching user data:', error);
