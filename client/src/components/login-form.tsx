@@ -25,7 +25,7 @@ export function LoginForm({
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -58,12 +58,12 @@ export function LoginForm({
         email: email,
         password: password,
       })
-        .then((response) => {
+        .then(async (response) => {
           toast.dismiss(loadingToast);
           console.log('Login successful:', response.data);
           toast.success('Login successful!');
-          window.location.reload();
-          window.location.href = '/dashboard';
+          await refreshUser(); // Refresh user state
+          navigate('/');
         })
         .catch((error) => {
           toast.dismiss(loadingToast);

@@ -8,7 +8,7 @@ import { Document, Model, model, Schema, Types } from 'mongoose';
 const locationSchema: Schema = new Schema(
   {
     /** Unique place ID from Google, used for detailed information queries later */
-    placeId: { type: String, required: true },
+    placeId: { type: String, required: false },
     /** Name of the place */
     name: { type: String, required: true },
     /** Formatted address */
@@ -27,12 +27,16 @@ const locationSchema: Schema = new Schema(
  */
 const planItemSchema: Schema = new Schema(
   {
-    type: { type: String, enum: ['activity', 'food'], required: true },
+    type: { 
+      type: String, 
+      enum: ['activity', 'food', 'accommodation', 'transportation', 'shopping', 'other'], 
+      required: true 
+    },
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     startTime: { type: Date },
     endTime: { type: Date },
-    cost: { type: Number, default: 0 },
+    cost: { type: String, default: '' }, // Changed from Number to String
     notes: { type: String, trim: true },
     location: locationSchema,
     order: { type: Number, required: true },
@@ -56,7 +60,7 @@ const dailyScheduleSchema: Schema = new Schema(
  * Interface for a Location object from Google Maps
  */
 export interface ILocation {
-  placeId: string;
+  placeId?: string;
   name: string;
   address: string;
   coordinates?: { lat: number; lng: number };
@@ -67,13 +71,13 @@ export interface ILocation {
  */
 export interface IPlanItem {
   _id: Types.ObjectId;
-  type: 'activity' | 'food';
+  type: 'activity' | 'food' | 'accommodation' | 'transportation' | 'shopping' | 'other';
   title: string;
   description?: string;
   startTime?: Date;
   endTime?: Date;
   location?: ILocation;
-  cost?: number;
+  cost?: string; // Changed from number to string
   notes?: string;
   order: number;
 }

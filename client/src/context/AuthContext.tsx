@@ -12,6 +12,7 @@ export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 // Create the context with a default value
@@ -19,6 +20,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true, // Start in a loading state
   logout: () => {},
+  refreshUser: async () => {},
 });
 
 // Custom hook for easy access to the context

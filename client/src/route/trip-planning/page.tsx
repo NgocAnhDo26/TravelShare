@@ -4,8 +4,13 @@ import { Button } from '@/components/ui/button';
 // import Header from '@/components/header';
 import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import { useNavigate } from 'react-router-dom';
+import API from '@/utils/axiosInstance';
+import type { ILocation } from '@/types/trip';
+import type { DateRange } from 'react-day-picker';
 
 function TripPlanningContent() {
+  const navigate = useNavigate();
   const [publicState, setPublicState] = useState<
     'friends' | 'public' | 'private'
   >('public');
@@ -15,6 +20,12 @@ function TripPlanningContent() {
   const [inviteInput, setInviteInput] = useState('');
   const [inviteFocused, setInviteFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Form state
+  const [destination, setDestination] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -31,6 +42,54 @@ function TripPlanningContent() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [dropdownOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      // Validate form data
+      if (!destination.trim()) {
+        throw new Error('Destination is required');
+      }
+
+      if (!dateRange?.from || !dateRange?.to) {
+        throw new Error('Please select start and end dates');
+      }
+
+      if (dateRange.from > dateRange.to) {
+        throw new Error('Start date cannot be after end date');
+      }
+
+      // Create destination location object
+      const destinationLocation: ILocation = {
+        placeId: '', // Will be empty for now, can be enhanced with Google Places API later
+        name: destination.trim(),
+        address: destination.trim(),
+      };
+
+      // Prepare request data
+      const planData = {
+        title: `${destination.trim()}`, // Auto-generate title from destination
+        destination: destinationLocation,
+        startDate: dateRange.from.toISOString(),
+        endDate: dateRange.to.toISOString(),
+        privacy: publicState,
+      };
+
+      // Make API call
+      const response = await API.post('/plans', planData);
+      
+      // Navigate to the created plan
+      navigate(`/plans/${response.data._id}/edit`);
+    } catch (err: any) {
+      console.error('Error creating travel plan:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to create travel plan');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const publicOptions = [
     {
@@ -138,12 +197,19 @@ function TripPlanningContent() {
       <h1 className='text-4xl font-bold mb-8 mt-8 text-center'>
         Plan a new trip
       </h1>
-      <form className='w-full max-w-xl flex flex-col items-center gap-4'>
+      <form onSubmit={handleSubmit} className='w-full max-w-xl flex flex-col items-center gap-4'>
+        {error && (
+          <div className='w-full p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
+            {error}
+          </div>
+        )}
         <div className='w-full relative'>
           <Input
             id='destination'
             type='text'
             placeholder=' '
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
             className='peer w-full h-14 px-4 pt-5 pb-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black-400 text-base placeholder-transparent'
             autoComplete='off'
             required
@@ -156,7 +222,11 @@ function TripPlanningContent() {
           </Label>
         </div>
         <div className='w-full'>
-          <DateRangePicker id='dateRange' className='w-full' />
+          <DateRangePicker 
+            id='dateRange' 
+            className='w-full'
+            onDateChange={setDateRange}
+          />
         </div>
         <div className='flex w-full justify-between items-center mt-2 mb-2'>
           {!inviteOpen ? (
@@ -347,9 +417,10 @@ function TripPlanningContent() {
         </div>
         <Button
           type='submit'
-          className='w-full h-14 text-lg font-semibold mt-4 mb-2 text-white'
+          disabled={isLoading}
+          className='w-full h-14 text-lg font-semibold mt-4 mb-2 text-white disabled:opacity-50 disabled:cursor-not-allowed'
         >
-          Start planning
+          {isLoading ? 'Creating plan...' : 'Start planning'}
         </Button>
       </form>
     </div>

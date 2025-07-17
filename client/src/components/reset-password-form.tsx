@@ -13,7 +13,7 @@ import { useState, useRef, useEffect } from "react";
 import API from "@/utils/axiosInstance";
 import toast from "react-hot-toast";
 import PswStrength, { customPasswordStrength } from "./password-strength";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 export function ResetPasswordForm({
@@ -133,12 +133,12 @@ export function ResetPasswordForm({
 						</div>
 						<div className="mt-4 text-center text-sm">
 							Remember your password?{" "}
-							<a
-								href="/login"
+							<Link
+								to="/login"
 								className="underline underline-offset-4"
 							>
 								Back to login
-							</a>
+							</Link>
 						</div>
 					</form>
 				</CardContent>

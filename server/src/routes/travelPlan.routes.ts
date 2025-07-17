@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { TravelPlanController } from '../controllers/travelPlan.controllers';
 import AuthJwtMiddleware from '../middlewares/authJwt';
+import uploadUseCases from '../middlewares/upload';
 
 const router = Router();
 
@@ -86,13 +87,14 @@ router.put(
 
 /**
  * @route   PUT /:id/cover-image
- * @desc    Updates the cover image of a travel plan.
+ * @desc    Updates the cover image of a travel plan with file upload
  * @access  Private (Requires Authentication & Authorization)
  */
 router.put(
   '/:id/cover-image',
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
+  uploadUseCases.singleFileUpload('coverImage'),
   TravelPlanController.updateTravelPlanCoverImage,
 );
 
@@ -155,4 +157,5 @@ router.delete(
     AuthJwtMiddleware.isAuthor,
     TravelPlanController.deletePlanItem
 );
+
 export default router;

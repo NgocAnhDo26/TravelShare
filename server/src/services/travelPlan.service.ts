@@ -1,6 +1,7 @@
 import  mongoose, { Types } from 'mongoose';
 import TravelPlan, { ITravelPlan,IPlanItem, ILocation } from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
+import supabase from '../config/supabase.config';
 
 /**
  * @interface ITravelPlanService
@@ -42,6 +43,7 @@ interface ITravelPlanService {
     startDate: Date,
     endDate: Date,
   ): Promise<ITravelPlan>;
+  deleteImageFromSupabase(imageUrl: string): Promise<void>;
 }
 
 interface CreateTravelPlanRequest {
@@ -265,9 +267,58 @@ const TravelPlanService: ITravelPlanService = {
       throw new Error('You are not authorized to edit this travel plan.');
     }
 
+    // Store old cover image URL for cleanup
+    const oldCoverImageUrl = plan.coverImageUrl;
+
     plan.coverImageUrl = coverImageUrl;
     await plan.save();
+
+    // Delete old cover image from Supabase storage if it exists
+    if (oldCoverImageUrl) {
+      try {
+        await this.deleteImageFromSupabase(oldCoverImageUrl);
+      } catch (error) {
+        console.error('Failed to delete old cover image:', error);
+        // Don't throw here - the update was successful, cleanup is secondary
+      }
+    }
+
     return plan;
+  },
+
+  /**
+   * Delete image from Supabase storage
+   * @param imageUrl - The full URL of the image to delete
+   */
+  async deleteImageFromSupabase(imageUrl: string): Promise<void> {
+    try {
+      // Extract bucket name and filename from URL
+      // URL format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[filename]
+      const url = new URL(imageUrl);
+      const pathParts = url.pathname.split('/');
+      // Find the index of 'public' and get the next part as bucket name
+      const publicIdx = pathParts.findIndex((part) => part === 'public');
+      const bucketName = pathParts[publicIdx + 1];
+      const filePath = pathParts.slice(publicIdx + 2).join('/');
+
+      if (!bucketName || !filePath) {
+        throw new Error('Invalid image URL format');
+      }
+
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .remove([filePath]);
+
+      if (error) {
+        console.error('Supabase delete error:', error);
+        throw new Error(`Failed to delete file: ${error.message}`);
+      }
+
+      console.log('Successfully deleted old image:', filePath, 'from bucket:', bucketName);
+    } catch (error) {
+      console.error('Error deleting image from Supabase:', error);
+      throw error;
+    }
   },
 
   async updateTravelPlanDates(

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { cn } from "@/lib/utils"; // Giả định bạn có utility cn này
 import { Button } from "@/components/ui/button"; // Giả định bạn có Shadcn Button
+import { Link } from 'react-router-dom';
 
 // --- Header Component (có thể là một file riêng như components/layout/Header.tsx) ---
 // Giữ nguyên Header từ UserProfilePage vì nó là chung cho cả ứng dụng
@@ -13,10 +14,10 @@ const Header: React.FC<{ avatarUrl: string }> = ({ avatarUrl }) => {
             <div className="flex items-center space-x-6">
                 <div className="text-xl font-bold text-blue-800">TravelShare</div> {/* Thay thế bằng logo TravelShare */}
                 <nav className="hidden md:flex space-x-4">
-                    <a href="/" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Home</a>
-                    <a href="/travel-guides" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Travel guides</a>
-                    <a href="/hotels" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Hotels</a>
-                    <a href="/deals" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Deals</a>
+                    <Link to="/" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Home</Link>
+                    <Link to="/travel-guides" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Travel guides</Link>
+                    <Link to="/hotels" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Hotels</Link>
+                    <Link to="/deals" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Deals</Link>
                 </nav>
             </div>
 

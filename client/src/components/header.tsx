@@ -1,6 +1,7 @@
 // Vibe code using Copilot, reviewed and improved by Do Hai.
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
 	MapPin,
@@ -32,11 +33,13 @@ import API from "../utils/axiosInstance";
 import { toast } from "react-hot-toast";
 
 const Header: React.FC = () => {
+	const navigate = useNavigate();
+
 	function handleLogout() {
 		API.post("/auth/logout")
 			.then(() => {
 				toast.success("Logged out successfully!");
-				window.location.href = "/";
+				navigate("/");
 			})
 			.catch((error) => {
 				console.error("Logout failed:", error);

@@ -294,12 +294,22 @@ const TravelPlanController: ITravelPlanController = {
     try {
       const userId = req.user as string;
       const planId = req.params.id;
-      const { coverImageUrl } = req.body;
+      
+      // Check if file was uploaded
+      if (!req.file) {
+        res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ message: 'Cover image file is required.' });
+        return;
+      }
 
+      // Get the file URL from req.file (location for S3, path for local)
+      const coverImageUrl = (req.file as any).location || req.file.path;
+      
       if (!coverImageUrl) {
         res
           .status(HTTP_STATUS.BAD_REQUEST)
-          .json({ message: 'Cover image URL is required.' });
+          .json({ message: 'File upload failed.' });
         return;
       }
 
