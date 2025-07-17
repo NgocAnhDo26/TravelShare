@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useRef } from "react";
 import API from "@/utils/axiosInstance";
 import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 export function ForgotPasswordForm({
 	className,
@@ -97,12 +98,12 @@ export function ForgotPasswordForm({
 						</div>
 						<div className="mt-4 text-center text-sm">
 							Remember your password?{" "}
-							<a
-								href="/"
+							<Link
+								to="/"
 								className="underline underline-offset-4"
 							>
 								Back to login
-							</a>
+							</Link>
 						</div>
 					</form>
 				</CardContent>

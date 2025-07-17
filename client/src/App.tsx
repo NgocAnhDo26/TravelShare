@@ -7,6 +7,7 @@ import OtherProfilePage from './route/OtherProfilePage/page';
 import TripPlanningPage from './route/trip-planning/page';
 import PlanEditorPage from './route/PlanEditorPage/page';
 import ItineraryPage from './route/itinerary/page';
+import MainPage from './route/main/page';
 import NotFound from './utils/404';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
@@ -27,6 +28,7 @@ function App() {
 
         <Routes>
           {/* Public routes */}
+          <Route path='/' element={<MainPage />} />
           <Route path='/register' element={<RegisterPage />} />
           <Route path='/login' element={<LoginPage />} />
           <Route path='/forgot-password' element={<ForgotPasswordPage />} />
@@ -34,7 +36,6 @@ function App() {
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
-            <Route path='/' element={<ItineraryPage />} />
             <Route path='/profile' element={<UserProfilePage />}>
               <Route index element={<UserProfilePage />} />
               <Route path=':userId' element={<UserProfilePage />} />
