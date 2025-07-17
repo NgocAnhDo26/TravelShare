@@ -22,6 +22,7 @@ import {
   Camera,
   Upload,
   X,
+  TrashIcon,
 } from 'lucide-react';
 import type { Trip } from '@/types/trip';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
@@ -37,6 +38,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
+  DialogClose,
 } from './ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
@@ -78,6 +81,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [authorLoading, setAuthorLoading] = useState(true);
   const [authorError, setAuthorError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -275,6 +279,18 @@ const TripHeader: React.FC<TripHeaderProps> = ({
     navigate(`/plans/${trip._id}`);
   };
 
+  const handleDeletePlan = async () => {
+    try {
+      await API.delete(`/plans/${trip._id}`);
+      toast.success('Plan deleted successfully');
+      navigate(`/users/${user?.userId}/profile`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to delete plan');
+    } finally {
+      setDeleteDialogOpen(false);
+    }
+  };
+
   return (
     <>
       <div className='relative'>
@@ -309,8 +325,8 @@ const TripHeader: React.FC<TripHeaderProps> = ({
         )}
       </div>
       <Card className='relative lg:mx-16 mx-10 bg-white px-6 pt-8 shadow-lg -mt-28 rounded-md'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center'>
+        <div className='flex items-center'>
+          <div className='flex items-center flex-1'>
             {isEditingTitle ? (
               <Input
                 value={editedTitle}
@@ -394,6 +410,38 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                 <p>Switch to view mode</p>
               </TooltipContent>
             </Tooltip>
+          )}
+          {/* Delete Plan button for author, only in edit mode */}
+          {editMode && canEditPlan(trip, user) && (
+            <>
+              <Button
+                variant='destructive'
+                size='sm'
+                className='flex items-center gap-2 ml-2'
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <TrashIcon className='w-4 h-4' />
+                Delete
+              </Button>
+              <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete Plan</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to delete this plan? This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant='outline'>Cancel</Button>
+                    </DialogClose>
+                    <Button variant='destructive' onClick={handleDeletePlan} autoFocus>
+                      Delete
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
         

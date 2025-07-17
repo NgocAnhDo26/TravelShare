@@ -242,7 +242,7 @@ const UserController: IUserController = {
 
     try {
       const userProfile = await UserService.getProfile(userId);
-      res.status(200).json(userProfile);
+      res.status(200).json(userProfile); // Now includes tripPlans
     } catch (error: any) {
       if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });

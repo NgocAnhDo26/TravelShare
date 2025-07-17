@@ -1,7 +1,27 @@
+jest.mock('../../src/config/supabase.config.ts', () => ({
+  __esModule: true,
+  default: {
+    supabaseUrl: 'https://mock-supabase.com',
+    supabaseServiceKey: 'mock-service-key'
+  }
+}));
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => ({
+    from: jest.fn().mockReturnThis(),
+    select: jest.fn().mockResolvedValue({ data: [], error: null }),
+    // Add other mocked methods as needed
+  }))
+}));
+
 import { FollowService, UserService } from '../../src/services/user.service';
 import User from '../../src/models/user.model';
 import Follow from '../../src/models/follow.model';
 import { Types } from 'mongoose';
+import * as TravelPlanServiceModule from '../../src/services/travelPlan.service';
+
+// Mock TravelPlanService.getTravelPlansByAuthor to return an empty array
+jest.spyOn(TravelPlanServiceModule.TravelPlanService, 'getTravelPlansByAuthor').mockResolvedValue([]);
 
 process.env.JWT_SECRET = 'test-secret';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
@@ -82,7 +102,14 @@ describe('UserService', () => {
   describe('getProfile', () => {
     it('should return a user public profile', async () => {
       const userId = new Types.ObjectId().toHexString();
-      const userProfile = { _id: userId, username: 'testuser' };
+      const userProfile = {
+        username: 'testuser',
+        displayName: 'Test User',
+        avatarUrl: '',
+        bio: '',
+        followerCount: 0,
+        followingCount: 0,
+      };
       (mockedUser.findById as jest.Mock).mockReturnValue({
         select: jest.fn().mockResolvedValue(userProfile),
       });
@@ -90,7 +117,10 @@ describe('UserService', () => {
       const result = await UserService.getProfile(userId);
 
       expect(mockedUser.findById).toHaveBeenCalledWith(userId);
-      expect(result).toEqual(userProfile);
+      expect(result).toEqual({
+        ...userProfile,
+        tripPlans: [],
+      });
     });
 
     it('should throw an error if user not found', async () => {
