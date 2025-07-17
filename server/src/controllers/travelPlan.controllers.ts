@@ -303,8 +303,8 @@ const TravelPlanController: ITravelPlanController = {
         return;
       }
 
-      // The fileUrl should be available from the upload middleware
-      const coverImageUrl = req.body.fileUrl;
+      // Get the file URL from req.file (location for S3, path for local)
+      const coverImageUrl = (req.file as any).location || req.file.path;
       
       if (!coverImageUrl) {
         res

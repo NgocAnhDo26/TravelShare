@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from './ui/dialog';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+
+// Add a type for the user profile
+interface AuthorProfile {
+  username: string;
+  displayName?: string;
+  avatarUrl?: string;
+}
 
 interface TripHeaderProps {
   trip: Trip;
@@ -65,6 +73,34 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCoverImageLoading, setIsCoverImageLoading] = useState(false);
+  // Add state for author profile
+  const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null);
+  const [authorLoading, setAuthorLoading] = useState(true);
+  const [authorError, setAuthorError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setAuthorLoading(true);
+    setAuthorError(null);
+    API.get(`/users/${trip.author}/profile`)
+      .then((res) => {
+        if (isMounted) {
+          setAuthorProfile(res.data);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setAuthorError('Failed to load author');
+          console.error(err);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setAuthorLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [trip.author]);
 
   const handleEditTitle = () => {
     setIsEditingTitle(true);
@@ -449,25 +485,30 @@ const TripHeader: React.FC<TripHeaderProps> = ({
           <div className='flex items-center space-x-2'>
             {editMode ? (
               <>
-                {trip.author ? (
-                  <img
-                    key={trip.author}
-                    src={trip.author}
-                    alt={`${trip.author}'s avatar`}
-                    className='w-9 h-9 rounded-full object-cover border-2 border-white'
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src =
-                        'https://placehold.co/40x40/cccccc/ffffff?text=U';
-                    }}
-                  />
+                {authorLoading ? (
+                  <div className='w-9 h-9 rounded-full bg-gray-200 animate-pulse border-2 border-white' />
+                ) : authorProfile ? (
+                  <Avatar className='w-9 h-9 border-2 border-white'>
+                    <AvatarImage
+                      src={authorProfile.avatarUrl}
+                      alt={`${authorProfile.displayName || authorProfile.username}'s avatar`}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = 'https://placehold.co/40x40/cccccc/ffffff?text=U';
+                      }}
+                    />
+                    <AvatarFallback>
+                      {(authorProfile.displayName || authorProfile.username || 'U')
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 ) : (
-                  <div
-                    key={trip.author}
-                    className='w-9 h-9 bg-pink-200 rounded-full flex items-center justify-center text-pink-600 font-bold text-sm border-2 border-white'
-                  >
-                    {trip.author}
+                  <div className='w-9 h-9 bg-pink-200 rounded-full flex items-center justify-center text-pink-600 font-bold text-sm border-2 border-white'>
+                    {authorError ? '?' : 'U'}
                   </div>
                 )}
                 <button className='w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors border-2 border-white'>
@@ -505,7 +546,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
           
           <div className='space-y-4'>
             {/* Current Image Preview */}
-            <div className='space-y-2'>
+            <div className='space-y-2 grid'>
               <label className='text-sm font-medium'>Current Image</label>
               <div className='relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden'>
                 <img
@@ -523,7 +564,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             </div>
 
             {/* File Upload */}
-            <div className='space-y-2'>
+            <div className='space-y-2 grid'>
               <label className='text-sm font-medium'>Select New Image</label>
               <div className='flex items-center gap-2'>
                 <Input
@@ -546,7 +587,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
 
             {/* Preview */}
             {previewUrl && (
-              <div className='space-y-2'>
+              <div className='space-y-2 grid'>
                 <label className='text-sm font-medium'>Preview</label>
                 <div className='relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden'>
                   <img
