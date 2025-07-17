@@ -24,7 +24,7 @@ const GlobalNavigation = () => {
   const navigate = useNavigate();
 
   return (
-    <div className='sticky top-0 flex items-center gap-4 border-b-1 px-24 py-2 shadow-sm bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
+    <div className='sticky top-0 z-50 flex items-center gap-4 border-b-1 px-24 py-2 shadow-sm bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
       <Link to='/' className='text-md font-normal text-gray-800 mr-4'>
         <img src='/logo_title.png' alt='Logo' className='h-12' />
       </Link>

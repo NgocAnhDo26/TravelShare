@@ -1,6 +1,7 @@
 import  mongoose, { Types } from 'mongoose';
 import TravelPlan, { ITravelPlan,IPlanItem, ILocation } from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
+import supabase from '../config/supabase.config';
 
 /**
  * @interface ITravelPlanService
@@ -42,6 +43,7 @@ interface ITravelPlanService {
     startDate: Date,
     endDate: Date,
   ): Promise<ITravelPlan>;
+  deleteImageFromSupabase(imageUrl: string): Promise<void>;
 }
 
 interface CreateTravelPlanRequest {
@@ -265,9 +267,54 @@ const TravelPlanService: ITravelPlanService = {
       throw new Error('You are not authorized to edit this travel plan.');
     }
 
+    // Store old cover image URL for cleanup
+    const oldCoverImageUrl = plan.coverImageUrl;
+
     plan.coverImageUrl = coverImageUrl;
     await plan.save();
+
+    // Delete old cover image from Supabase storage if it exists
+    if (oldCoverImageUrl) {
+      try {
+        await this.deleteImageFromSupabase(oldCoverImageUrl);
+      } catch (error) {
+        console.error('Failed to delete old cover image:', error);
+        // Don't throw here - the update was successful, cleanup is secondary
+      }
+    }
+
     return plan;
+  },
+
+  /**
+   * Delete image from Supabase storage
+   * @param imageUrl - The full URL of the image to delete
+   */
+  async deleteImageFromSupabase(imageUrl: string): Promise<void> {
+    try {
+      // Extract filename from URL
+      // URL format: https://[project].supabase.co/storage/v1/object/public/avatars/[filename]
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      
+      if (!fileName) {
+        throw new Error('Invalid image URL format');
+      }
+
+      const { error } = await supabase.storage
+        .from('avatars')
+        .remove([fileName]);
+
+      if (error) {
+        console.error('Supabase delete error:', error);
+        throw new Error(`Failed to delete file: ${error.message}`);
+      }
+
+      console.log('Successfully deleted old cover image:', fileName);
+    } catch (error) {
+      console.error('Error deleting image from Supabase:', error);
+      throw error;
+    }
   },
 
   async updateTravelPlanDates(
