@@ -292,25 +292,29 @@ const TravelPlanService: ITravelPlanService = {
    */
   async deleteImageFromSupabase(imageUrl: string): Promise<void> {
     try {
-      // Extract filename from URL
-      // URL format: https://[project].supabase.co/storage/v1/object/public/avatars/[filename]
-      const urlParts = imageUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      
-      if (!fileName) {
+      // Extract bucket name and filename from URL
+      // URL format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[filename]
+      const url = new URL(imageUrl);
+      const pathParts = url.pathname.split('/');
+      // Find the index of 'public' and get the next part as bucket name
+      const publicIdx = pathParts.findIndex((part) => part === 'public');
+      const bucketName = pathParts[publicIdx + 1];
+      const filePath = pathParts.slice(publicIdx + 2).join('/');
+
+      if (!bucketName || !filePath) {
         throw new Error('Invalid image URL format');
       }
 
       const { error } = await supabase.storage
-        .from('avatars')
-        .remove([fileName]);
+        .from(bucketName)
+        .remove([filePath]);
 
       if (error) {
         console.error('Supabase delete error:', error);
         throw new Error(`Failed to delete file: ${error.message}`);
       }
 
-      console.log('Successfully deleted old cover image:', fileName);
+      console.log('Successfully deleted old image:', filePath, 'from bucket:', bucketName);
     } catch (error) {
       console.error('Error deleting image from Supabase:', error);
       throw error;

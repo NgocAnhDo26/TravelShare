@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +77,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null);
   const [authorLoading, setAuthorLoading] = useState(true);
   const [authorError, setAuthorError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -573,11 +574,12 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                   onChange={handleImageSelect}
                   disabled={isCoverImageLoading}
                   className='flex-1'
+                  ref={fileInputRef}
                 />
                 <Button
                   variant='outline'
                   size='icon'
-                  onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+                  onClick={() => fileInputRef.current?.click()}
                   disabled={isCoverImageLoading}
                 >
                   <Upload className='w-4 h-4' />
