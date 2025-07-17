@@ -11,12 +11,23 @@ import { CalendarIcon } from "lucide-react"
 import * as React from "react"
 import { type DateRange } from "react-day-picker"
 
+interface DateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  id?: string;
+  onDateChange?: (date: DateRange | undefined) => void;
+}
+
 export default function DateRangePicker({
   className,
   id,
-}: React.HTMLAttributes<HTMLDivElement> & { id?: string }) {
+  onDateChange,
+}: DateRangePickerProps) {
   const [date, setDate] = React.useState<DateRange | undefined>(undefined);
   const [isOpen, setIsOpen] = React.useState(false);
+
+  const handleDateChange = (newDate: DateRange | undefined) => {
+    setDate(newDate);
+    onDateChange?.(newDate);
+  };
 
   return (
     <div className={cn("relative grid gap-2", className)}>
@@ -63,7 +74,7 @@ export default function DateRangePicker({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={handleDateChange}
             numberOfMonths={2}
             disabled={{ before: new Date() }}
             showOutsideDays={false}
