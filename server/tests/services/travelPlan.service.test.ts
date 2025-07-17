@@ -6,6 +6,16 @@ import { Types } from 'mongoose';
 // Mock the Mongoose model and utility functions
 jest.mock('../../src/models/travelPlan.model');
 jest.mock('../../src/utils/travelPlan');
+jest.mock('../../src/config/supabase.config', () => ({
+  __esModule: true,
+  default: {
+    storage: {
+      from: () => ({
+        remove: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    },
+  },
+}));
 
 const mockedTravelPlan = TravelPlan as jest.Mocked<typeof TravelPlan>;
 const mockedGenerateSchedule = generateSchedule as jest.Mock;
@@ -24,7 +34,14 @@ describe('TravelPlanService', () => {
         endDate: new Date('2024-01-03'),
       };
       const authorId = new Types.ObjectId().toHexString();
-      const schedule = [{ dayNumber: 1, date: new Date('2024-01-01'), items: [] }];
+      const schedule = [{ dayNumber: 1, date: new Date('2024-01-01'), items: [{
+        _id: new Types.ObjectId(),
+        type: 'activity',
+        title: 'Visit Place',
+        cost: '0',
+        order: 1,
+        location: { placeId: '1', name: 'Test Place', address: '123 Test St', coordinates: { lat: 0, lng: 0 } }
+      }] }];
       const newPlan = { ...planData, author: authorId, schedule };
 
       mockedGenerateSchedule.mockReturnValue(schedule);
