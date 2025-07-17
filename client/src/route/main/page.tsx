@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -6,10 +6,34 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { Plus, MapPin, Globe, Users } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '../../context/AuthContext';
+import Feed from '../../components/PlanCard';
+import API from '../../utils/axiosInstance';
+import PublicPlanCard from '../../components/PublicPlanCard';
 
 const MainPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const [publicPlans, setPublicPlans] = useState<any[]>([]);
+  const [isPublicLoading, setIsPublicLoading] = useState(false);
+
+  useEffect(() => {
+
+    if (!isLoading && !user) {
+      const fetchPublicPlans = async () => {
+        setIsPublicLoading(true);
+        try {
+
+          const response = await API.get('/plans/public');
+          setPublicPlans(response.data);
+        } catch (error) {
+          console.error('Failed to fetch public plans:', error);
+        } finally {
+          setIsPublicLoading(false);
+        }
+      };
+      fetchPublicPlans();
+    }
+  }, [user, isLoading]);
 
   const handleCreatePlan = () => {
     navigate('/plans/create');
@@ -62,7 +86,7 @@ const MainPage: React.FC = () => {
                       <span>Plan your next destination</span>
                     </div>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleCreatePlan}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
@@ -72,50 +96,15 @@ const MainPage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-
             {/* Feed Section */}
-            <div className="space-y-4">
+            <div>
               <Separator className='my-6' />
-              
-              {/* Skeleton Posts */}
-              {skeletonPosts.map((index) => (
-                <Card key={index} className="shadow-sm">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full" />
-                      <div className="flex-1">
-                        <Skeleton className="h-4 w-32 mb-2" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2 mb-4" />
-                    
-                    {/* Mock image placeholder */}
-                    <Skeleton className="h-48 w-full rounded-lg mb-4" />
-                    
-                    {/* Mock action buttons */}
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="w-4 h-4" />
-                        <Skeleton className="h-3 w-8" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="w-4 h-4" />
-                        <Skeleton className="h-3 w-12" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="w-4 h-4" />
-                        <Skeleton className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Your Feed</h2>
+              <Feed />
             </div>
+
+
+
           </>
         ) : (
           // Guest user content
@@ -143,14 +132,14 @@ const MainPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex gap-3 justify-center pt-4">
-                    <Button 
+                    <Button
                       onClick={handleLogin}
                       variant="outline"
                       className="border-blue-300 text-blue-700 hover:bg-blue-50"
                     >
                       Sign In
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleRegister}
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
@@ -171,53 +160,39 @@ const MainPage: React.FC = () => {
                   Sign up to create your own travel plans and interact with the community
                 </p>
               </div>
-              
+
               {/* Limited skeleton posts for guests */}
-              {skeletonPosts.slice(0, 3).map((index) => (
-                <Card key={index} className="shadow-sm opacity-75">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full" />
-                      <div className="flex-1">
-                        <Skeleton className="h-4 w-32 mb-2" />
-                        <Skeleton className="h-3 w-24" />
+              {isPublicLoading ? (
+                // Hiển thị skeleton khi đang tải
+                Array.from({ length: 3 }).map((_, index) => (
+                  <Card key={index} className="shadow-sm">
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-10 h-10 rounded-full" />
+                        <div className="flex-1">
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2 mb-4" />
-                    
-                    {/* Mock image placeholder */}
-                    <Skeleton className="h-48 w-full rounded-lg mb-4" />
-                    
-                    {/* Mock action buttons */}
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="w-4 h-4" />
-                        <Skeleton className="h-3 w-8" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="w-4 h-4" />
-                        <Skeleton className="h-3 w-12" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="w-4 h-4" />
-                        <Skeleton className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-48 w-full rounded-lg" />
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                 publicPlans.map((plan) => (
+                  <PublicPlanCard key={plan._id} plan={plan} />
+                ))
+              )}
+
               {/* Call to action */}
               <Card className="mt-6 shadow-sm border-dashed border-2 border-gray-300 bg-gray-50">
                 <CardContent className="text-center py-8">
                   <p className="text-gray-600 mb-4">
                     Want to see more travel plans and create your own?
                   </p>
-                  <Button 
+                  <Button
                     onClick={handleRegister}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >

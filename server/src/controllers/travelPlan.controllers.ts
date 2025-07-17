@@ -37,6 +37,8 @@ interface ITravelPlanController {
     res: Response,
     next: NextFunction,
   ): Promise<void>;
+
+   getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>; 
 }
 
 /**
@@ -411,6 +413,22 @@ const TravelPlanController: ITravelPlanController = {
       }
       res.status(HTTP_STATUS.OK).json({ message: 'Item deleted successfully!' });
     } catch (error) {
+      next(error);
+    }
+  },
+   async getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+     
+      const userId = req.user as string;
+      
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const feed = await TravelPlanService.getFeedForUser(userId, { page, limit });
+
+      res.status(HTTP_STATUS.OK).json(feed);
+    } catch (error: any) {
+  
       next(error);
     }
   },

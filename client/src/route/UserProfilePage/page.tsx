@@ -532,7 +532,7 @@ const UserProfilePage: React.FC = () => {
             following={userData.followingCount}
             onShare={handleShareProfile}
             avatarUrl={userData.avatarUrl}
-            isMyProfile={!userId} // Check if this is the user's own profile
+           isMyProfile={!userId || user?.userId === userId} // Check if this is the user's own profile
           />
           {/* Add FAQSection below ProfileCard */}
           {/* <FAQSection faqs={userData.faqs} /> */}

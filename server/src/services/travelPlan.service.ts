@@ -2,6 +2,8 @@ import  mongoose, { Types } from 'mongoose';
 import TravelPlan, { ITravelPlan,IPlanItem, ILocation } from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
 import supabase from '../config/supabase.config';
+import Follow from '../models/follow.model';
+import { FollowService } from './user.service'; 
 
 /**
  * @interface ITravelPlanService
@@ -44,6 +46,11 @@ interface ITravelPlanService {
     endDate: Date,
   ): Promise<ITravelPlan>;
   deleteImageFromSupabase(imageUrl: string): Promise<void>;
+
+   getFeedForUser(
+    userId: string,
+    options: { page: number; limit: number },
+  ): Promise<any[]>;
 }
 
 interface CreateTravelPlanRequest {
@@ -470,6 +477,44 @@ const TravelPlanService: ITravelPlanService = {
     }
     return itemDeleted;
   },
+
+  async getFeedForUser(
+    userId: string,
+    options: { page: number; limit: number },
+  ): Promise<any[]> {
+    try {
+      const followingRelations = await FollowService.getFollowing(userId, {
+        page: 1,
+        limit: 5000,
+      });
+      const followingIds = followingRelations.map(
+        (relation) => relation.following._id,
+      );
+
+      const followedPlans = await TravelPlan.find({
+        author: { $in: followingIds },
+      })
+        .populate('author', 'username displayName avatarUrl')
+        .sort({ createdAt: -1 })
+        .exec();
+
+      const publicFeed = await TravelPlan.find({
+        privacy: 'public',
+        author: { $nin: followingIds },
+      })
+        .populate('author', 'username displayName avatarUrl')
+        .sort({ createdAt: -1 })
+        .exec();
+        
+      const feedPlans = [...followedPlans, ...publicFeed];
+
+      return feedPlans;
+    } catch (error) {
+      console.error('Error getting feed for user:', error);
+      throw error;
+    }
+  },
+
 };
 
 export { TravelPlanService };
