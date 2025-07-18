@@ -27,6 +27,17 @@ router.get(
 );
 
 /**
+ * GET /api/plans/feed
+ * Get personalized travel plan feed for the logged-in user
+ * Requires Authentication
+ */
+router.get(
+  '/feed',
+  AuthJwtMiddleware.verifyToken, 
+  TravelPlanController.getHomeFeed,
+);
+
+/**
  * GET /api/plans/:id
  * Get a travel plan by ID
  * Requires: Authentication
