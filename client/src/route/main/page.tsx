@@ -47,9 +47,6 @@ const MainPage: React.FC = () => {
     navigate('/register');
   };
 
-  // Mock data for skeleton loading
-  const skeletonPosts = Array.from({ length: 5 }, (_, index) => index);
-
   // Show loading state while checking authentication
   if (isLoading) {
     return (

@@ -29,7 +29,7 @@ type EditProfileFormProps = {
 
 const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
   const [username, setUsername] = useState(user.username);
-  const [email, setEmail] = useState(user.email || '');
+  const [email] = useState(user.email || '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState(user.avatarUrl);
   const [displayName, setDisplayName] = useState(user.displayName || '');
