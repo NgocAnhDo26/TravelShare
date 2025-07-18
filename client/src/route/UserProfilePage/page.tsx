@@ -35,6 +35,7 @@ interface ProfileCardProps {
   onShare: () => void;
   avatarUrl?: string; // Optional avatar
   isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
+  email?: string; 
 }
 
 const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -45,6 +46,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   onShare,
   avatarUrl,
   isMyProfile,
+  email,
 }) => {
   return (
     <Card className='flex flex-col items-center gap-0 p-6'>
@@ -81,8 +83,10 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
         <div className='flex space-x-3 w-full'>
           <EditProfileForm
             user={{
+              displayName: displayName,
               username: userName,
               avatarUrl: avatarUrl ?? '',
+              email: email, 
             }}
           />
           <Button onClick={onShare} className='flex-1 cursor-pointer'>
@@ -528,6 +532,7 @@ const UserProfilePage: React.FC = () => {
           <ProfileCard
             userName={userData.username}
             displayName={userData.displayName ?? userData.username}
+            email={userData.email}
             followers={userData.followerCount}
             following={userData.followingCount}
             onShare={handleShareProfile}

@@ -228,7 +228,7 @@ const UserService: IUserService = {
 
   getProfile: async (userId: string): Promise<any> => {
     const userProfile = await User.findById(userId).select(
-      'displayName username avatarUrl bio followerCount followingCount',
+      'displayName username email avatarUrl bio followerCount followingCount',
     );
 
     if (!userProfile) {
@@ -250,6 +250,7 @@ const UserService: IUserService = {
     return {
       username: userProfile.username,
       displayName: userProfile.displayName,
+      email: userProfile.email,
       avatarUrl: userProfile.avatarUrl,
       bio: userProfile.bio,
       followerCount: userProfile.followerCount,

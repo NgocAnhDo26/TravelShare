@@ -22,6 +22,7 @@ type EditProfileFormProps = {
     username: string;
     avatarUrl: string;
     email?: string;
+    displayName?: string; 
   };
   onSuccess?: () => void;
 } & React.ComponentProps<'div'>;
@@ -31,6 +32,7 @@ const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
   const [email, setEmail] = useState(user.email || '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState(user.avatarUrl);
+  const [displayName, setDisplayName] = useState(user.displayName || '');
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,7 +52,9 @@ const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
     }
 
     const formData = new FormData();
+    formData.append('displayName', displayName);
     formData.append('username', username);
+    formData.append('email', email);
     if (avatarFile) {
       formData.append('avatar', avatarFile);
     }
@@ -88,6 +92,14 @@ const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
         </DialogHeader>
         <form onSubmit={handleSubmit} className='flex flex-col gap-6'>
           <div className='grid gap-3'>
+            <Label htmlFor='displayName'>Display Name</Label>
+            <Input
+              id='displayName'
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          </div>
+          <div className='grid gap-3'>
             <Label htmlFor='username'>Username</Label>
             <Input
               id='username'
@@ -100,7 +112,7 @@ const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
             <Input
               id='email'
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              readOnly
             />
           </div>
           <div className='grid gap-3'>
