@@ -55,14 +55,14 @@ export function LoginForm({
       const loadingToast = toast.loading('Logging in...');
 
       API.post('/auth/login', {
-        email: email,
-        password: password,
+        email: emailValue, 
+        password: passwordValue, 
       })
         .then(async (response) => {
           toast.dismiss(loadingToast);
           console.log('Login successful:', response.data);
           toast.success('Login successful!');
-          await refreshUser(); // Refresh user state
+          await refreshUser(); 
           navigate('/');
         })
         .catch((error) => {
