@@ -85,7 +85,10 @@ const GlobalNavigation = () => {
                 <Calendar className='mr-2 h-4 w-4' />
                 <span>My Plans</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+              onSelect={() => {
+                navigate('/favorites');
+              }}>
                 <Heart className='mr-2 h-4 w-4' />
                 <span>Favorites</span>
               </DropdownMenuItem>

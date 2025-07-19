@@ -8,6 +8,7 @@ import TripPlanningPage from './route/trip-planning/page';
 import PlanEditorPage from './route/PlanEditorPage/page';
 import ItineraryPage from './route/itinerary/page';
 import MainPage from './route/main/page';
+// import FavoritesPage from './route/favorites/page'; // Remove static import
 import NotFound from './utils/404';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
@@ -16,6 +17,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import GlobalNavigation from './components/navigation';
 import { AuthProvider } from './context/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
+import React from 'react';
+
+// Lazy import FavoritesPage
+const FavoritesPage = React.lazy(() => import('./route/favorites/page'));
 
 function App() {
   return (
@@ -40,6 +45,11 @@ function App() {
               <Route index element={<UserProfilePage />} />
               <Route path=':userId' element={<UserProfilePage />} />
             </Route>
+            <Route path='/favorites' element={
+              <React.Suspense fallback={<div>Loading...</div>}>
+                <FavoritesPage />
+              </React.Suspense>
+            } />
             <Route
               path='/other-profile/:userId'
               element={<OtherProfilePage />}

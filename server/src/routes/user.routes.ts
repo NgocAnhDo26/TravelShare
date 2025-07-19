@@ -5,6 +5,7 @@ import {
 } from '../controllers/user.controllers';
 import AuthJwtMiddleware from '../middlewares/authJwt';
 import uploadUseCases from '../middlewares/upload';
+import { getLikedTargetsByUser } from '../controllers/like.controllers';
 
 const router = Router();
 
@@ -45,6 +46,9 @@ router.put(
   uploadUseCases.singleFileUpload('avatar'),
   UserController.updateProfile,
 );
+
+// Get all liked targets by current user (authenticated)
+router.get('/likes', AuthJwtMiddleware.verifyToken, getLikedTargetsByUser);
 
 // --- Public Routes ---
 /** Get user profile (current user or any user) */

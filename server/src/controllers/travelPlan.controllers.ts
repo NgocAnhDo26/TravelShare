@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { TravelPlanService } from '../services/travelPlan.service';
-import { ITravelPlan } from '../models/travelPlan.model'; // Assuming interfaces are in the model file
+import { LikeService } from '../services/like.service';
+import { ITravelPlan } from '../models/travelPlan.model'; 
 import { HTTP_STATUS } from '../constants/http';
+import { Types } from 'mongoose'; // Make sure this is imported
 
 /**
  * @interface ITravelPlanController
@@ -110,6 +112,7 @@ const TravelPlanController: ITravelPlanController = {
   async getTravelPlanById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user as string;
       const travelPlan = await TravelPlanService.getTravelPlanById(id);
 
       if (!travelPlan) {
@@ -119,7 +122,20 @@ const TravelPlanController: ITravelPlanController = {
         return;
       }
 
-      res.status(HTTP_STATUS.OK).json(travelPlan);
+      // Check if liked by current user
+      let isLiked = false;
+      if (userId) {
+        isLiked = await LikeService.isLiked({
+          userId: new Types.ObjectId(userId),
+          targetId: new Types.ObjectId(id),
+          onModel: 'TravelPlan',
+        });
+      }
+
+      res.status(HTTP_STATUS.OK).json({
+        ...travelPlan.toObject?.() || travelPlan,
+        isLiked,
+      });
     } catch (error) {
       console.error('Error in getTravelPlanById controller:', error);
 
@@ -145,10 +161,29 @@ const TravelPlanController: ITravelPlanController = {
   async getTravelPlansByAuthor(req: Request, res: Response): Promise<void> {
     try {
       const { authorId } = req.params;
-      const travelPlans =
-        await TravelPlanService.getTravelPlansByAuthor(authorId);
+      const userId = req.user as string;
+      const travelPlans = await TravelPlanService.getTravelPlansByAuthor(authorId);
 
-      res.status(HTTP_STATUS.OK).json(travelPlans);
+      // Get all liked plan ids for this user
+      let likedMap: Record<string, boolean> = {};
+      if (userId && travelPlans.length > 0) {
+        const likes = await LikeService.getUserLikesForTargets({
+          userId: new Types.ObjectId(userId),
+          targetIds: travelPlans.map((plan: any) => plan._id),
+          onModel: 'TravelPlan',
+        });
+        likedMap = likes.reduce((acc: Record<string, boolean>, like: any) => {
+          acc[like.targetId.toString()] = true;
+          return acc;
+        }, {});
+      }
+
+      res.status(HTTP_STATUS.OK).json(
+        travelPlans.map((plan: any) => ({
+          ...plan.toObject?.() || plan,
+          isLiked: likedMap[plan._id.toString()] || false,
+        }))
+      );
     } catch (error) {
       console.error('Error in getTravelPlansByAuthor controller:', error);
 
@@ -418,17 +453,35 @@ const TravelPlanController: ITravelPlanController = {
   },
    async getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-     
       const userId = req.user as string;
-      
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
 
+      // 1. Get feed plans
       const feed = await TravelPlanService.getFeedForUser(userId, { page, limit });
 
-      res.status(HTTP_STATUS.OK).json(feed);
+      // 2. Get all liked plan ids for this user
+      let likedMap: Record<string, boolean> = {};
+      if (userId && feed.length > 0) {
+        const likes = await LikeService.getUserLikesForTargets({
+          userId: new Types.ObjectId(userId),
+          targetIds: feed.map((plan: any) => plan._id),
+          onModel: 'TravelPlan',
+        });
+        likedMap = likes.reduce((acc: Record<string, boolean>, like: any) => {
+          acc[like.targetId.toString()] = true;
+          return acc;
+        }, {});
+      }
+
+      // 3. Attach isLiked to each plan
+      res.status(HTTP_STATUS.OK).json(
+        feed.map((plan: any) => ({
+          ...plan.toObject?.() || plan,
+          isLiked: likedMap[plan._id.toString()] || false,
+        }))
+      );
     } catch (error: any) {
-  
       next(error);
     }
   },

@@ -82,6 +82,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [authorError, setAuthorError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isLiked, setIsLiked] = useState(!!trip.isLiked);
+  const [likesCount, setLikesCount] = useState(trip.likesCount ?? 0);
+  const [pop, setPop] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -288,6 +291,28 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       toast.error(err.response?.data?.error || 'Failed to delete plan');
     } finally {
       setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleToggleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPop(true);
+
+    setIsLiked(prevLiked => {
+      setLikesCount(prevCount => prevLiked ? prevCount - 1 : prevCount + 1);
+      return !prevLiked;
+    });
+
+    try {
+      await API.post(`/plans/${trip._id}/like`);
+    } catch (err) {
+      // Revert both states if error
+      setIsLiked(prevLiked => {
+        setLikesCount(prevCount => prevLiked ? prevCount - 1 : prevCount + 1);
+        return !prevLiked;
+      });
+    } finally {
+      setTimeout(() => setPop(false), 200);
     }
   };
 
@@ -567,9 +592,35 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             ) : (
               <>
                 <div className='flex items-center'>
-                  <Button variant='ghost'>
-                    <Heart />
-                    {trip.likesCount ?? 0}
+                  <Button
+                    variant='ghost'
+                    type="button"
+                    onClick={handleToggleLike}
+                    onMouseDown={e => e.stopPropagation()}
+                    className={`
+                      group flex items-center gap-2 px-2 py-1 rounded-full
+                      transition bg-transparent hover:bg-red-50 active:bg-red-100
+                      focus:outline-none cursor-pointer active:scale-95
+                    `}
+                    aria-label={isLiked ? "Unlike" : "Like"}
+                    tabIndex={0}
+                  >
+                    <Heart
+                      size={22}
+                      className={`
+                        transition-all duration-200
+                        ${isLiked
+                          ? 'text-red-500 fill-red-500 group-hover:scale-125 group-hover:fill-red-500 group-hover:text-red-500'
+                          : 'text-gray-400 fill-transparent group-hover:scale-125 group-hover:text-red-500 group-hover:fill-red-200'
+                        }
+                        ${pop ? 'scale-150' : ''}
+                      `}
+                      style={{
+                        filter: isLiked ? 'drop-shadow(0 0 4px #f87171)' : undefined,
+                        transition: 'transform 0.05s, color 0.05s, fill 0.05s, filter 0.05s'
+                      }}
+                    />
+                    <span className="font-medium">{likesCount}</span>
                   </Button>
                   <Button variant='ghost'>
                     <MessageCircle />

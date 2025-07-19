@@ -46,6 +46,7 @@ export interface Trip {
   originalPlan?: string; // Reference to original plan ID
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
+  isLiked: boolean;
 }
 
 // Legacy interfaces for backward compatibility (deprecated)

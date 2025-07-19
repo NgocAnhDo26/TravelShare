@@ -8,6 +8,7 @@ import travelPlanRouter from './routes/travelPlan.routes';
 import cookieParser from 'cookie-parser';
 import { logger, morganStream } from './utils/logger';
 import morgan from 'morgan';
+import { createLikeRoutes } from './routes/like.routes';
 dotenv.config();
 
 const app = express();
@@ -27,10 +28,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Routes
-// app.use("/api/items", itemRoutes);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/plans', travelPlanRouter);
+app.use('/api/plans', createLikeRoutes('TravelPlan'));
+// When you implement posts, add:
+// import postRouter from './routes/post.routes';
+// app.use('/api/posts', postRouter);
+// app.use('/api/posts', createLikeRoutes('Post'));
 
 // Global error handler (should be after routes)
 app.use(errorHandler);
