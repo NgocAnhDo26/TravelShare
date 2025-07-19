@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { LikeService } from '../services/like.service';
 import { Types } from 'mongoose';
+import TravelPlan from '../models/travelPlan.model';
 
 /**
  * Like a target (TravelPlan or Post)
@@ -120,7 +121,6 @@ export const getLikedTargetsByUser = async (req: Request, res: Response, next: N
     // 2. Fetch all TravelPlans with those IDs
     let travelPlans: any[] = [];
     if (targetIds.length > 0) {
-      const TravelPlan = require('../models/travelPlan.model').default;
       travelPlans = await TravelPlan.find({ _id: { $in: targetIds } });
     }
 
