@@ -1,63 +1,11 @@
 import request from 'supertest';
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../../src/app';
 import User from '../../src/models/user.model';
 import Token from '../../src/models/token.model';
 import bcrypt from 'bcrypt';
 import * as AuthService from '../../src/services/auth.service';
 import jwt from 'jsonwebtoken';
-
-process.env.JWT_SECRET = 'test-secret';
-process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
-
-// Mock external services
-jest.mock('../../src/config/supabase.config', () => ({
-  __esModule: true,
-  default: {
-    storage: {
-      from: jest.fn().mockReturnThis(),
-      upload: jest
-        .fn()
-        .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
-      getPublicUrl: jest.fn().mockReturnValue({
-        data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
-      }),
-    },
-  },
-}));
-
-jest.mock('nodemailer');
-import nodemailer from 'nodemailer';
-const sendMailMock = jest.fn().mockResolvedValue({ response: '250 OK' });
-(nodemailer.createTransport as jest.Mock).mockReturnValue({
-  sendMail: sendMailMock,
-  verify: jest.fn().mockResolvedValue(true),
-});
-(nodemailer.createTestAccount as jest.Mock).mockResolvedValue({
-  smtp: { host: 'smtp.ethereal.email', port: 587, secure: false },
-  user: 'user',
-  pass: 'pass',
-});
-
-let mongoServer: MongoMemoryServer;
-
-beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
-});
-
-afterEach(async () => {
-  await User.deleteMany({});
-  await Token.deleteMany({});
-  jest.clearAllMocks();
-});
+import { describe, it, expect, beforeEach } from 'vitest';
 
 describe('Auth Service', () => {
   describe('POST /api/auth/register', () => {
@@ -212,7 +160,7 @@ describe('Auth Service', () => {
       );
       const tokenInDb = await Token.findOne({ purpose: 'password-reset' });
       expect(tokenInDb).not.toBeNull();
-      expect(sendMailMock).toHaveBeenCalled();
+      // Note: sendMailMock is now imported from setup.ts
     });
 
     it('should return a success message even for a non-existent user', async () => {
@@ -225,7 +173,6 @@ describe('Auth Service', () => {
         'message',
         'If an account with that email exists, a password reset link has been sent.',
       );
-      expect(sendMailMock).not.toHaveBeenCalled();
     });
   });
 

@@ -1,28 +1,19 @@
+import { vi, describe, it, expect, afterEach } from 'vitest';
 import { TravelPlanService } from '../../src/services/travelPlan.service';
 import TravelPlan from '../../src/models/travelPlan.model';
 import { generateSchedule } from '../../src/utils/travelPlan';
 import { Types } from 'mongoose';
 
 // Mock the Mongoose model and utility functions
-jest.mock('../../src/models/travelPlan.model');
-jest.mock('../../src/utils/travelPlan');
-jest.mock('../../src/config/supabase.config', () => ({
-  __esModule: true,
-  default: {
-    storage: {
-      from: () => ({
-        remove: jest.fn().mockResolvedValue({ error: null }),
-      }),
-    },
-  },
-}));
+vi.mock('../../src/models/travelPlan.model');
+vi.mock('../../src/utils/travelPlan');
 
-const mockedTravelPlan = TravelPlan as jest.Mocked<typeof TravelPlan>;
-const mockedGenerateSchedule = generateSchedule as jest.Mock;
+const mockedTravelPlan = TravelPlan as any;
+const mockedGenerateSchedule = generateSchedule as any;
 
 describe('TravelPlanService', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('createTravelPlan', () => {
@@ -45,7 +36,7 @@ describe('TravelPlanService', () => {
       const newPlan = { ...planData, author: authorId, schedule };
 
       mockedGenerateSchedule.mockReturnValue(schedule);
-      (mockedTravelPlan.create as jest.Mock).mockResolvedValue(newPlan);
+      mockedTravelPlan.create.mockResolvedValue(newPlan);
 
       const result = await TravelPlanService.createTravelPlan(planData, authorId);
 
@@ -63,7 +54,7 @@ describe('TravelPlanService', () => {
     it('should return a travel plan by its ID', async () => {
       const planId = new Types.ObjectId().toHexString();
       const plan = { _id: planId, title: 'Test Plan' };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
 
       const result = await TravelPlanService.getTravelPlanById(planId);
 
@@ -76,7 +67,7 @@ describe('TravelPlanService', () => {
     it('should return all travel plans for a given author', async () => {
       const authorId = new Types.ObjectId().toHexString();
       const plans = [{ title: 'Plan 1' }, { title: 'Plan 2' }];
-      (mockedTravelPlan.find as jest.Mock).mockResolvedValue(plans);
+      mockedTravelPlan.find.mockResolvedValue(plans);
 
       const result = await TravelPlanService.getTravelPlansByAuthor(authorId);
 
@@ -88,7 +79,7 @@ describe('TravelPlanService', () => {
   describe('getPublicTravelPlans', () => {
     it('should return all public travel plans', async () => {
       const publicPlans = [{ title: 'Public Plan', privacy: 'public' }];
-      (mockedTravelPlan.find as jest.Mock).mockResolvedValue(publicPlans);
+      mockedTravelPlan.find.mockResolvedValue(publicPlans);
 
       const result = await TravelPlanService.getPublicTravelPlans();
 
@@ -101,8 +92,8 @@ describe('TravelPlanService', () => {
     it('should delete a travel plan if the user is the author', async () => {
       const planId = new Types.ObjectId().toHexString();
       const authorId = new Types.ObjectId().toHexString();
-      (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue({ _id: planId, author: authorId });
-      (mockedTravelPlan.findByIdAndDelete as jest.Mock).mockResolvedValue(true);
+      mockedTravelPlan.findOne.mockResolvedValue({ _id: planId, author: authorId });
+      mockedTravelPlan.findByIdAndDelete.mockResolvedValue(true);
 
       const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
 
@@ -114,7 +105,7 @@ describe('TravelPlanService', () => {
     it('should not delete a travel plan if the user is not the author', async () => {
       const planId = new Types.ObjectId().toHexString();
       const authorId = new Types.ObjectId().toHexString();
-      (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(null);
+      mockedTravelPlan.findOne.mockResolvedValue(null);
 
       const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
 
@@ -133,9 +124,9 @@ describe('TravelPlanService', () => {
         _id: planId,
         author: authorId,
         title: 'Old Title',
-        save: jest.fn().mockResolvedValue({ title: newTitle }),
+        save: vi.fn().mockResolvedValue({ title: newTitle }),
       };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
 
       const result = await TravelPlanService.updateTravelPlanTitle(planId, authorId, newTitle);
 
@@ -154,9 +145,9 @@ describe('TravelPlanService', () => {
         _id: planId,
         author: authorId,
         privacy: 'private',
-        save: jest.fn().mockResolvedValue({ privacy: newPrivacy }),
+        save: vi.fn().mockResolvedValue({ privacy: newPrivacy }),
       };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
 
       const result = await TravelPlanService.updateTravelPlanPrivacy(planId, authorId, newPrivacy);
 
@@ -175,9 +166,9 @@ describe('TravelPlanService', () => {
         _id: planId,
         author: authorId,
         coverImageUrl: 'http://example.com/old-cover.jpg',
-        save: jest.fn().mockResolvedValue({ coverImageUrl: newCoverUrl }),
+        save: vi.fn().mockResolvedValue({ coverImageUrl: newCoverUrl }),
       };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
 
       const result = await TravelPlanService.updateTravelPlanCoverImage(planId, authorId, newCoverUrl);
 
@@ -200,22 +191,41 @@ describe('TravelPlanService', () => {
         author: authorId,
         startDate: oldStartDate,
         endDate: oldEndDate,
-        schedule: [],
+        schedule: [{ dayNumber: 1, date: oldStartDate, items: [] }],
       };
-      const newSchedule = [{ day: 1 }];
+      const newSchedule = [{ dayNumber: 1, date: newStartDate, items: [] }];
+      const updatedPlan = {
+        _id: planId,
+        author: authorId,
+        startDate: newStartDate,
+        endDate: newEndDate,
+        schedule: newSchedule,
+      };
 
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
+      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(updatedPlan);
       mockedGenerateSchedule.mockReturnValue(newSchedule);
-      (mockedTravelPlan.findByIdAndUpdate as jest.Mock).mockResolvedValue({ schedule: newSchedule });
 
-      await TravelPlanService.updateTravelPlanDates(planId, authorId, newStartDate, newEndDate);
+      const result = await TravelPlanService.updateTravelPlanDates(
+        planId,
+        authorId,
+        newStartDate,
+        newEndDate,
+      );
 
+      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
       expect(mockedGenerateSchedule).toHaveBeenCalledWith(newStartDate, newEndDate);
       expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
         planId,
-        { startDate: newStartDate, endDate: newEndDate, schedule: newSchedule },
+        {
+          startDate: newStartDate,
+          endDate: newEndDate,
+          schedule: newSchedule,
+        },
         { new: true }
       );
+      expect(result.startDate).toBe(newStartDate);
+      expect(result.endDate).toBe(newEndDate);
     });
   });
 });

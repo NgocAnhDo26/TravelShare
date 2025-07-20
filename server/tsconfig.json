@@ -34,7 +34,6 @@
       "./src/types" /* Custom types directory for local type definitions. */
     ] /* Specify multiple folders that act like './node_modules/@types'. */,
     "types": [
-      "jest",
       "node"
     ] /* Specify type package names to be included without being referenced in a source file. */,
     // "allowUmdGlobalAccess": true,                     /* Allow accessing UMD globals from modules. */
