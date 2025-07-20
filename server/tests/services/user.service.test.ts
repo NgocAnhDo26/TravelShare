@@ -1,19 +1,4 @@
-jest.mock('../../src/config/supabase.config.ts', () => ({
-  __esModule: true,
-  default: {
-    supabaseUrl: 'https://mock-supabase.com',
-    supabaseServiceKey: 'mock-service-key'
-  }
-}));
-
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockResolvedValue({ data: [], error: null }),
-    // Add other mocked methods as needed
-  }))
-}));
-
+import { vi, describe, it, expect, afterEach } from 'vitest';
 import { FollowService, UserService } from '../../src/services/user.service';
 import User from '../../src/models/user.model';
 import Follow from '../../src/models/follow.model';
@@ -21,29 +6,26 @@ import { Types } from 'mongoose';
 import * as TravelPlanServiceModule from '../../src/services/travelPlan.service';
 
 // Mock TravelPlanService.getTravelPlansByAuthor to return an empty array
-jest.spyOn(TravelPlanServiceModule.TravelPlanService, 'getTravelPlansByAuthor').mockResolvedValue([]);
-
-process.env.JWT_SECRET = 'test-secret';
-process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+vi.spyOn(TravelPlanServiceModule.TravelPlanService, 'getTravelPlansByAuthor').mockResolvedValue([]);
 
 // Mock the Mongoose models
-jest.mock('../../src/models/user.model');
-jest.mock('../../src/models/follow.model');
+vi.mock('../../src/models/user.model');
+vi.mock('../../src/models/follow.model');
 
-const mockedUser = User as jest.Mocked<typeof User>;
-const mockedFollow = Follow as jest.Mocked<typeof Follow>;
+const mockedUser = User as any;
+const mockedFollow = Follow as any;
 
 describe('UserService', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getEditProfile', () => {
     it('should return user profile for editing', async () => {
       const userId = new Types.ObjectId().toHexString();
       const userProfile = { _id: userId, displayName: 'Test User' };
-      (mockedUser.findById as jest.Mock).mockReturnValue({
-        select: jest.fn().mockResolvedValue(userProfile),
+      mockedUser.findById.mockReturnValue({
+        select: vi.fn().mockResolvedValue(userProfile),
       });
 
       const result = await UserService.getEditProfile(userId);
@@ -54,8 +36,8 @@ describe('UserService', () => {
 
     it('should throw an error if user not found', async () => {
       const userId = new Types.ObjectId().toHexString();
-      (mockedUser.findById as jest.Mock).mockReturnValue({
-        select: jest.fn().mockResolvedValue(null),
+      mockedUser.findById.mockReturnValue({
+        select: vi.fn().mockResolvedValue(null),
       });
 
       await expect(UserService.getEditProfile(userId)).rejects.toThrow('User not found.');
@@ -68,8 +50,8 @@ describe('UserService', () => {
       const updateData = { displayName: 'Updated Name' };
       const updatedUser = { _id: userId, ...updateData };
 
-      (mockedUser.findByIdAndUpdate as jest.Mock).mockReturnValue({
-        select: jest.fn().mockResolvedValue(updatedUser),
+      mockedUser.findByIdAndUpdate.mockReturnValue({
+        select: vi.fn().mockResolvedValue(updatedUser),
       });
 
       const result = await UserService.updateProfile(userId, updateData);
@@ -85,7 +67,7 @@ describe('UserService', () => {
     it('should throw an error if username already exists', async () => {
       const userId = new Types.ObjectId().toHexString();
       const updateData = { username: 'existinguser' };
-      (mockedUser.findOne as jest.Mock).mockResolvedValue({ _id: new Types.ObjectId() });
+      mockedUser.findOne.mockResolvedValue({ _id: new Types.ObjectId() });
 
       await expect(UserService.updateProfile(userId, updateData)).rejects.toThrow('Username already exists.');
     });
@@ -93,7 +75,7 @@ describe('UserService', () => {
     it('should throw an error if email already exists', async () => {
       const userId = new Types.ObjectId().toHexString();
       const updateData = { email: 'existing@test.com' };
-      (mockedUser.findOne as jest.Mock).mockResolvedValue({ _id: new Types.ObjectId() });
+      mockedUser.findOne.mockResolvedValue({ _id: new Types.ObjectId() });
 
       await expect(UserService.updateProfile(userId, updateData)).rejects.toThrow('Email already exists.');
     });
@@ -110,8 +92,8 @@ describe('UserService', () => {
         followerCount: 0,
         followingCount: 0,
       };
-      (mockedUser.findById as jest.Mock).mockReturnValue({
-        select: jest.fn().mockResolvedValue(userProfile),
+      mockedUser.findById.mockReturnValue({
+        select: vi.fn().mockResolvedValue(userProfile),
       });
 
       const result = await UserService.getProfile(userId);
@@ -125,8 +107,8 @@ describe('UserService', () => {
 
     it('should throw an error if user not found', async () => {
       const userId = new Types.ObjectId().toHexString();
-      (mockedUser.findById as jest.Mock).mockReturnValue({
-        select: jest.fn().mockResolvedValue(null),
+      mockedUser.findById.mockReturnValue({
+        select: vi.fn().mockResolvedValue(null),
       });
 
       await expect(UserService.getProfile(userId)).rejects.toThrow('User not found.');
@@ -136,7 +118,7 @@ describe('UserService', () => {
 
 describe('FollowService', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('followUser', () => {
@@ -144,9 +126,9 @@ describe('FollowService', () => {
       const followerId = new Types.ObjectId().toHexString();
       const followingId = new Types.ObjectId().toHexString();
 
-      (mockedUser.countDocuments as jest.Mock).mockResolvedValue(2);
-      (mockedFollow.findOne as jest.Mock).mockResolvedValue(null);
-      (mockedFollow.create as jest.Mock).mockResolvedValue({ follower: followerId, following: followingId });
+      mockedUser.countDocuments.mockResolvedValue(2);
+      mockedFollow.findOne.mockResolvedValue(null);
+      mockedFollow.create.mockResolvedValue({ follower: followerId, following: followingId });
 
       await FollowService.followUser(followerId, followingId);
 
@@ -162,8 +144,8 @@ describe('FollowService', () => {
     it('should throw an error if already following', async () => {
       const followerId = new Types.ObjectId().toHexString();
       const followingId = new Types.ObjectId().toHexString();
-      (mockedUser.countDocuments as jest.Mock).mockResolvedValue(2);
-      (mockedFollow.findOne as jest.Mock).mockResolvedValue({});
+      mockedUser.countDocuments.mockResolvedValue(2);
+      mockedFollow.findOne.mockResolvedValue({});
 
       await expect(FollowService.followUser(followerId, followingId)).rejects.toThrow('You are already following this user.');
     });
@@ -173,7 +155,7 @@ describe('FollowService', () => {
     it('should allow a user to unfollow another', async () => {
       const followerId = new Types.ObjectId().toHexString();
       const followingId = new Types.ObjectId().toHexString();
-      (mockedFollow.deleteOne as jest.Mock).mockResolvedValue({ deletedCount: 1 });
+      mockedFollow.deleteOne.mockResolvedValue({ deletedCount: 1 });
 
       await FollowService.unfollowUser(followerId, followingId);
 
@@ -184,7 +166,7 @@ describe('FollowService', () => {
     it('should throw an error if not following the user', async () => {
       const followerId = new Types.ObjectId().toHexString();
       const followingId = new Types.ObjectId().toHexString();
-      (mockedFollow.deleteOne as jest.Mock).mockResolvedValue({ deletedCount: 0 });
+      mockedFollow.deleteOne.mockResolvedValue({ deletedCount: 0 });
 
       await expect(FollowService.unfollowUser(followerId, followingId)).rejects.toThrow('You are not following this user.');
     });
@@ -193,7 +175,7 @@ describe('FollowService', () => {
   describe('getFollowerCount', () => {
     it('should return the follower count', async () => {
       const userId = new Types.ObjectId().toHexString();
-      (mockedUser.findById as jest.Mock).mockResolvedValue({ followerCount: 10 });
+      mockedUser.findById.mockResolvedValue({ followerCount: 10 });
       const count = await FollowService.getFollowerCount(userId);
       expect(count).toBe(10);
     });
@@ -202,7 +184,7 @@ describe('FollowService', () => {
   describe('getFollowingCount', () => {
     it('should return the following count', async () => {
       const userId = new Types.ObjectId().toHexString();
-      (mockedUser.findById as jest.Mock).mockResolvedValue({ followingCount: 5 });
+      mockedUser.findById.mockResolvedValue({ followingCount: 5 });
       const count = await FollowService.getFollowingCount(userId);
       expect(count).toBe(5);
     });
@@ -212,13 +194,13 @@ describe('FollowService', () => {
     it('should return a paginated list of followers', async () => {
       const userId = new Types.ObjectId().toHexString();
       const followers = [{ _id: new Types.ObjectId() }];
-      (mockedFollow.find as jest.Mock).mockReturnValue({
-        populate: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        sort: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(followers),
+      mockedFollow.find.mockReturnValue({
+        populate: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        exec: vi.fn().mockResolvedValue(followers),
       });
 
       const result = await FollowService.getFollowers(userId, { page: 1, limit: 10 });
@@ -230,13 +212,13 @@ describe('FollowService', () => {
     it('should return a paginated list of following users', async () => {
       const userId = new Types.ObjectId().toHexString();
       const following = [{ _id: new Types.ObjectId() }];
-      (mockedFollow.find as jest.Mock).mockReturnValue({
-        populate: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        sort: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(following),
+      mockedFollow.find.mockReturnValue({
+        populate: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        exec: vi.fn().mockResolvedValue(following),
       });
 
       const result = await FollowService.getFollowing(userId, { page: 1, limit: 10 });
