@@ -23,6 +23,7 @@ interface IFollowService {
     userId: string,
     options: { page: number; limit: number },
   ): Promise<IFollow[]>;
+  isFollowing(followerId: string, followingId: string): Promise<boolean>;
 }
 
 /**
@@ -155,6 +156,17 @@ const FollowService: IFollowService = {
       .limit(limit)
       .exec();
   },
+
+  /**
+   * Checks if a user is following another user.
+   */
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const follow = await Follow.findOne({
+      follower: followerId,
+      following: followingId,
+    });
+    return !!follow;
+  },
 };
 
 interface UpdateProfileData {
@@ -248,6 +260,7 @@ const UserService: IUserService = {
     }));
 
     return {
+      _id: userProfile._id,
       username: userProfile.username,
       displayName: userProfile.displayName,
       email: userProfile.email,

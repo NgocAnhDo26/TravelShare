@@ -12,6 +12,7 @@ interface IFollowController {
   unfollow(req: Request, res: Response, next: NextFunction): Promise<void>;
   getFollowers(req: Request, res: Response, next: NextFunction): Promise<void>;
   getFollowing(req: Request, res: Response, next: NextFunction): Promise<void>;
+  isFollowing(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 /**
@@ -168,6 +169,38 @@ const FollowController: IFollowController = {
           totalItems: totalFollowing,
         },
       });
+    } catch (error: any) {
+      next(error);
+    }
+  },
+
+  /**
+   * @description Check if the current user is following another user.
+   */
+  async isFollowing(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const followerId = req.user as string; // The logged-in user
+      const followingId = req.params.id; // The user to check if following
+
+      if (!followerId) {
+        res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .json({ message: 'You are not authorized to perform this action.' });
+        return;
+      }
+      if (!isValidObjectId(followingId)) {
+        res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ message: 'The provided user ID has an invalid format.' });
+        return;
+      }
+
+      const isFollowing = await FollowService.isFollowing(followerId, followingId);
+      res.status(HTTP_STATUS.OK).json({ isFollowing });
     } catch (error: any) {
       next(error);
     }
