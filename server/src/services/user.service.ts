@@ -18,11 +18,11 @@ interface IFollowService {
   getFollowers(
     userId: string,
     options: { page: number; limit: number },
-  ): Promise<IFollow[]>;
+  ): Promise<any[]>;
   getFollowing(
     userId: string,
     options: { page: number; limit: number },
-  ): Promise<IFollow[]>;
+  ): Promise<any[]>;
   isFollowing(followerId: string, followingId: string): Promise<boolean>;
 }
 
@@ -120,41 +120,85 @@ const FollowService: IFollowService = {
   },
 
   /**
-   * Retrieves a paginated list of a user's followers.
+   * Retrieves a paginated list of a user's followers with follow status.
    */
   async getFollowers(
     userId: string,
     options: { page: number; limit: number },
-  ): Promise<IFollow[]> {
+  ): Promise<any[]> {
     const { page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
-    return Follow.find({ following: userId })
+    const followers = await Follow.find({ following: userId })
       .populate('follower', 'username displayName avatarUrl')
       .select('follower, createdDate')
       .sort({ createdDate: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    // Since users can only see their own followers, userId is the current user
+    const followerIds = followers.map(f => f.follower._id.toString());
+    
+    // Get all follow relationships where current user follows any of the followers
+    const followRelationships = await Follow.find({
+      follower: userId,
+      following: { $in: followerIds }
+    }).select('following');
+
+    const followingSet = new Set(
+      followRelationships.map(f => f.following.toString())
+    );
+
+    // Add isFollowing property to each follower
+    return followers.map(follow => ({
+      ...follow.toObject(),
+      follower: {
+        ...follow.follower,
+        isFollowing: followingSet.has(follow.follower._id.toString())
+      }
+    }));
   },
 
   /**
-   * Retrieves a paginated list of users a user is following.
+   * Retrieves a paginated list of users a user is following with follow status.
    */
   async getFollowing(
     userId: string,
     options: { page: number; limit: number },
-  ): Promise<IFollow[]> {
+  ): Promise<any[]> {
     const { page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
-    return Follow.find({ follower: userId })
+    const following = await Follow.find({ follower: userId })
       .populate('following', 'username displayName avatarUrl')
       .select('following, createdDate')
       .sort({ createdDate: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    // Since users can only see their own following, userId is the current user
+    const followingIds = following.map(f => f.following._id.toString());
+    
+    // Get all follow relationships where current user follows any of the following users
+    const followRelationships = await Follow.find({
+      follower: userId,
+      following: { $in: followingIds }
+    }).select('following');
+
+    const followingSet = new Set(
+      followRelationships.map(f => f.following.toString())
+    );
+
+    // Add isFollowing property to each following user
+    return following.map(follow => ({
+      ...follow.toObject(),
+      following: {
+        ...follow.following,
+        isFollowing: followingSet.has(follow.following._id.toString())
+      }
+    }));
   },
 
   /**

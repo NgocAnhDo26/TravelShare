@@ -191,38 +191,102 @@ describe('FollowService', () => {
   });
 
   describe('getFollowers', () => {
-    it('should return a paginated list of followers', async () => {
+    it('should return a paginated list of followers with follow status', async () => {
       const userId = new Types.ObjectId().toHexString();
-      const followers = [{ _id: new Types.ObjectId() }];
-      mockedFollow.find.mockReturnValue({
+      const followerId = new Types.ObjectId();
+      const followers = [{
+        _id: new Types.ObjectId(),
+        follower: {
+          _id: followerId,
+          username: 'testuser',
+          displayName: 'Test User',
+          avatarUrl: ''
+        },
+        createdDate: new Date(),
+        toObject: vi.fn().mockReturnValue({
+          follower: {
+            _id: followerId,
+            username: 'testuser',
+            displayName: 'Test User',
+            avatarUrl: ''
+          },
+          createdDate: new Date()
+        })
+      }];
+      
+      // Mock the first query (main followers query)
+      const mockQueryChain = {
         populate: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
         sort: vi.fn().mockReturnThis(),
         skip: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         exec: vi.fn().mockResolvedValue(followers),
-      });
+      };
+
+      // Mock the second query (follow relationships query)
+      const mockSecondQuery = {
+        select: vi.fn().mockResolvedValue([])
+      };
+
+      mockedFollow.find
+        .mockReturnValueOnce(mockQueryChain)  // First call
+        .mockReturnValueOnce(mockSecondQuery); // Second call
 
       const result = await FollowService.getFollowers(userId, { page: 1, limit: 10 });
-      expect(result).toEqual(followers);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('follower');
+      expect(result[0].follower).toHaveProperty('isFollowing');
     });
   });
 
   describe('getFollowing', () => {
-    it('should return a paginated list of following users', async () => {
+    it('should return a paginated list of following users with follow status', async () => {
       const userId = new Types.ObjectId().toHexString();
-      const following = [{ _id: new Types.ObjectId() }];
-      mockedFollow.find.mockReturnValue({
+      const followingId = new Types.ObjectId();
+      const following = [{
+        _id: new Types.ObjectId(),
+        following: {
+          _id: followingId,
+          username: 'testuser',
+          displayName: 'Test User',
+          avatarUrl: ''
+        },
+        createdDate: new Date(),
+        toObject: vi.fn().mockReturnValue({
+          following: {
+            _id: followingId,
+            username: 'testuser',
+            displayName: 'Test User',
+            avatarUrl: ''
+          },
+          createdDate: new Date()
+        })
+      }];
+      
+      // Mock the first query (main following query)
+      const mockQueryChain = {
         populate: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
         sort: vi.fn().mockReturnThis(),
         skip: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         exec: vi.fn().mockResolvedValue(following),
-      });
+      };
+
+      // Mock the second query (follow relationships query)
+      const mockSecondQuery = {
+        select: vi.fn().mockResolvedValue([])
+      };
+
+      mockedFollow.find
+        .mockReturnValueOnce(mockQueryChain)  // First call
+        .mockReturnValueOnce(mockSecondQuery); // Second call
 
       const result = await FollowService.getFollowing(userId, { page: 1, limit: 10 });
-      expect(result).toEqual(following);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('following');
+      expect(result[0].following).toHaveProperty('isFollowing');
     });
   });
 });

@@ -3,6 +3,7 @@ import { TravelPlanService } from '../../src/services/travelPlan.service';
 import TravelPlan from '../../src/models/travelPlan.model';
 import { generateSchedule } from '../../src/utils/travelPlan';
 import { Types } from 'mongoose';
+import { suppressConsoleErrorAsync } from '../setup';
 
 // Mock the Mongoose model and utility functions
 vi.mock('../../src/models/travelPlan.model');
@@ -159,22 +160,24 @@ describe('TravelPlanService', () => {
 
   describe('updateTravelPlanCoverImage', () => {
     it('should update the cover image URL of a travel plan', async () => {
-      const planId = new Types.ObjectId().toHexString();
-      const authorId = new Types.ObjectId().toHexString();
-      const newCoverUrl = 'http://example.com/new-cover.jpg';
-      const plan = {
-        _id: planId,
-        author: authorId,
-        coverImageUrl: 'http://example.com/old-cover.jpg',
-        save: vi.fn().mockResolvedValue({ coverImageUrl: newCoverUrl }),
-      };
-      mockedTravelPlan.findById.mockResolvedValue(plan);
+      await suppressConsoleErrorAsync(async () => {
+        const planId = new Types.ObjectId().toHexString();
+        const authorId = new Types.ObjectId().toHexString();
+        const newCoverUrl = 'http://example.com/new-cover.jpg';
+        const plan = {
+          _id: planId,
+          author: authorId,
+          coverImageUrl: 'http://example.com/old-cover.jpg',
+          save: vi.fn().mockResolvedValue({ coverImageUrl: newCoverUrl }),
+        };
+        mockedTravelPlan.findById.mockResolvedValue(plan);
 
-      const result = await TravelPlanService.updateTravelPlanCoverImage(planId, authorId, newCoverUrl);
+        const result = await TravelPlanService.updateTravelPlanCoverImage(planId, authorId, newCoverUrl);
 
-      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
-      expect(plan.save).toHaveBeenCalled();
-      expect(result.coverImageUrl).toBe(newCoverUrl);
+        expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
+        expect(plan.save).toHaveBeenCalled();
+        expect(result.coverImageUrl).toBe(newCoverUrl);
+      });
     });
   });
 

@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt';
 import * as AuthService from '../../src/services/auth.service';
 import jwt from 'jsonwebtoken';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { suppressConsoleErrorAsync } from '../setup';
 
 describe('Auth Service', () => {
   describe('POST /api/auth/register', () => {
@@ -164,15 +165,17 @@ describe('Auth Service', () => {
     });
 
     it('should return a success message even for a non-existent user', async () => {
-      const res = await request(app)
-        .post('/api/auth/forgot-password')
-        .send({ email: 'nonexistent@example.com' });
+      await suppressConsoleErrorAsync(async () => {
+        const res = await request(app)
+          .post('/api/auth/forgot-password')
+          .send({ email: 'nonexistent@example.com' });
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty(
-        'message',
-        'If an account with that email exists, a password reset link has been sent.',
-      );
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toHaveProperty(
+          'message',
+          'If an account with that email exists, a password reset link has been sent.',
+        );
+      });
     });
   });
 
@@ -285,22 +288,24 @@ describe('Auth Service', () => {
     });
 
     it('should return 401 if access token is invalid/expired (due to current implementation)', async () => {
-      const expiredAccessToken = jwt.sign(
-        { userId: user._id.toString() },
-        process.env.JWT_SECRET!,
-        { expiresIn: '0s' },
-      );
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const res = await request(app)
-        .post('/api/auth/verify-token')
-        .set(
-          'Cookie',
-          `accessToken=${expiredAccessToken}; refreshToken=${refreshToken}`,
+      await suppressConsoleErrorAsync(async () => {
+        const expiredAccessToken = jwt.sign(
+          { userId: user._id.toString() },
+          process.env.JWT_SECRET!,
+          { expiresIn: '0s' },
         );
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toEqual({ valid: false, error: 'Invalid token.' });
+        const res = await request(app)
+          .post('/api/auth/verify-token')
+          .set(
+            'Cookie',
+            `accessToken=${expiredAccessToken}; refreshToken=${refreshToken}`,
+          );
+
+        expect(res.statusCode).toBe(401);
+        expect(res.body).toEqual({ valid: false, error: 'Invalid token.' });
+      });
     });
 
     it('should return 401 if no tokens are provided', async () => {
@@ -311,12 +316,14 @@ describe('Auth Service', () => {
     });
 
     it('should return 401 if only an invalid access token is provided', async () => {
-      const res = await request(app)
-        .post('/api/auth/verify-token')
-        .set('Cookie', `accessToken=invalid`);
+      await suppressConsoleErrorAsync(async () => {
+        const res = await request(app)
+          .post('/api/auth/verify-token')
+          .set('Cookie', `accessToken=invalid`);
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty('error', 'Invalid token.');
+        expect(res.statusCode).toBe(401);
+        expect(res.body).toHaveProperty('error', 'Invalid token.');
+      });
     });
   });
 });

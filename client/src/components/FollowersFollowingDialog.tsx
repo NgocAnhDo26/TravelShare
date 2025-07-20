@@ -20,6 +20,7 @@ interface User {
   username: string;
   displayName?: string;
   avatarUrl?: string;
+  isFollowing?: boolean;
 }
 
 interface FollowersFollowingDialogProps {
@@ -39,7 +40,6 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [isFollowingMap, setIsFollowingMap] = useState<Record<string, boolean>>({});
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -54,14 +54,26 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
         params: { page: pageNum, limit: 20 }
       });
       
-      const newUsers = response.data.data.map((item: any) => {
+      const newUsers = response.data.data?.map((item: any) => {
         // The API returns different structures for followers vs following
+        let userData;
         if (type === 'followers') {
-          return item.follower;
+          userData = item.follower;
         } else {
-          return item.following;
+          userData = item.following;
         }
-      });
+        
+        // Extract user data from _doc if it exists (Mongoose populated document)
+        if (userData && userData._doc) {
+          return {
+            ...userData._doc,
+            isFollowing: userData.isFollowing || false
+          };
+        }
+        
+        // Fallback to direct user data
+        return userData;
+      }).filter((user: any) => user && user._id && user.username) || [];
 
       // Ensure minimum loading time of 500ms for smooth transitions
       const elapsedTime = Date.now() - startTime;
@@ -79,7 +91,7 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
 
       setHasMore(pageNum < response.data.pagination.totalPages);
       setPage(pageNum);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error fetching ${type}:`, error);
       toast.error(`Failed to fetch ${type}`);
     } finally {
@@ -87,48 +99,32 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
     }
   };
 
-  const checkFollowStatuses = async (userIds: string[]) => {
-    if (!user || userIds.length === 0) return;
-    
-    try {
-      const followStatuses = await Promise.all(
-        userIds.map(async (userId) => {
-          try {
-            const response = await API.get(`/users/${userId}/is-following`);
-            return { userId, isFollowing: response.data.isFollowing };
-          } catch (error) {
-            return { userId, isFollowing: false };
-          }
-        })
-      );
-
-      const statusMap = followStatuses.reduce((acc, { userId, isFollowing }) => {
-        acc[userId] = isFollowing;
-        return acc;
-      }, {} as Record<string, boolean>);
-
-      setIsFollowingMap(prev => ({ ...prev, ...statusMap }));
-    } catch (error) {
-      console.error('Error checking follow statuses:', error);
-    }
-  };
-
   const handleFollowToggle = async (targetUserId: string) => {
-    if (!user) {
+    if (!user || !targetUserId) {
       navigate('/login');
       return;
     }
 
     try {
-      const isCurrentlyFollowing = isFollowingMap[targetUserId];
+      // Find the user in the current list
+      const userIndex = users.findIndex(u => u._id === targetUserId);
+      if (userIndex === -1) return;
+      
+      const isCurrentlyFollowing = users[userIndex].isFollowing;
       
       if (isCurrentlyFollowing) {
         await API.delete(`/users/${targetUserId}/unfollow`);
-        setIsFollowingMap(prev => ({ ...prev, [targetUserId]: false }));
+        // Update the user's follow status in the list
+        setUsers(prev => prev.map(u => 
+          u._id === targetUserId ? { ...u, isFollowing: false } : u
+        ));
         toast.success('Unfollowed successfully');
       } else {
         await API.post(`/users/${targetUserId}/follow`);
-        setIsFollowingMap(prev => ({ ...prev, [targetUserId]: true }));
+        // Update the user's follow status in the list
+        setUsers(prev => prev.map(u => 
+          u._id === targetUserId ? { ...u, isFollowing: true } : u
+        ));
         toast.success('Followed successfully');
       }
     } catch (error: any) {
@@ -152,12 +148,7 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
     }
   }, [isOpen, type, currentUserId]);
 
-  useEffect(() => {
-    if (users.length > 0) {
-      const userIds = users.map(u => u._id);
-      checkFollowStatuses(userIds);
-    }
-  }, [users]);
+
 
   const handleUserClick = (userId: string) => {
     navigate(`/profile/${userId}`);
@@ -199,7 +190,7 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
             <div className="space-y-2 animate-in fade-in duration-300">
               {users.map((userItem, index) => (
                 <div
-                  key={userItem._id}
+                  key={`${userItem._id}-${index}`}
                   className="flex items-center justify-between px-2 py-1 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors animate-in slide-in-from-bottom-2 duration-300"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
@@ -210,30 +201,30 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
                     <Avatar className="w-10 h-10">
                       <AvatarImage src={userItem.avatarUrl} />
                       <AvatarFallback className="text-sm">
-                        {userItem.username.charAt(0).toUpperCase()}
+                        {userItem.username?.charAt(0)?.toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 truncate">
-                        {userItem.displayName || userItem.username}
+                        {userItem.displayName || userItem.username || 'Unknown User'}
                       </p>
                       <p className="text-sm text-gray-500 truncate">
-                        @{userItem.username}
+                        @{userItem.username || 'unknown'}
                       </p>
                     </div>
                   </div>
                   
-                  {user && user.userId !== userItem._id && (
+                  {user && user.userId !== userItem._id && userItem._id && (
                     <Button
                       size="sm"
-                      variant={isFollowingMap[userItem._id] ? 'outline' : 'default'}
+                      variant={userItem.isFollowing ? 'outline' : 'default'}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleFollowToggle(userItem._id);
                       }}
                       className="ml-2"
                     >
-                      {isFollowingMap[userItem._id] ? 'Unfollow' : 'Follow'}
+                      {userItem.isFollowing ? 'Unfollow' : 'Follow'}
                     </Button>
                   )}
                 </div>

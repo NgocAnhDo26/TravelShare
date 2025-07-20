@@ -97,7 +97,7 @@ const FollowController: IFollowController = {
   },
 
   /**
-   * @description Get a list of followers for a given user. Public endpoint.
+   * @description Get a list of followers for the current user. Public endpoint.
    */
   async getFollowers(
     req: Request,
@@ -105,8 +105,8 @@ const FollowController: IFollowController = {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const userId = req.user as string; // The logged-in user is the follower
-      if (!isValidObjectId(userId)) {
+      const currentUserId = req.user as string; // The logged-in user
+      if (!isValidObjectId(currentUserId)) {
         res.status(400).json({ message: 'Invalid user ID format.' });
         return;
       }
@@ -114,11 +114,11 @@ const FollowController: IFollowController = {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
 
-      const followers = await FollowService.getFollowers(userId, {
+      const followers = await FollowService.getFollowers(currentUserId, {
         page,
         limit,
       });
-      const totalFollowers = await FollowService.getFollowerCount(userId);
+      const totalFollowers = await FollowService.getFollowerCount(currentUserId);
 
       res.status(200).json({
         data: followers,
@@ -135,7 +135,7 @@ const FollowController: IFollowController = {
   },
 
   /**
-   * @description Get a list of users a given user is following. Public endpoint.
+   * @description Get a list of users the current user is following. Public endpoint.
    */
   async getFollowing(
     req: Request,
@@ -143,8 +143,8 @@ const FollowController: IFollowController = {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const userId = req.user as string; // The logged-in user is the follower
-      if (!isValidObjectId(userId)) {
+      const currentUserId = req.user as string; // The logged-in user
+      if (!isValidObjectId(currentUserId)) {
         res
           .status(400)
           .json({ message: 'The provided user ID has an invalid format.' });
@@ -154,11 +154,11 @@ const FollowController: IFollowController = {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
 
-      const following = await FollowService.getFollowing(userId, {
+      const following = await FollowService.getFollowing(currentUserId, {
         page,
         limit,
       });
-      const totalFollowing = await FollowService.getFollowingCount(userId);
+      const totalFollowing = await FollowService.getFollowingCount(currentUserId);
 
       res.status(200).json({
         data: following,
