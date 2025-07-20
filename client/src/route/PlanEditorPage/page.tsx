@@ -68,7 +68,6 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Handle item added to a specific day
   const handleItemAdded = (dayNumber: number, item: IPlanItem) => {
     if (!planData) return;
-    
     const updatedSchedule = planData.schedule.map(day => {
       if (day.dayNumber === dayNumber) {
         return {
@@ -88,6 +87,14 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Handle item updated in a specific day
   const handleItemUpdated = (dayNumber: number, itemId: string, updatedItem: IPlanItem) => {
     if (!planData) return;
+    if(updatedItem.startTime && updatedItem.endTime) {
+      const startDate = new Date(updatedItem.startTime).toISOString().split('T')[1];
+      const endDate = new Date(updatedItem.endTime).toISOString().split('T')[1];
+      if (startDate > endDate) {
+        toast.error('Start time cannot be after end time');
+        return;
+      }
+    }
     
     const updatedSchedule = planData.schedule.map(day => {
       if (day.dayNumber === dayNumber) {

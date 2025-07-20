@@ -12,8 +12,8 @@ export interface IPlanItem {
   type: 'activity' | 'food' | 'accommodation' | 'transportation' | 'shopping' | 'other';
   title: string;
   description?: string;
-  startTime?: string; // ISO date string
-  endTime?: string; // ISO date string
+  startTime?: string; // non-ISO date string, e.g., '10:00 AM'
+  endTime?: string; // non-ISO date string, e.g., '10:00 AM'
   location?: ILocation;
   cost?: string; // Changed from number to string
   notes?: string;
@@ -35,8 +35,8 @@ export interface Trip {
   destination: ILocation;
   coverImageUrl?: string;
   author: string; // User ID
-  startDate?: string; // ISO date string
-  endDate?: string; // ISO date string
+  startDate?: string; // not ISO, but hh:mm AM/PM format
+  endDate?: string; // not ISO, but hh:mm AM/PM format
   privacy: 'public' | 'private';
   schedule: IDailySchedule[];
   likesCount: number;
