@@ -58,6 +58,7 @@ import {
 import { useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
+import type { Dispatch, SetStateAction } from 'react';
 
 interface ItinerarySectionProps {
   itinerary: IDailySchedule[];
@@ -266,38 +267,55 @@ const ItemForm: React.FC<{
 
 /**
  * Renders the Dropdown Menu for item actions (Edit, Delete).
+ * Auto-expands the Accordion section when drag is over the menu.
  */
 const ItemActionsMenu: React.FC<{
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ onEdit, onDelete }) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button
-        variant='secondary'
-        size='icon'
-        className='ml-auto size-8 flex-shrink-0'
-      >
-        <Ellipsis />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent className='w-56' align='start'>
-      <DropdownMenuGroup>
-        <DropdownMenuItem onClick={onEdit}>
-          <Pencil className='mr-2 h-4 w-4' />
-          <span>Edit item</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={onDelete}
-          className='text-red-600 focus:bg-red-50 focus:text-red-600'
+  dayNumber: number;
+  setOpenSections?: (v: string[]) => void;
+  openSections?: string[];
+  sortableId?: string;
+}> = ({ onEdit, onDelete, dayNumber, setOpenSections, openSections, sortableId }) => {
+  // Only useSortable if sortableId is provided
+  const { setNodeRef, isOver } = sortableId ? useSortable({ id: sortableId }) : { setNodeRef: undefined, isOver: false };
+
+  React.useEffect(() => {
+    if (isOver && setOpenSections && openSections && !openSections.includes(dayNumber.toString())) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          ref={setNodeRef}
+          variant='secondary'
+          size='icon'
+          className='ml-auto size-8 flex-shrink-0'
         >
-          <Trash className='mr-2 h-4 w-4 text-red-600' />
-          <span>Delete item</span>
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-    </DropdownMenuContent>
-  </DropdownMenu>
-);
+          <Ellipsis />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className='w-56' align='start'>
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className='mr-2 h-4 w-4' />
+            <span>Edit item</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={onDelete}
+            className='text-red-600 focus:bg-red-50 focus:text-red-600'
+          >
+            <Trash className='mr-2 h-4 w-4 text-red-600' />
+            <span>Delete item</span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 /**
  * Renders a single itinerary item card.
@@ -307,7 +325,10 @@ const ItineraryItemCard: React.FC<{
   editMode?: boolean;
   onEdit: (item: IPlanItem) => void;
   onDelete: (item: IPlanItem) => void;
-}> = ({ item, editMode = false, onEdit, onDelete }) => {
+  dayNumber?: number;
+  setOpenSections?: (v: string[]) => void;
+  openSections?: string[];
+}> = ({ item, editMode = false, onEdit, onDelete, dayNumber, setOpenSections, openSections }) => {
   const badgeColors = {
     activity: 'bg-blue-100 text-blue-800',
     food: 'bg-yellow-100 text-yellow-800',
@@ -350,7 +371,14 @@ const ItineraryItemCard: React.FC<{
           {item.title}
         </div>
         {editMode && (
-          <ItemActionsMenu onEdit={handleEdit} onDelete={handleDelete} />
+          <ItemActionsMenu
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            dayNumber={dayNumber ?? 1}
+            setOpenSections={setOpenSections}
+            openSections={openSections}
+            sortableId={item._id}
+          />
         )}
       </CardTitle>
 
@@ -511,7 +539,47 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Find source and target day
+    // Check if dropped on empty day
+    if (overId.startsWith('empty-day-')) {
+      const targetDayNumber = Number(overId.replace('empty-day-', ''));
+      const sourceDay = findDayByItemId(activeId);
+      const targetDay = localItinerary.find((day) => day.dayNumber === targetDayNumber);
+
+      if (!sourceDay || !targetDay) {
+        setDraggedItem(null);
+        return;
+      }
+
+      // Remove from source
+      const movingItem = sourceDay.items.find((item) => item._id === activeId);
+      if (!movingItem) {
+        setDraggedItem(null);
+        return;
+      }
+      const newSourceItems = sourceDay.items.filter((item) => item._id !== activeId);
+
+      // Add to target (empty day)
+      const newTargetItems = [{ ...movingItem, order: 0, dayNumber: targetDay.dayNumber }];
+
+      // Update state
+      setLocalItinerary((prev) =>
+        prev.map((day) => {
+          if (day.dayNumber === sourceDay.dayNumber) {
+            return { ...day, items: newSourceItems.map((item, idx) => ({ ...item, order: idx })) };
+          }
+          if (day.dayNumber === targetDay.dayNumber) {
+            return { ...day, items: newTargetItems };
+          }
+          return day;
+        })
+      );
+
+      // TODO: Send payload to backend here
+
+      setDraggedItem(null);
+      return;
+    }
+
     const sourceDay = findDayByItemId(activeId);
     const targetDay = findDayByItemId(overId);
 
@@ -537,12 +605,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         )
       );
 
-      // Prepare payload for backend
-      const payload = newItems.map((item, idx) => ({
-        id: item._id,
-        newDayNumber: sourceDay.dayNumber,
-        newOrder: idx,
-      }));
       // TODO: Send payload to backend here
 
     } else {
@@ -576,19 +638,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         })
       );
 
-      // Prepare payload for backend
-      const payload = [
-        ...newSourceItems.map((item, idx) => ({
-          id: item._id,
-          newDayNumber: sourceDay.dayNumber,
-          newOrder: idx,
-        })),
-        ...newTargetItems.map((item, idx) => ({
-          id: item._id,
-          newDayNumber: targetDay.dayNumber,
-          newOrder: idx,
-        })),
-      ];
       // TODO: Send payload to backend here
     }
 
@@ -821,24 +870,41 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
           >
             {localItinerary.map((day) => (
               <AccordionItem key={day.dayNumber} value={day.dayNumber.toString()}>
-                <AccordionTrigger className='text-xl'>
-                  {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
-                </AccordionTrigger>
+                <AccordionTriggerDropTarget
+                  dayNumber={day.dayNumber}
+                  setOpenSections={setOpenSections}
+                  openSections={openSections}
+                >
+                  <AccordionTrigger className='text-xl'>
+                    {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
+                  </AccordionTrigger>
+                </AccordionTriggerDropTarget>
                 <AccordionContent>
                   <SortableContext
-                    items={day.items.map((item) => item._id)}
+                    items={
+                      day.items.length > 0
+                        ? day.items.map((item) => item._id)
+                        : [`empty-day-${day.dayNumber}`]
+                    }
                     strategy={verticalListSortingStrategy}
                   >
-                    {day.items.map((item) => (
-                      <SortableItem key={item._id} id={item._id}>
-                        <ItineraryItemCard
-                          item={item}
-                          editMode={editMode}
-                          onEdit={handleEditItem}
-                          onDelete={handleDeleteItem}
-                        />
-                      </SortableItem>
-                    ))}
+                    {day.items.length > 0 ? (
+                      day.items.map((item) => (
+                        <SortableItem key={item._id} id={item._id}>
+                          <ItineraryItemCard
+                            item={item}
+                            editMode={editMode}
+                            onEdit={handleEditItem}
+                            onDelete={handleDeleteItem}
+                            dayNumber={day.dayNumber}
+                            setOpenSections={setOpenSections}
+                            openSections={openSections}
+                          />
+                        </SortableItem>
+                      ))
+                    ) : (
+                      <DropTarget dayNumber={day.dayNumber} setOpenSections={setOpenSections} openSections={openSections} />
+                    )}
                   </SortableContext>
                   <Button
                     variant='secondary'
@@ -993,6 +1059,67 @@ const SortableItem: React.FC<{ id: string; children: React.ReactNode }> = ({ id,
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+};
+
+// Drop target for empty days
+const DropTarget: React.FC<{
+  dayNumber: number;
+  setOpenSections?: Dispatch<SetStateAction<string[]>>;
+  openSections?: string[];
+}> = ({ dayNumber, setOpenSections, openSections }) => {
+  const { setNodeRef, isOver } = useSortable({ id: `empty-day-${dayNumber}` });
+
+  React.useEffect(() => {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      !openSections.includes(dayNumber.toString())
+    ) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`p-4 bg-white rounded-lg mt-2 border shadow-sm flex items-center justify-center cursor-pointer transition ${
+        isOver ? 'bg-blue-50 border-blue-400' : ''
+      }`}
+      style={{ minHeight: 60 }}
+    >
+      <p className='text-muted-foreground'>
+        Drop here to move item to this day
+      </p>
+    </div>
+  );
+};
+
+// Add this component above your ItinerarySection
+const AccordionTriggerDropTarget: React.FC<{
+  dayNumber: number;
+  setOpenSections?: Dispatch<SetStateAction<string[]>>;
+  openSections?: string[];
+  children: React.ReactNode;
+}> = ({ dayNumber, setOpenSections, openSections, children }) => {
+  const { setNodeRef, isOver } = useSortable({ id: `trigger-day-${dayNumber}` });
+
+  React.useEffect(() => {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      !openSections.includes(dayNumber.toString())
+    ) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
+
+  return (
+    <div ref={setNodeRef}>
       {children}
     </div>
   );
