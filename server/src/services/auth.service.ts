@@ -7,14 +7,19 @@ import Token from '../models/token.model';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import fs from 'fs';
+import axios from 'axios';
 import path from 'path';
+import { OAuth2Client } from 'google-auth-library';
+
 const saltRounds = 10;
 dotenv.config();
-
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 let emailTransporter: nodemailer.Transporter | null = null; // singleton
 interface IAuthenticationService {
   register(req: Request, res: Response): Promise<void>;
   login(req: Request, res: Response): Promise<void>;
+  googleLogin(req: Request, res: Response): Promise<void>;
+  googleRegister(req: Request, res: Response): Promise<void>;
   forgotPassword(req: Request, res: Response): Promise<void>;
   resetPassword(req: Request, res: Response): Promise<void>;
   verifyToken(req: Request, res: Response): Promise<void>;
@@ -272,6 +277,118 @@ const AuthService: IAuthenticationService = {
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ error: 'Internal server error.' });
+    }
+  },
+
+  googleLogin: async (req: Request, res: Response) => {
+    const { token } = req.body; // Đây là access_token từ frontend
+
+    if (!token) {
+      res.status(400).json({ error: 'Google Access Token is required.' });
+      return 
+    }
+
+    try {
+      // Dùng access_token để lấy thông tin người dùng từ Google
+      const googleResponse = await axios.get(
+        `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const { email } = googleResponse.data;
+      if (!email) {
+        res.status(401).json({ error: 'Invalid Google token or email not found.' });
+        return 
+      }
+
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        res.status(404).json({ error: 'User not found. Please register first.' });
+        return 
+      }
+
+      // Logic tạo token và cookie không đổi
+      const accessToken = createToken(user._id as string, 'access');
+      const refreshToken = createToken(user._id as string, 'refresh');
+      const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
+      
+      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: !isLocalDev, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
+      res.cookie('accessToken', accessToken, { httpOnly: true, secure: !isLocalDev, maxAge: 3 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
+
+      res.status(200).json({
+        message: 'Google login successful.',
+        userId: user._id,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (error) {
+      console.error('Google login error:', error);
+      res.status(500).json({ error: 'Internal server error or invalid token.' });
+    }
+  },
+
+  googleRegister: async (req: Request, res: Response) => {
+    const { token } = req.body; 
+
+    if (!token) {
+      res.status(400).json({ error: 'Google Access Token is required.' });
+      return;
+    }
+
+    try {
+      
+      const googleResponse = await axios.get(
+        `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      
+      const { email, name, picture } = googleResponse.data;
+      if (!email) {
+        res.status(401).json({ error: 'Invalid Google token or email not found.' });
+        return 
+      }
+
+      const lowerCaseEmail = email.toLowerCase();
+      let user = await User.findOne({ email: lowerCaseEmail });
+      if (user) {
+        res.status(409).json({ error: 'User already exists. Please login.' });
+        return 
+      }
+
+      user = new User({
+        email: lowerCaseEmail,
+        displayName: name || lowerCaseEmail.split('@')[0],
+        username: lowerCaseEmail,
+        avatarUrl: picture,
+        registrationDate: new Date(),
+      });
+      await user.save();
+
+      // Logic tạo token và cookie không đổi
+      const accessToken = createToken(user._id as string, 'access');
+      const refreshToken = createToken(user._id as string, 'refresh');
+      const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
+      
+      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: !isLocalDev, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
+      res.cookie('accessToken', accessToken, { httpOnly: true, secure: !isLocalDev, maxAge: 3 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
+
+      res.status(201).json({
+        message: 'Google registration successful.',
+        userId: user._id,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (error) {
+      console.error('Google register error:', error);
+      res.status(500).json({ error: 'Internal server error or invalid token.' });
     }
   },
 

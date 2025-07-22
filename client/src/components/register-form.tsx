@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import PswStrength, { customPasswordStrength } from "./password-strength";
 import toast from "react-hot-toast";
 import API from "@/utils/axiosInstance";
+import { useGoogleLogin } from '@react-oauth/google';
 
 export function RegisterForm({
 	className,
@@ -40,6 +41,29 @@ export function RegisterForm({
 			navigate('/');
 		}
 	}, [user, navigate]);
+
+	 const handleGoogleRegister = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      const loadingToast = toast.loading('Registering with Google...');
+      try {
+        const response = await API.post('/auth/google-register', {
+          token: tokenResponse.access_token,
+        });
+        toast.dismiss(loadingToast);
+
+        toast.success(response.data.message || 'Registration successful! Please log in.');
+
+        
+        navigate('/login'); 
+
+      } catch (error: any) {
+     
+      }
+    },
+    onError: () => {
+      toast.error('Google registration failed. Please try again.');
+    },
+  });
 
 	const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -269,7 +293,7 @@ export function RegisterForm({
 								>
 									Create Account
 								</Button>
-								<Button variant="outline" className="w-full">
+								<Button variant="outline" className="w-full" type="button" onClick={() => handleGoogleRegister()}>
 									Sign up with Google
 								</Button>
 							</div>
