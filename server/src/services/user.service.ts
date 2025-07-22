@@ -131,33 +131,24 @@ const FollowService: IFollowService = {
 
     const followers = await Follow.find({ following: userId })
       .populate('follower', 'username displayName avatarUrl')
-      .select('follower, createdDate')
+      .select('follower createdDate')
       .sort({ createdDate: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
 
-    // Since users can only see their own followers, userId is the current user
-    const followerIds = followers.map(f => f.follower._id.toString());
-    
-    // Get all follow relationships where current user follows any of the followers
-    const followRelationships = await Follow.find({
-      follower: userId,
-      following: { $in: followerIds }
-    }).select('following');
-
-    const followingSet = new Set(
-      followRelationships.map(f => f.following.toString())
-    );
-
-    // Add isFollowing property to each follower
-    return followers.map(follow => ({
-      ...follow.toObject(),
-      follower: {
-        ...follow.follower,
-        isFollowing: followingSet.has(follow.follower._id.toString())
-      }
-    }));
+    // Return a flat array of follower user objects
+    return followers.map(follow => {
+      const followerUser = follow.follower as unknown as IUser;
+      return {
+        _id: followerUser._id,
+        username: followerUser.username,
+        displayName: followerUser.displayName,
+        avatarUrl: followerUser.avatarUrl,
+        isFollowing: true,
+        followedAt: follow.createdDate,
+      };
+    });
   },
 
   /**
@@ -172,33 +163,24 @@ const FollowService: IFollowService = {
 
     const following = await Follow.find({ follower: userId })
       .populate('following', 'username displayName avatarUrl')
-      .select('following, createdDate')
+      .select('following createdDate')
       .sort({ createdDate: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
 
-    // Since users can only see their own following, userId is the current user
-    const followingIds = following.map(f => f.following._id.toString());
-    
-    // Get all follow relationships where current user follows any of the following users
-    const followRelationships = await Follow.find({
-      follower: userId,
-      following: { $in: followingIds }
-    }).select('following');
-
-    const followingSet = new Set(
-      followRelationships.map(f => f.following.toString())
-    );
-
-    // Add isFollowing property to each following user
-    return following.map(follow => ({
-      ...follow.toObject(),
-      following: {
-        ...follow.following,
-        isFollowing: followingSet.has(follow.following._id.toString())
-      }
-    }));
+    // Return a flat array of following user objects
+    return following.map(follow => {
+      const followingUser = follow.following as unknown as IUser;
+      return {
+        _id: followingUser._id,
+        username: followingUser.username,
+        displayName: followingUser.displayName,
+        avatarUrl: followingUser.avatarUrl,
+        isFollowing: true,
+        followedAt: follow.createdDate,
+      };
+    });
   },
 
   /**

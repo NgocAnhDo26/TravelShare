@@ -54,26 +54,8 @@ const FollowersFollowingDialog: React.FC<FollowersFollowingDialogProps> = ({
         params: { page: pageNum, limit: 20 }
       });
       
-      const newUsers = response.data.data?.map((item: any) => {
-        // The API returns different structures for followers vs following
-        let userData;
-        if (type === 'followers') {
-          userData = item.follower;
-        } else {
-          userData = item.following;
-        }
-        
-        // Extract user data from _doc if it exists (Mongoose populated document)
-        if (userData && userData._doc) {
-          return {
-            ...userData._doc,
-            isFollowing: userData.isFollowing || false
-          };
-        }
-        
-        // Fallback to direct user data
-        return userData;
-      }).filter((user: any) => user && user._id && user.username) || [];
+      // Use the flat user array returned by the backend
+      const newUsers = response.data.data || [];
 
       // Ensure minimum loading time of 500ms for smooth transitions
       const elapsedTime = Date.now() - startTime;

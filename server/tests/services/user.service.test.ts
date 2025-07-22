@@ -224,19 +224,16 @@ describe('FollowService', () => {
         exec: vi.fn().mockResolvedValue(followers),
       };
 
-      // Mock the second query (follow relationships query)
-      const mockSecondQuery = {
-        select: vi.fn().mockResolvedValue([])
-      };
-
-      mockedFollow.find
-        .mockReturnValueOnce(mockQueryChain)  // First call
-        .mockReturnValueOnce(mockSecondQuery); // Second call
+      mockedFollow.find.mockReturnValueOnce(mockQueryChain);
 
       const result = await FollowService.getFollowers(userId, { page: 1, limit: 10 });
       expect(result).toHaveLength(1);
-      expect(result[0]).toHaveProperty('follower');
-      expect(result[0].follower).toHaveProperty('isFollowing');
+      expect(result[0]).toHaveProperty('_id');
+      expect(result[0]).toHaveProperty('username');
+      expect(result[0]).toHaveProperty('displayName');
+      expect(result[0]).toHaveProperty('avatarUrl');
+      expect(result[0]).toHaveProperty('isFollowing');
+      expect(result[0]).toHaveProperty('followedAt');
     });
   });
 
@@ -274,19 +271,16 @@ describe('FollowService', () => {
         exec: vi.fn().mockResolvedValue(following),
       };
 
-      // Mock the second query (follow relationships query)
-      const mockSecondQuery = {
-        select: vi.fn().mockResolvedValue([])
-      };
-
-      mockedFollow.find
-        .mockReturnValueOnce(mockQueryChain)  // First call
-        .mockReturnValueOnce(mockSecondQuery); // Second call
+      mockedFollow.find.mockReturnValueOnce(mockQueryChain);
 
       const result = await FollowService.getFollowing(userId, { page: 1, limit: 10 });
       expect(result).toHaveLength(1);
-      expect(result[0]).toHaveProperty('following');
-      expect(result[0].following).toHaveProperty('isFollowing');
+      expect(result[0]).toHaveProperty('_id');
+      expect(result[0]).toHaveProperty('username');
+      expect(result[0]).toHaveProperty('displayName');
+      expect(result[0]).toHaveProperty('avatarUrl');
+      expect(result[0]).toHaveProperty('isFollowing');
+      expect(result[0]).toHaveProperty('followedAt');
     });
   });
 });

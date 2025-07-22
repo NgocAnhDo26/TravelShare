@@ -488,7 +488,7 @@ const TravelPlanService: ITravelPlanService = {
         limit: 5000,
       });
       const followingIds = followingRelations.map(
-        (relation) => relation.following._id,
+        (relation) => relation._id,
       );
 
       const followedPlans = await TravelPlan.find({

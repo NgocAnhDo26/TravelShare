@@ -306,7 +306,8 @@ const TabsSection: React.FC<TabsSectionProps> = ({
               {plans.map((plan) => (
                 <Card
                   key={plan._id}
-                  className='relative p-0 overflow-hidden group gap-0'
+                  className='relative p-0 overflow-hidden group gap-0 cursor-pointer hover:scale-105 transition-transform duration-250'
+                  onClick={() => navigate(`/plans/${plan._id}`)}
                 >
                   <div className="relative w-full h-20">
                     <img
@@ -322,12 +323,6 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align='end'>
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/plans/${plan._id}`)}
-                          >
-                            <EyeIcon />
-                            View plan
-                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => navigate(`/plans/${plan._id}/edit`)}
                           >
