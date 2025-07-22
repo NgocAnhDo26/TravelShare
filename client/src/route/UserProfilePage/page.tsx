@@ -19,6 +19,7 @@ import {
 
 import { EllipsisVerticalIcon, EyeIcon, Milestone, NotepadText, PencilIcon, Share, TrashIcon } from 'lucide-react';
 import EditProfileForm from '@/components/edit-profile-form';
+import FollowersFollowingDialog from '@/components/FollowersFollowingDialog';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
@@ -35,7 +36,13 @@ interface ProfileCardProps {
   onShare: () => void;
   avatarUrl?: string; // Optional avatar
   isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
-  email?: string; 
+  email?: string;
+  userId?: string; // User ID for follow/unfollow operations
+  isFollowing?: boolean; // Whether the current user is following this user
+  onFollowToggle?: () => void; // Callback for follow/unfollow
+  isLoading?: boolean; // Loading state for follow/unfollow button
+  onFollowersClick?: () => void; // Callback for followers click
+  onFollowingClick?: () => void; // Callback for following click
 }
 
 const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -45,8 +52,13 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   following,
   onShare,
   avatarUrl,
-  isMyProfile,
+  isMyProfile = false,
   email,
+  isFollowing,
+  onFollowToggle,
+  isLoading,
+  onFollowersClick,
+  onFollowingClick,
 }) => {
   return (
     <Card className='flex flex-col items-center gap-0 p-6'>
@@ -64,13 +76,27 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 
       {/* Follow Stats */}
       <div className='flex space-x-6 mb-6'>
-        <div className='text-center'>
+        <div 
+          className={`text-center transition-opacity p-2 rounded-lg ${
+            isMyProfile 
+              ? 'cursor-pointer hover:opacity-80 hover:bg-gray-50' 
+              : ''
+          }`}
+          onClick={isMyProfile ? onFollowersClick : undefined}
+        >
           <span className='block text-lg font-bold text-gray-800'>
             {followers}
           </span>
           <span className='text-gray-500 text-xs uppercase'>Followers</span>
         </div>
-        <div className='text-center'>
+        <div 
+          className={`text-center transition-opacity p-2 rounded-lg ${
+            isMyProfile 
+              ? 'cursor-pointer hover:opacity-80 hover:bg-gray-50' 
+              : ''
+          }`}
+          onClick={isMyProfile ? onFollowingClick : undefined}
+        >
           <span className='block text-lg font-bold text-gray-800'>
             {following}
           </span>
@@ -95,7 +121,14 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           </Button>
         </div>
       ) : (
-        <Button className='cursor-pointer'>Follow</Button>
+        <Button 
+          className='cursor-pointer' 
+          onClick={onFollowToggle}
+          disabled={isLoading}
+          variant={isFollowing ? 'outline' : 'default'}
+        >
+          {isLoading ? 'Loading...' : isFollowing ? 'Unfollow' : 'Follow'}
+        </Button>
       )}
     </Card>
   );
@@ -172,69 +205,6 @@ const TravelLogCard: React.FC<TravelLogCardProps> = ({
     </Card>
   );
 };
-
-// --- FAQSection Component (can be a separate file like components/profile/FAQSection.tsx) ---
-// interface FAQSectionProps {
-//   faqs: { question: string; link?: string }[]; // 'answer' changed to 'link' for hyperlink
-// }
-
-// const FAQSection: React.FC<FAQSectionProps> = ({ faqs }) => {
-//   const [userQuestion, setUserQuestion] = useState(''); // State for the input field
-
-//   const handleQuestionSubmit = () => {
-//     if (userQuestion.trim()) {
-//       console.log('Câu hỏi người dùng:', userQuestion);
-//       // TODO: Gửi câu hỏi này đến backend hoặc xử lý tại đây
-//       alert(`Câu hỏi của bạn đã được gửi: "${userQuestion}"`); // Sử dụng alert tạm thời
-//       setUserQuestion(''); // Reset input
-//     } else {
-//       alert('Vui lòng nhập câu hỏi của bạn.');
-//     }
-//   };
-
-//   return (
-//     <div className='bg-white rounded-xl shadow-md p-6'>
-//       <h2 className='text-xl font-bold text-gray-800 mb-4'>
-//         Những câu hỏi thường gặp
-//       </h2>
-//       <div className='space-y-4 mb-6'>
-//         {faqs.map((faq, index) => (
-//           <div key={index}>
-//             <a
-//               href={faq.link || '#'} // Link to specified URL or '#' if no link
-//               className='text-blue-600 hover:text-blue-800 underline block leading-relaxed' // Hyperlink styling
-//               target={faq.link ? '_blank' : '_self'} // Open in new tab if there's a link
-//               rel={faq.link ? 'noopener noreferrer' : ''}
-//             >
-//               - {faq.question}
-//             </a>
-//           </div>
-//         ))}
-//       </div>
-//       {/* Input field for user questions */}
-//       <div className='mt-4'>
-//         <input
-//           type='text'
-//           placeholder='Bạn có câu hỏi nào dành cho cộng đồng chúng tôi không ?'
-//           className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700'
-//           value={userQuestion}
-//           onChange={(e) => setUserQuestion(e.target.value)}
-//           onKeyPress={(e) => {
-//             if (e.key === 'Enter') {
-//               handleQuestionSubmit();
-//             }
-//           }}
-//         />
-//         <Button
-//           onClick={handleQuestionSubmit}
-//           className='w-full mt-3 bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-md'
-//         >
-//           Gửi câu hỏi
-//         </Button>
-//       </div>
-//     </div>
-//   );
-// };
 
 // --- TabsSection Component (can be a separate file like components/profile/TabsSection.tsx) ---
 interface TabsSectionProps {
@@ -336,7 +306,8 @@ const TabsSection: React.FC<TabsSectionProps> = ({
               {plans.map((plan) => (
                 <Card
                   key={plan._id}
-                  className='relative p-0 overflow-hidden group gap-0'
+                  className='relative p-0 overflow-hidden group gap-0 cursor-pointer hover:scale-105 transition-transform duration-250'
+                  onClick={() => navigate(`/plans/${plan._id}`)}
                 >
                   <div className="relative w-full h-20">
                     <img
@@ -352,12 +323,6 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align='end'>
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/plans/${plan._id}`)}
-                          >
-                            <EyeIcon />
-                            View plan
-                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => navigate(`/plans/${plan._id}/edit`)}
                           >
@@ -423,6 +388,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
 
 // Define interface for user profile data
 interface UserProfileData {
+  _id: string;
   username: string;
   email: string;
   displayName?: string;
@@ -444,9 +410,14 @@ interface UserProfileData {
 const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
   let { userId } = useParams();
+  const navigate = useNavigate();
   const [userData, setUserData] = useState<UserProfileData | undefined>(
     undefined,
   );
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [followersDialogOpen, setFollowersDialogOpen] = useState<boolean>(false);
+  const [followingDialogOpen, setFollowingDialogOpen] = useState<boolean>(false);
 
   // Use userId prop to fetch user data from API
   // Call API to fetch user data based on userId
@@ -472,49 +443,71 @@ const UserProfilePage: React.FC = () => {
     fetchUserData();
   }, [user, userId]);
 
-  //   // Dữ liệu giả định cho trang profile
-  //   const userData = {
-  //     userName: 'Phát Nguyễn',
-  //     userHandle: '@pht5',
-  //     followers: 0,
-  //     following: 0,
-  //     avatarUrl:
-  //       'https://topanh.com/wp-content/uploads/2025/05/hinh-gai-xinh-tiktok-2.jpg', // Updated avatar URL
-  //     countriesVisited: 5, // Example data for TravelLogCard
-  //     citiesVisited: 12, // Example data for TravelLogCard
-  //     regionsVisited: 3, // Example data for TravelLogCard
-  //     rank: 'Newbie TravelShare', // Rank data
-  //     tripPlansCount: 0,
-  //     guidesCount: 0,
-  //     travelLog: [
-  //       // Travel log data
-  //       { country: 'Trung Quốc', cities: ['Thâm Quyến', 'Vạn Lý Trường Thành'] },
-  //       { country: 'Việt Nam', cities: ['Biển Lâm Đồng', 'Thị trấn Đà Lạt'] },
-  //       { country: 'Nhật Bản', cities: ['Tokyo', 'Kyoto'] },
-  //       { country: 'Hàn Quốc', cities: ['Seoul', 'Busan', 'Đảo Jeju'] },
-  //       { country: 'Thái Lan', cities: ['Bangkok', 'Chiang Mai'] },
-  //     ],
-  //     faqs: [
-  //       // FAQ data with mock links
-  //       {
-  //         question:
-  //           'Bạn thân tôi thường hay chơi với tôi nhưng nay tôi đi du lịch, thì tôi kiếm dịch vụ trông chó ở đâu cho uy tín ?',
-  //         link: 'https://example.com/pet-sitting',
-  //       },
-  //       {
-  //         question:
-  //           'Tôi có vợ tôi ở nhà nhưng nay tôi đi du lịch cô ấy không muốn đi với tôi và khuyến khích tôi đi một mình để cô ấy trông nhà nhưng tôi hơi cô đơn, có nên ở nhà không ?',
-  //         link: 'https://example.com/solo-travel-loneliness',
-  //       },
-  //       {
-  //         question: 'Tôi không muốn đi du lịch thì phải làm sao ?',
-  //         link: 'https://example.com/no-travel-motivation',
-  //       },
-  //     ],
-  //   };
+  // Check if current user is following the profile user
+  useEffect(() => {
+    const checkFollowStatus = async () => {
+      if (!user || !userId || user.userId === userId) return;
+      
+      try {
+        const response = await API.get(`/users/${userId}/is-following`);
+        setIsFollowing(response.data.isFollowing);
+      } catch (error) {
+        console.error('Error checking follow status:', error);
+      }
+    };
+
+    checkFollowStatus();
+  }, [user, userId]);
+
+  // Handle follow/unfollow
+  const handleFollowToggle = async () => {
+    if (!user) {
+      // Navigate to login page if user is not authenticated
+      navigate('/login');
+      return;
+    }
+
+    if (!userId || user.userId === userId) return;
+
+    setIsLoading(true);
+    try {
+      if (isFollowing) {
+        // Unfollow
+        await API.delete(`/users/${userId}/unfollow`);
+        setIsFollowing(false);
+        setUserData(prev => prev ? { ...prev, followerCount: prev.followerCount - 1 } : prev);
+        toast.success('Unfollowed successfully');
+      } else {
+        // Follow
+        await API.post(`/users/${userId}/follow`);
+        setIsFollowing(true);
+        setUserData(prev => prev ? { ...prev, followerCount: prev.followerCount + 1 } : prev);
+        toast.success('Followed successfully');
+      }
+    } catch (error: any) {
+      console.error('Error toggling follow:', error);
+      toast.error(error.response?.data?.message || 'Failed to update follow status');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleShareProfile = () => {
     console.log('Share Profile clicked!');
+  };
+
+  const isMyProfile = !userId || user?.userId === userId;
+
+  const handleFollowersClick = () => {
+    // Only allow viewing followers/following on own profile
+    if (!isMyProfile) return;
+    setFollowersDialogOpen(true);
+  };
+
+  const handleFollowingClick = () => {
+    // Only allow viewing followers/following on own profile
+    if (!isMyProfile) return;
+    setFollowingDialogOpen(true);
   };
 
   // Ensure userData is defined before rendering components that depend on it
@@ -537,7 +530,13 @@ const UserProfilePage: React.FC = () => {
             following={userData.followingCount}
             onShare={handleShareProfile}
             avatarUrl={userData.avatarUrl}
-           isMyProfile={!userId || user?.userId === userId} // Check if this is the user's own profile
+            isMyProfile={isMyProfile}
+            userId={userData._id}
+            isFollowing={isFollowing}
+            onFollowToggle={handleFollowToggle}
+            isLoading={isLoading}
+            onFollowersClick={handleFollowersClick}
+            onFollowingClick={handleFollowingClick}
           />
           {/* Add FAQSection below ProfileCard */}
           {/* <FAQSection faqs={userData.faqs} /> */}
@@ -545,6 +544,20 @@ const UserProfilePage: React.FC = () => {
 
         {/* Right Column (Travel Log and Tabs Section) */}
         <div className='lg:col-span-2 space-y-6'>
+          
+          {/* Followers/Following Dialogs */}
+          <FollowersFollowingDialog
+            isOpen={followersDialogOpen}
+            onClose={() => setFollowersDialogOpen(false)}
+            type="followers"
+            currentUserId={user?.userId || ''}
+          />
+          <FollowersFollowingDialog
+            isOpen={followingDialogOpen}
+            onClose={() => setFollowingDialogOpen(false)}
+            type="following"
+            currentUserId={user?.userId || ''}
+          />
           <TravelLogCard
             // countriesVisited={userData.countriesVisited}
             // citiesVisited={userData.citiesVisited}
