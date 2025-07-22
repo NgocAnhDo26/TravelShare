@@ -491,23 +491,32 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       : new Date().toISOString().split('T')[0];
 
     if(data.startTime && data.endTime) {
-      const startDate = new Date(data.startTime).toISOString().split('T')[1];
-      const endDate = new Date(data.endTime).toISOString().split('T')[1];
-      if (startDate > endDate) {
+      // Compare times as minutes since midnight
+      const [startHour, startMinute] = data.startTime.split(':').map(Number);
+      const [endHour, endMinute] = data.endTime.split(':').map(Number);
+      const startTotal = startHour * 60 + startMinute;
+      const endTotal = endHour * 60 + endMinute;
+      if (startTotal > endTotal) {
         throw new Error('Start time cannot be after end time');
       }
     }
 
     if (data.startTime) {
-      // Create date in UTC to avoid timezone conversion
-      const startDateTime = new Date(`${dayDate.split('T')[0]}T${data.startTime}:00.000Z`);
-      apiData.startTime = startDateTime.toISOString();
+      // Only create date if startTime is a valid HH:mm string
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (timeRegex.test(data.startTime)) {
+        const startDateTime = new Date(`${dayDate.split('T')[0]}T${data.startTime}:00.000Z`);
+        apiData.startTime = startDateTime.toISOString();
+      }
     }
 
     if (data.endTime) {
-      // Create date in UTC to avoid timezone conversion
-      const endDateTime = new Date(`${dayDate.split('T')[0]}T${data.endTime}:00.000Z`);
-      apiData.endTime = endDateTime.toISOString();
+      // Only create date if endTime is a valid HH:mm string
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (timeRegex.test(data.endTime)) {
+        const endDateTime = new Date(`${dayDate.split('T')[0]}T${data.endTime}:00.000Z`);
+        apiData.endTime = endDateTime.toISOString();
+      }
     }
 
     return apiData;
