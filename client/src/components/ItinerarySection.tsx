@@ -806,12 +806,63 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   return (
     <section className='lg:mx-14 mx-8 mt-6'>
       <h1 className='text-2xl font-bold text-left mb-4'>Itinerary</h1>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
+      {editMode ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <Accordion
+            type="multiple"
+            value={openSections}
+            onValueChange={setOpenSections}
+            className="w-full"
+          >
+            {localItinerary.map((day) => (
+              <AccordionItem key={day.dayNumber} value={day.dayNumber.toString()}>
+                <AccordionTrigger className='text-xl'>
+                  {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <SortableContext
+                    items={day.items.map((item) => item._id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {day.items.map((item) => (
+                      <SortableItem key={item._id} id={item._id}>
+                        <ItineraryItemCard
+                          item={item}
+                          editMode={editMode}
+                          onEdit={handleEditItem}
+                          onDelete={handleDeleteItem}
+                        />
+                      </SortableItem>
+                    ))}
+                  </SortableContext>
+                  <Button
+                    variant='secondary'
+                    className='mt-4 w-full'
+                    onClick={() => handleAddItem(day.dayNumber)}
+                  >
+                    <MapPinPlus className='mr-2 h-4 w-4' /> New Item
+                  </Button>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+          <DragOverlay>
+            {draggedItem ? (
+              <ItineraryItemCard
+                item={draggedItem}
+                editMode={false}
+                onEdit={() => {}}
+                onDelete={() => {}}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      ) : (
         <Accordion
           type="multiple"
           value={openSections}
@@ -824,46 +875,20 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                 {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
               </AccordionTrigger>
               <AccordionContent>
-                <SortableContext
-                  items={day.items.map((item) => item._id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {day.items.map((item) => (
-                    <SortableItem key={item._id} id={item._id}>
-                      <ItineraryItemCard
-                        item={item}
-                        editMode={editMode}
-                        onEdit={handleEditItem}
-                        onDelete={handleDeleteItem}
-                      />
-                    </SortableItem>
-                  ))}
-                </SortableContext>
-                {editMode && (
-                  <Button
-                    variant='secondary'
-                    className='mt-4 w-full'
-                    onClick={() => handleAddItem(day.dayNumber)}
-                  >
-                    <MapPinPlus className='mr-2 h-4 w-4' /> New Item
-                  </Button>
-                )}
+                {day.items.map((item) => (
+                  <ItineraryItemCard
+                    key={item._id}
+                    item={item}
+                    editMode={false}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                  />
+                ))}
               </AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
-        <DragOverlay>
-          {draggedItem ? (
-            <ItineraryItemCard
-              item={draggedItem}
-              editMode={false}
-              onEdit={() => {}}
-              onDelete={() => {}}
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
-
+      )}
       {/* Add Item Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
