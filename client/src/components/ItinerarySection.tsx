@@ -44,6 +44,20 @@ import {
 import type { IDailySchedule, IPlanItem } from '@/types/trip';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
+import {
+  DndContext,
+  closestCenter,
+  DragOverlay,
+} from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useSortable } from '@dnd-kit/sortable';
 
 interface ItinerarySectionProps {
   itinerary: IDailySchedule[];
@@ -459,9 +473,127 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Form data state
+  const [draggedItem, setDraggedItem] = useState<IPlanItem | null>(null);
+  const [localItinerary, setLocalItinerary] = useState<IDailySchedule[]>(itinerary);
   const [formData, setFormData] = useState<ItemFormData>(initialFormData);
+
+  // Sensors for dnd-kit
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  // Helper: Find day by item id
+  const findDayByItemId = (id: string) =>
+    localItinerary.find((day) => day.items.some((item) => item._id === id));
+
+  // Helper: Find item by id
+  const findItemById = (id: string) => {
+    for (const day of localItinerary) {
+      const found = day.items.find((item) => item._id === id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  // Drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const item = findItemById(active.id as string);
+    setDraggedItem(item);
+  };
+
+  // Drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) {
+      setDraggedItem(null);
+      return;
+    }
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Find source and target day
+    const sourceDay = findDayByItemId(activeId);
+    const targetDay = findDayByItemId(overId);
+
+    if (!sourceDay || !targetDay) {
+      setDraggedItem(null);
+      return;
+    }
+
+    // If same day, reorder
+    if (sourceDay.dayNumber === targetDay.dayNumber) {
+      const oldIndex = sourceDay.items.findIndex((item) => item._id === activeId);
+      const newIndex = targetDay.items.findIndex((item) => item._id === overId);
+
+      const newItems = arrayMove(sourceDay.items, oldIndex, newIndex);
+      const updatedDay: IDailySchedule = {
+        ...sourceDay,
+        items: newItems.map((item, idx) => ({ ...item, order: idx })),
+      };
+
+      setLocalItinerary((prev) =>
+        prev.map((day) =>
+          day.dayNumber === sourceDay.dayNumber ? updatedDay : day
+        )
+      );
+
+      // Prepare payload for backend
+      const payload = newItems.map((item, idx) => ({
+        id: item._id,
+        newDayNumber: sourceDay.dayNumber,
+        newOrder: idx,
+      }));
+      // TODO: Send payload to backend here
+
+    } else {
+      // Move to another day
+      const movingItem = sourceDay.items.find((item) => item._id === activeId);
+      if (!movingItem) {
+        setDraggedItem(null);
+        return;
+      }
+
+      // Remove from source
+      const newSourceItems = sourceDay.items.filter((item) => item._id !== activeId);
+      // Insert into target at overId position
+      const overIndex = targetDay.items.findIndex((item) => item._id === overId);
+      const newTargetItems = [
+        ...targetDay.items.slice(0, overIndex),
+        { ...movingItem, order: overIndex, dayNumber: targetDay.dayNumber },
+        ...targetDay.items.slice(overIndex),
+      ].map((item, idx) => ({ ...item, order: idx }));
+
+      // Update state
+      setLocalItinerary((prev) =>
+        prev.map((day) => {
+          if (day.dayNumber === sourceDay.dayNumber) {
+            return { ...day, items: newSourceItems.map((item, idx) => ({ ...item, order: idx })) };
+          }
+          if (day.dayNumber === targetDay.dayNumber) {
+            return { ...day, items: newTargetItems };
+          }
+          return day;
+        })
+      );
+
+      // Prepare payload for backend
+      const payload = [
+        ...newSourceItems.map((item, idx) => ({
+          id: item._id,
+          newDayNumber: sourceDay.dayNumber,
+          newOrder: idx,
+        })),
+        ...newTargetItems.map((item, idx) => ({
+          id: item._id,
+          newDayNumber: targetDay.dayNumber,
+          newOrder: idx,
+        })),
+      ];
+      // TODO: Send payload to backend here
+    }
+
+    setDraggedItem(null);
+  };
 
   // Convert form data to API format
   const convertFormDataToApiFormat = (
@@ -670,25 +802,67 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     setFormData(initialFormData);
   };
 
+  // Render itinerary with dnd-kit
   return (
     <section className='lg:mx-14 mx-8 mt-6'>
       <h1 className='text-2xl font-bold text-left mb-4'>Itinerary</h1>
-      <Accordion
-        type='multiple'
-        value={openSections}
-        onValueChange={setOpenSections}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       >
-        {itinerary.map((day) => (
-          <DayItinerary
-            key={day.dayNumber}
-            day={day}
-            editMode={editMode}
-            onAddItem={handleAddItem}
-            onEditItem={handleEditItem}
-            onDeleteItem={handleDeleteItem}
-          />
-        ))}
-      </Accordion>
+        <Accordion
+          type="multiple"
+          value={openSections}
+          onValueChange={setOpenSections}
+          className="w-full"
+        >
+          {localItinerary.map((day) => (
+            <AccordionItem key={day.dayNumber} value={day.dayNumber.toString()}>
+              <AccordionTrigger className='text-xl'>
+                {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
+              </AccordionTrigger>
+              <AccordionContent>
+                <SortableContext
+                  items={day.items.map((item) => item._id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {day.items.map((item) => (
+                    <SortableItem key={item._id} id={item._id}>
+                      <ItineraryItemCard
+                        item={item}
+                        editMode={editMode}
+                        onEdit={handleEditItem}
+                        onDelete={handleDeleteItem}
+                      />
+                    </SortableItem>
+                  ))}
+                </SortableContext>
+                {editMode && (
+                  <Button
+                    variant='secondary'
+                    className='mt-4 w-full'
+                    onClick={() => handleAddItem(day.dayNumber)}
+                  >
+                    <MapPinPlus className='mr-2 h-4 w-4' /> New Item
+                  </Button>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+        <DragOverlay>
+          {draggedItem ? (
+            <ItineraryItemCard
+              item={draggedItem}
+              editMode={false}
+              onEdit={() => {}}
+              onDelete={() => {}}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Add Item Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
@@ -772,6 +946,30 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         </DialogContent>
       </Dialog>
     </section>
+  );
+};
+
+const SortableItem: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : 'auto',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
   );
 };
 
