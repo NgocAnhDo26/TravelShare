@@ -423,7 +423,7 @@ const ItineraryItemCard: React.FC<{
   );
 };
 
-const SortableItem: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
+const SortableItem: React.FC<{ id: string; children: React.ReactElement<any> }> = ({ id, children }) => {
   const {
     attributes,
     listeners,
@@ -443,9 +443,7 @@ const SortableItem: React.FC<{ id: string; children: React.ReactNode }> = ({ id,
   // Pass dragHandleProps to children
   return (
     <div ref={setNodeRef} style={style}>
-      {React.isValidElement(children)
-        ? React.cloneElement(children as React.ReactElement, { dragHandleProps: { ...attributes, ...listeners } })
-        : children}
+      {React.cloneElement(children, { dragHandleProps: { ...attributes, ...listeners } })}
     </div>
   );
 };
@@ -829,9 +827,19 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         `/plans/${tripId}/days/${currentDayNumber}/items`,
         apiData,
       );
+      const newItem = response.data.data;
+
+      // Update localItinerary to add the new item to the correct day
+      setLocalItinerary(prev =>
+        prev.map(day =>
+          day.dayNumber === currentDayNumber
+            ? { ...day, items: [...day.items, newItem] }
+            : day
+        )
+      );
 
       if (onItemAdded) {
-        onItemAdded(currentDayNumber, response.data.data);
+        onItemAdded(currentDayNumber, newItem);
       }
 
       setIsAddModalOpen(false);
@@ -858,13 +866,24 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         `/plans/${tripId}/items/${currentEditItem._id}`,
         apiData,
       );
+      const updatedItem = response.data.data;
+
+      // Update localItinerary to reflect the updated item
+      setLocalItinerary(prev =>
+        prev.map(day => ({
+          ...day,
+          items: day.items.map(item =>
+            item._id === currentEditItem._id ? updatedItem : item
+          ),
+        }))
+      );
 
       const dayNumber = itinerary.find((day) =>
         day.items.some((dayItem) => dayItem._id === currentEditItem._id),
       )?.dayNumber;
 
       if (dayNumber && onItemUpdated) {
-        onItemUpdated(dayNumber, currentEditItem._id, response.data.data);
+        onItemUpdated(dayNumber, currentEditItem._id, updatedItem);
       }
 
       setIsEditModalOpen(false);
