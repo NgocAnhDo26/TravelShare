@@ -10,7 +10,7 @@ import { FollowService } from './user.service';
  * @description Outlines the methods available in the TravelPlanService.
  */
 interface ITravelPlanService {
-    addPlanItem(planId: string, dayNumber: number, itemData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem>;
+  addPlanItem(planId: string, dayNumber: number, itemData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem>;
   getPlanItem(planId: string, itemId: string, authorId: string): Promise<IPlanItem | null>;
   updatePlanItem(planId: string, itemId: string, updateData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem | null>;
   deletePlanItem(planId: string, itemId: string, authorId: string): Promise<boolean>;
@@ -51,6 +51,13 @@ interface ITravelPlanService {
     userId: string,
     options: { page: number; limit: number },
   ): Promise<any[]>;
+
+  reorderItemsInDay(
+    planId: string,
+    dayNumber: number,
+    items: { _id: string; order: number }[],
+    authorId: string
+  ): Promise<boolean>;
 }
 
 interface CreateTravelPlanRequest {
@@ -515,6 +522,47 @@ const TravelPlanService: ITravelPlanService = {
     }
   },
 
+  /**
+   * Reorders items within a specific day in the schedule.
+   * @param planId - The travel plan ID
+   * @param dayNumber - The day number to reorder
+   * @param items - Array of {_id, order} objects representing new order
+   * @param authorId - The user's ID (for authorization)
+   * @returns Promise<boolean> - true if successful
+   */
+  async reorderItemsInDay(
+    planId: string,
+    dayNumber: number,
+    items: { _id: string; order: number }[],
+    authorId: string
+  ): Promise<boolean> {
+    try {
+      const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
+      if (!plan) throw new Error('Plan not found or user not authorized.');
+
+      const day = plan.schedule.find(d => d.dayNumber === dayNumber);
+      if (!day) throw new Error('Day not found in schedule.');
+
+      // Create a map for quick lookup of new order by item _id
+      const orderMap = new Map(items.map(item => [item._id.toString(), item.order]));
+
+      // Update the order field for each item in the day
+      day.items.forEach(item => {
+        if (orderMap.has(item._id.toString())) {
+          item.order = orderMap.get(item._id.toString())!;
+        }
+      });
+
+      // Sort the items array by the new order
+      day.items.sort((a, b) => a.order - b.order);
+
+      await plan.save();
+      return true;
+    } catch (error) {
+      console.error('Error in reorderItemsInDay:', error);
+      throw error;
+    }
+  }, 
 };
 
 export { TravelPlanService };

@@ -38,7 +38,8 @@ interface ITravelPlanController {
     next: NextFunction,
   ): Promise<void>;
 
-   getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>; 
+   getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>;
+   reorderItemsInDay(req: Request, res: Response, next: NextFunction): Promise<void>; 
 }
 
 /**
@@ -432,6 +433,30 @@ const TravelPlanController: ITravelPlanController = {
       next(error);
     }
   },
+
+  /**
+   * Reorder items within a specific day in the schedule.
+   * POST /api/plans/:id/items/reorder
+   * Body: { dayNumber: number, items: [{ _id: string, order: number }] }
+   */
+  async reorderItemsInDay(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const planId = req.params.id;
+      const authorId = req.user as string;
+      const { dayNumber, items } = req.body;
+
+      if (!dayNumber || !Array.isArray(items)) {
+        res.status(400).json({ error: 'dayNumber and items are required.' });
+        return;
+      }
+
+      await TravelPlanService.reorderItemsInDay(planId, dayNumber, items, authorId);
+
+      res.status(200).json({ message: 'Items reordered successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  }
 };
 
 export { TravelPlanController };

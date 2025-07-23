@@ -562,7 +562,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   };
 
   // Drag end
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) {
       setDraggedItem(null);
@@ -639,6 +639,25 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       );
 
       // TODO: Send payload to backend here
+      const reorderedItems = newItems.map((item, idx) => ({
+        _id: item._id,
+        order: idx + 1,
+      }));
+
+      const payload = {
+        dayNumber: sourceDay.dayNumber,
+        items: reorderedItems,
+      };
+      console.log('Reordering payload:', payload);
+      // API call:
+      await API.post(`/plans/${tripId}/items/reorder`, payload)
+        .then(() => {
+          toast.success('Items reordered!');
+        })
+        .catch((error) => {
+          console.error('Error reordering items:', error);
+          toast.error('Failed to reorder items. Please try again.');
+        });
 
     } else {
       // Move to another day
@@ -672,6 +691,25 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       );
 
       // TODO: Send payload to backend here
+      const sourceItems = newSourceItems.map((item, idx) => ({
+        _id: item._id,
+        order: idx,
+      }));
+
+      const targetItems = newTargetItems.map((item, idx) => ({
+        _id: item._id,
+        order: idx,
+      }));
+
+      const payload = {
+        sourceDayNumber: sourceDay.dayNumber,
+        targetDayNumber: targetDay.dayNumber,
+        sourceItems,
+        targetItems,
+      };
+
+      // API call:
+      // await API.post(`/plans/${tripId}/items/move`, payload);
     }
 
     setDraggedItem(null);
