@@ -13,6 +13,8 @@ const PostService: IPostService = {
     // creating a post is add the post data from the request body to the database
     try {
       console.log('Creating post with data:', req.body);
+      //TODO: add file upload handling for coverImageUrl and images
+      // SUGGESTION: Add user ID to the post data
       const postData = {
         title: req.body.title,
         content: req.body.content,
