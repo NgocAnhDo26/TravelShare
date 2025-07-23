@@ -1,8 +1,11 @@
 import React from 'react';
-import { Card, CardContent, CardHeader } from './ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { MessageCircle, Heart, Share2 } from 'lucide-react';
+import { MessageCircle, Heart, Share2, MapPin, Bookmark } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Separator } from './ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 interface Plan {
   _id: string;
@@ -12,7 +15,7 @@ interface Plan {
   author: {
     _id: string;
     username: string;
-    displayName?: string; 
+    displayName?: string;
     avatarUrl?: string;
   };
   likesCount: number;
@@ -26,47 +29,104 @@ interface FeedPostProps {
 const FeedPost: React.FC<FeedPostProps> = ({ plan }) => {
   const navigate = useNavigate();
 
-
   if (!plan?.author) {
     return null;
   }
-  
+
   const handleViewPlan = () => navigate(`/plans/${plan._id}`);
   const handleViewProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/profile/${plan.author._id}`);
   };
 
- 
   const fallbackChar = (plan.author.displayName || plan.author.username || 'A')
-                        .charAt(0)
-                        .toUpperCase();
+    .charAt(0)
+    .toUpperCase();
 
   return (
-    <Card className="shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={handleViewPlan}>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Avatar onClick={handleViewProfile} className="cursor-pointer">
-            <AvatarImage src={plan.author.avatarUrl} alt={plan.author.displayName || plan.author.username} />
-            <AvatarFallback>{fallbackChar}</AvatarFallback>
+    <Card
+      className='overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left gap-0 pb-1'
+      onClick={handleViewPlan}
+    >
+      <CardHeader className='pb-4'>
+        <div className='flex items-center gap-3'>
+          <Avatar
+            onClick={handleViewProfile}
+            className='cursor-pointer w-12 h-12 ring-2 ring-blue-500/20'
+          >
+            <AvatarImage
+              src={plan.author.avatarUrl}
+              alt={plan.author.displayName || plan.author.username}
+            />
+            <AvatarFallback className='bg-gradient-to-br from-teal-500 to-blue-600 text-white font-semibold'>
+              {fallbackChar}
+            </AvatarFallback>
           </Avatar>
-          <div onClick={handleViewProfile} className="cursor-pointer">
-           
-            <p className="font-semibold text-gray-800">{plan.author.displayName || plan.author.username}</p>
-            <p className="text-xs text-gray-500">@{plan.author.username}</p>
+          <div onClick={handleViewProfile} className='flex-1 cursor-pointer'>
+            <h3 className='font-semibold text-slate-800'>
+              {plan.author.displayName || plan.author.username}
+            </h3>
+            <p className='text-sm text-slate-500'>@{plan.author.username}</p>
           </div>
+          <Badge variant='secondary' className='bg-blue-100 text-blue-700'>
+            2h ago
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <h3 className="font-bold text-lg mb-2">{plan.title}</h3>
-        <p className="text-sm text-gray-600 mb-4">Destination: {plan.destination.name}</p>
-        {plan.coverImageUrl && <img src={plan.coverImageUrl} alt={plan.title} className="w-full h-64 object-cover rounded-lg mb-4" />}
-        <div className="flex items-center gap-6 text-gray-600">
-          <div className="flex items-center gap-2"><Heart size={18} /><span>{plan.likesCount || 0}</span></div>
-          <div className="flex items-center gap-2"><MessageCircle size={18} /><span>{plan.commentsCount || 0}</span></div>
-          <div className="flex items-center gap-2"><Share2 size={18} /><span>Share</span></div>
+      <CardContent className='px-6 pb-4'>
+        <div className='mb-4'>
+          <h4 className='text-xl font-bold text-slate-800 mb-2'>
+            {plan.title}
+          </h4>
+          <p className='text-slate-600 flex items-center gap-2'>
+            <MapPin className='w-4 h-4 text-teal-500' />
+            Destination: {plan.destination.name}
+          </p>
+        </div>
+
+        <div className='relative rounded-2xl overflow-hidden group'>
+          <img
+            src={plan.coverImageUrl}
+            alt={plan.title}
+            width={600}
+            height={400}
+            className='w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105'
+          />
+          <div className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
+          <div className='absolute bottom-4 left-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
+            <p className='font-semibold'>{plan.title}</p>
+          </div>
         </div>
       </CardContent>
+      <CardFooter className='flex flex-col gap-4 px-6 py-4 bg-slate-50/50'>
+        <Separator />
+        <div className='flex items-center justify-between w-full'>
+          <div className='flex items-center gap-6'>
+            <button className='flex items-center gap-2 text-slate-600 hover:text-red-500 transition-colors duration-200 group'>
+              <Heart className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
+              <span className='text-sm font-medium'>24</span>
+            </button>
+            <button className='flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-colors duration-200 group'>
+              <MessageCircle className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
+              <span className='text-sm font-medium'>8</span>
+            </button>
+            <button className='flex items-center gap-2 text-slate-600 hover:text-green-500 transition-colors duration-200 group'>
+              <Share2 className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
+              <span className='text-sm font-medium'>Share</span>
+            </button>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className='text-slate-600 hover:text-yellow-500 transition-colors duration-200'>
+                <Bookmark className='w-5 h-5 hover:scale-110 transition-transform duration-200' />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Save it</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </CardFooter>
     </Card>
   );
 };

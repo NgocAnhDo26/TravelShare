@@ -180,8 +180,8 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   }
 
   return (
-    <div className='flex flex-col h-full justify-center lg:mx-60 mx-24 my-10'>
-      <Card className='w-full overflow-hidden pt-0'>
+    <div className='flex flex-col justify-center lg:mx-60 mx-24 my-10'>
+      <Card className='w-full overflow-hidden pt-0 bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left gap-0'>
         <TripHeader trip={planData} editMode={actualEditMode} onTripUpdate={handleTripUpdate} />
         <ItinerarySection 
           itinerary={planData?.schedule || []} 

@@ -17,7 +17,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 
-import { EllipsisVerticalIcon, EyeIcon, Milestone, NotepadText, PencilIcon, Share, TrashIcon } from 'lucide-react';
+import { EllipsisVerticalIcon, Milestone, NotepadText, PencilIcon, Share, TrashIcon } from 'lucide-react';
 import EditProfileForm from '@/components/edit-profile-form';
 import FollowersFollowingDialog from '@/components/FollowersFollowingDialog';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -61,7 +61,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   onFollowingClick,
 }) => {
   return (
-    <Card className='flex flex-col items-center gap-0 p-6'>
+    <Card className='flex flex-col items-center p-6 overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/80 transition-all duration-300 text-left gap-0'>
       {/* Avatar Section */}
       <Avatar className='w-48 h-48 mb-4'>
         <AvatarImage src={avatarUrl} />
@@ -151,7 +151,7 @@ const TravelLogCard: React.FC<TravelLogCardProps> = ({
   travelLog,
 }) => {
   return (
-    <Card className='p-6 text-left gap-0'>
+    <Card className='p-6 text-left rounded-md overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 gap-0'>
       {' '}
       {/* Added text-left here */}
       {/* Top section: COUNTRIES, CITIES, & REGIONS stats */}
@@ -243,13 +243,13 @@ const TabsSection: React.FC<TabsSectionProps> = ({
   };
 
   return (
-    <Card className='p-6 gap-2'>
+    <Card className='p-6 gap-2 rounded-md overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left'>
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Plan</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the plan "{planToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete the plan "{planToDelete?.title}"? This action cannot be undone.ap-0
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -409,7 +409,7 @@ interface UserProfileData {
 // --- Main User Profile Page Component ---
 const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
-  let { userId } = useParams();
+  const { userId } = useParams();
   const navigate = useNavigate();
   const [userData, setUserData] = useState<UserProfileData | undefined>(
     undefined,
