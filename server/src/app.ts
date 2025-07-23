@@ -6,6 +6,7 @@ import authRouter from './routes/auth.routes';
 import userRouter from './routes/user.routes';
 import travelPlanRouter from './routes/travelPlan.routes';
 import cookieParser from 'cookie-parser';
+import postRouter from './routes/post.routes';
 import { logger, morganStream } from './utils/logger';
 import morgan from 'morgan';
 dotenv.config();
@@ -31,6 +32,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/plans', travelPlanRouter);
+app.use('/api/posts', postRouter);
 
 // Global error handler (should be after routes)
 app.use(errorHandler);
