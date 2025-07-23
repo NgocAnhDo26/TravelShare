@@ -40,6 +40,7 @@ import {
   Plus,
   X,
   Loader2,
+  GripVertical,
 } from 'lucide-react';
 import type { IDailySchedule, IPlanItem } from '@/types/trip';
 import API from '@/utils/axiosInstance';
@@ -101,7 +102,7 @@ const ItemForm: React.FC<{
   onCancel: () => void;
   isSubmitting: boolean;
   isEditing?: boolean;
-  dayDate: string; // Added to show which day this item belongs to
+  dayDate: string;
 }> = ({
   formData,
   onFormDataChange,
@@ -125,15 +126,12 @@ const ItemForm: React.FC<{
 
   return (
     <form onSubmit={onSubmit} className='space-y-4'>
-      {/* Day Info Display */}
       <div className='bg-gray-50 p-3 rounded-md'>
         <p className='text-sm text-gray-600'>
           <span className='font-medium'>{isEditing ? "Day:" : "Adding to:"}</span>{' '}
           {new Date(dayDate).toLocaleDateString()}
         </p>
       </div>
-
-      {/* Title */}
       <div className='grid gap-2'>
         <Label htmlFor='title'>Activity Title *</Label>
         <Input
@@ -145,8 +143,6 @@ const ItemForm: React.FC<{
           required
         />
       </div>
-
-      {/* Description */}
       <div className='grid gap-2'>
         <Label htmlFor='description'>Description</Label>
         <Textarea
@@ -158,8 +154,6 @@ const ItemForm: React.FC<{
           rows={3}
         />
       </div>
-
-      {/* Time */}
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
         <div className='grid gap-2'>
           <Label htmlFor='startTime'>Start Time</Label>
@@ -182,8 +176,6 @@ const ItemForm: React.FC<{
           />
         </div>
       </div>
-
-      {/* Location */}
       <div className='grid gap-2'>
         <Label htmlFor='location'>Location *</Label>
         <Input
@@ -195,8 +187,6 @@ const ItemForm: React.FC<{
           required
         />
       </div>
-
-      {/* Category */}
       <div className='grid gap-2'>
         <Label htmlFor='category'>Category</Label>
         <select
@@ -214,8 +204,6 @@ const ItemForm: React.FC<{
           <option value='other'>Other</option>
         </select>
       </div>
-
-      {/* Budget */}
       <div className='grid gap-2'>
         <Label htmlFor='cost'>Budget</Label>
         <Input
@@ -227,8 +215,6 @@ const ItemForm: React.FC<{
           placeholder='e.g., $50, 1.000.000 VND, $10/person'
         />
       </div>
-
-      {/* Notes */}
       <div className='grid gap-2'>
         <Label htmlFor='notes'>Additional Notes</Label>
         <Textarea
@@ -240,8 +226,6 @@ const ItemForm: React.FC<{
           rows={2}
         />
       </div>
-
-      {/* Action Buttons */}
       <DialogFooter>
         <Button
           type='button'
@@ -272,7 +256,7 @@ const ItemForm: React.FC<{
 const ItemActionsMenu: React.FC<{
   onEdit: () => void;
   onDelete: () => void;
-  dayNumber: number;
+  dayNumber?: number;
   setOpenSections?: (v: string[]) => void;
   openSections?: string[];
   sortableId?: string;
@@ -281,7 +265,7 @@ const ItemActionsMenu: React.FC<{
   const { setNodeRef, isOver } = sortableId ? useSortable({ id: sortableId }) : { setNodeRef: undefined, isOver: false };
 
   React.useEffect(() => {
-    if (isOver && setOpenSections && openSections && !openSections.includes(dayNumber.toString())) {
+    if (isOver && setOpenSections && openSections && dayNumber && !openSections.includes(dayNumber.toString())) {
       setOpenSections([...openSections, dayNumber.toString()]);
     }
   }, [isOver, dayNumber, openSections, setOpenSections]);
@@ -294,6 +278,9 @@ const ItemActionsMenu: React.FC<{
           variant='secondary'
           size='icon'
           className='ml-auto size-8 flex-shrink-0'
+          onPointerDown={e => e.stopPropagation()}
+          onPointerUp={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()} // Also prevent click bubbling
         >
           <Ellipsis />
         </Button>
@@ -328,7 +315,10 @@ const ItineraryItemCard: React.FC<{
   dayNumber?: number;
   setOpenSections?: (v: string[]) => void;
   openSections?: string[];
-}> = ({ item, editMode = false, onEdit, onDelete, dayNumber, setOpenSections, openSections }) => {
+  dragHandleProps?: any; // <-- add this
+}> = ({
+  item, editMode = false, onEdit, onDelete, dayNumber, setOpenSections, openSections, dragHandleProps
+}) => {
   const badgeColors = {
     activity: 'bg-blue-100 text-blue-800',
     food: 'bg-yellow-100 text-yellow-800',
@@ -365,6 +355,18 @@ const ItineraryItemCard: React.FC<{
     <Card className='mt-4 p-4 rounded-sm text-left gap-2'>
       <CardTitle className='text-lg font-semibold flex items-center justify-between'>
         <div className='flex items-center'>
+          {/* Only show drag handle in edit mode */}
+          {editMode && dragHandleProps && (
+            <span
+              {...dragHandleProps}
+              className="cursor-grab active:cursor-grabbing mr-2"
+              tabIndex={-1}
+              aria-label="Drag to reorder"
+              onClick={e => e.stopPropagation()}
+            >
+              <GripVertical className="w-4 h-4 text-gray-400" />
+            </span>
+          )}
           <Badge className={`${badgeColors[item.type]} mr-2`}>
             {getCategoryLabel(item.type)}
           </Badge>
@@ -374,7 +376,7 @@ const ItineraryItemCard: React.FC<{
           <ItemActionsMenu
             onEdit={handleEdit}
             onDelete={handleDelete}
-            dayNumber={dayNumber ?? 1}
+            dayNumber={dayNumber}
             setOpenSections={setOpenSections}
             openSections={openSections}
             sortableId={item._id}
@@ -421,58 +423,95 @@ const ItineraryItemCard: React.FC<{
   );
 };
 
-/**
- * Renders an accordion item for a single day's itinerary.
- */
-const DayItinerary: React.FC<{
-  day: IDailySchedule;
-  editMode?: boolean;
-  onAddItem: (dayNumber: number) => void;
-  onEditItem: (item: IPlanItem) => void;
-  onDeleteItem: (item: IPlanItem) => void;
-}> = ({ day, editMode = false, onAddItem, onEditItem, onDeleteItem }) => {
-  const handleAddItem = () => onAddItem(day.dayNumber);
+const SortableItem: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : 'auto',
+  };
+
+  // Pass dragHandleProps to children
+  return (
+    <div ref={setNodeRef} style={style}>
+      {React.isValidElement(children)
+        ? React.cloneElement(children as React.ReactElement, { dragHandleProps: { ...attributes, ...listeners } })
+        : children}
+    </div>
+  );
+};
+
+// Drop target for empty days
+const DropTarget: React.FC<{
+  dayNumber: number;
+  setOpenSections?: Dispatch<SetStateAction<string[]>>;
+  openSections?: string[];
+}> = ({ dayNumber, setOpenSections, openSections }) => {
+  const { setNodeRef, isOver } = useSortable({ id: `empty-day-${dayNumber}` });
+
+  React.useEffect(() => {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      !openSections.includes(dayNumber.toString())
+    ) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
 
   return (
-    <AccordionItem value={day.dayNumber.toString()}>
-      <AccordionTrigger className='text-xl'>
-        {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
-      </AccordionTrigger>
-      <AccordionContent>
-        {day.items.length > 0 ? (
-          day.items.map((item) => (
-            <ItineraryItemCard
-              key={item._id}
-              item={item}
-              editMode={editMode}
-              onEdit={onEditItem}
-              onDelete={onDeleteItem}
-            />
-          ))
-        ) : (
-          <div className='p-4 bg-white rounded-lg mt-2 border shadow-sm'>
-            <p className='text-muted-foreground'>
-              No activities planned for this day yet.
-            </p>
-          </div>
-        )}
+    <div
+      ref={setNodeRef}
+      className={`p-4 bg-white rounded-lg mt-2 border shadow-sm flex items-center justify-center cursor-pointer transition ${
+        isOver ? 'bg-blue-50 border-blue-400' : ''
+      }`}
+      style={{ minHeight: 60 }}
+    >
+      <p className='text-muted-foreground'>
+        Drop here to move item to this day
+      </p>
+    </div>
+  );
+};
 
-        {editMode && (
-          <Button
-            variant='secondary'
-            className='mt-4 w-full'
-            onClick={handleAddItem}
-          >
-            <MapPinPlus className='mr-2 h-4 w-4' /> New Item
-          </Button>
-        )}
-      </AccordionContent>
-    </AccordionItem>
+const AccordionTriggerDropTarget: React.FC<{
+  dayNumber: number;
+  setOpenSections?: Dispatch<SetStateAction<string[]>>;
+  openSections?: string[];
+  children: React.ReactNode;
+}> = ({ dayNumber, setOpenSections, openSections, children }) => {
+  const { setNodeRef, isOver } = useSortable({ id: `trigger-day-${dayNumber}` });
+
+  React.useEffect(() => {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      !openSections.includes(dayNumber.toString())
+    ) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
+
+  return (
+    <div ref={setNodeRef}>
+      {children}
+    </div>
   );
 };
 
 /**
- * Renders the main itinerary section with the accordion.
+ * Renders the main itinerary section with the accordion and drag-and-drop.
  */
 const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   itinerary,
@@ -493,12 +532,8 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentDayNumber, setCurrentDayNumber] = useState<number>(1);
-  const [currentEditItem, setCurrentEditItem] = useState<IPlanItem | null>(
-    null,
-  );
-  const [currentDeleteItem, setCurrentDeleteItem] = useState<IPlanItem | null>(
-    null,
-  );
+  const [currentEditItem, setCurrentEditItem] = useState<IPlanItem | null>(null);
+  const [currentDeleteItem, setCurrentDeleteItem] = useState<IPlanItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [draggedItem, setDraggedItem] = useState<IPlanItem | null>(null);
@@ -652,11 +687,10 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       title: data.title,
       description: data.description,
       type: data.category as IPlanItem['type'],
-      cost: data.cost || '', // Keep as string
+      cost: data.cost || '',
       notes: data.notes,
     };
 
-    // Add location if provided
     if (data.location) {
       apiData.location = {
         placeId: '',
@@ -665,14 +699,12 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       };
     }
 
-    // Add times if provided - we'll use the day's date from the itinerary
     const dayData = itinerary.find((day) => day.dayNumber === currentDayNumber);
     const dayDate = dayData
       ? dayData.date
       : new Date().toISOString().split('T')[0];
 
     if(data.startTime && data.endTime) {
-      // Compare times as minutes since midnight
       const [startHour, startMinute] = data.startTime.split(':').map(Number);
       const [endHour, endMinute] = data.endTime.split(':').map(Number);
       const startTotal = startHour * 60 + startMinute;
@@ -683,7 +715,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     }
 
     if (data.startTime) {
-      // Only create date if startTime is a valid HH:mm string
       const timeRegex = /^\d{2}:\d{2}$/;
       if (timeRegex.test(data.startTime)) {
         const startDateTime = new Date(`${dayDate.split('T')[0]}T${data.startTime}:00.000Z`);
@@ -692,7 +723,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     }
 
     if (data.endTime) {
-      // Only create date if endTime is a valid HH:mm string
       const timeRegex = /^\d{2}:\d{2}$/;
       if (timeRegex.test(data.endTime)) {
         const endDateTime = new Date(`${dayDate.split('T')[0]}T${data.endTime}:00.000Z`);
@@ -707,10 +737,10 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   const convertApiFormatToFormData = (item: IPlanItem): ItemFormData => {
     const getTimeFromISO = (isoString?: string): string => {
       if (!isoString) return '';
-      const date = new Date(isoString); // Parse ISO string that has timezone
-      const hours = date.getUTCHours().toString().padStart(2, '0'); // UTC to avoid timezone issues
+      const date = new Date(isoString);
+      const hours = date.getUTCHours().toString().padStart(2, '0');
       const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-      return `${hours}:${minutes}`; // Returns in HH:mm format
+      return `${hours}:${minutes}`;
     };
 
     return {
@@ -754,7 +784,15 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     try {
       await API.delete(`/plans/${tripId}/items/${currentDeleteItem._id}`);
 
-      // Find the day number for this item
+      // Update localItinerary to remove the deleted item
+      setLocalItinerary(prev =>
+        prev.map(day =>
+          day.items.some(item => item._id === currentDeleteItem._id)
+            ? { ...day, items: day.items.filter(item => item._id !== currentDeleteItem._id) }
+            : day
+        )
+      );
+
       const dayNumber = itinerary.find((day) =>
         day.items.some((dayItem) => dayItem._id === currentDeleteItem._id),
       )?.dayNumber;
@@ -795,7 +833,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       if (onItemAdded) {
         onItemAdded(currentDayNumber, response.data.data);
       }
-      
 
       setIsAddModalOpen(false);
       setFormData(initialFormData);
@@ -822,7 +859,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         apiData,
       );
 
-      // Find the day number for this item
       const dayNumber = itinerary.find((day) =>
         day.items.some((dayItem) => dayItem._id === currentEditItem._id),
       )?.dayNumber;
@@ -851,7 +887,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     setFormData(initialFormData);
   };
 
-  // Render itinerary with dnd-kit
   return (
     <section className='lg:mx-14 mx-8 mt-6'>
       <h1 className='text-2xl font-bold text-left mb-4'>Itinerary</h1>
@@ -899,6 +934,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                             dayNumber={day.dayNumber}
                             setOpenSections={setOpenSections}
                             openSections={openSections}
+                            // dragHandleProps will be injected by SortableItem
                           />
                         </SortableItem>
                       ))
@@ -1037,91 +1073,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         </DialogContent>
       </Dialog>
     </section>
-  );
-};
-
-const SortableItem: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 100 : 'auto',
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
-    </div>
-  );
-};
-
-// Drop target for empty days
-const DropTarget: React.FC<{
-  dayNumber: number;
-  setOpenSections?: Dispatch<SetStateAction<string[]>>;
-  openSections?: string[];
-}> = ({ dayNumber, setOpenSections, openSections }) => {
-  const { setNodeRef, isOver } = useSortable({ id: `empty-day-${dayNumber}` });
-
-  React.useEffect(() => {
-    if (
-      isOver &&
-      setOpenSections &&
-      openSections &&
-      !openSections.includes(dayNumber.toString())
-    ) {
-      setOpenSections([...openSections, dayNumber.toString()]);
-    }
-  }, [isOver, dayNumber, openSections, setOpenSections]);
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`p-4 bg-white rounded-lg mt-2 border shadow-sm flex items-center justify-center cursor-pointer transition ${
-        isOver ? 'bg-blue-50 border-blue-400' : ''
-      }`}
-      style={{ minHeight: 60 }}
-    >
-      <p className='text-muted-foreground'>
-        Drop here to move item to this day
-      </p>
-    </div>
-  );
-};
-
-// Add this component above your ItinerarySection
-const AccordionTriggerDropTarget: React.FC<{
-  dayNumber: number;
-  setOpenSections?: Dispatch<SetStateAction<string[]>>;
-  openSections?: string[];
-  children: React.ReactNode;
-}> = ({ dayNumber, setOpenSections, openSections, children }) => {
-  const { setNodeRef, isOver } = useSortable({ id: `trigger-day-${dayNumber}` });
-
-  React.useEffect(() => {
-    if (
-      isOver &&
-      setOpenSections &&
-      openSections &&
-      !openSections.includes(dayNumber.toString())
-    ) {
-      setOpenSections([...openSections, dayNumber.toString()]);
-    }
-  }, [isOver, dayNumber, openSections, setOpenSections]);
-
-  return (
-    <div ref={setNodeRef}>
-      {children}
-    </div>
   );
 };
 
