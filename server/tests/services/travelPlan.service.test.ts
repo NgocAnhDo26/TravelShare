@@ -4,13 +4,16 @@ import TravelPlan from '../../src/models/travelPlan.model';
 import { generateSchedule } from '../../src/utils/travelPlan';
 import { Types } from 'mongoose';
 import { suppressConsoleErrorAsync } from '../setup';
+import Follow from '../../src/models/follow.model';
 
 // Mock the Mongoose model and utility functions
 vi.mock('../../src/models/travelPlan.model');
 vi.mock('../../src/utils/travelPlan');
+vi.mock('../../src/models/follow.model');
 
 const mockedTravelPlan = TravelPlan as any;
 const mockedGenerateSchedule = generateSchedule as any;
+const mockedFollow = Follow as any;
 
 describe('TravelPlanService', () => {
   afterEach(() => {
@@ -230,5 +233,84 @@ describe('TravelPlanService', () => {
       expect(result.startDate).toBe(newStartDate);
       expect(result.endDate).toBe(newEndDate);
     });
+  });
+});
+
+// --- getFeedForUser ---
+describe('getFeedForUser', () => {
+  const userId = new Types.ObjectId().toHexString();
+  const followingId = new Types.ObjectId().toHexString();
+  const trendingId = new Types.ObjectId().toHexString();
+  const followedPlan = {
+    _id: new Types.ObjectId(),
+    author: { _id: followingId, username: 'followed', displayName: 'Followed User', avatarUrl: 'f.png' },
+    privacy: 'public',
+    createdAt: new Date('2024-01-01T10:00:00Z'),
+  };
+  const trendingPlan = {
+    _id: new Types.ObjectId(),
+    author: { _id: trendingId, username: 'trending', displayName: 'Trending User', avatarUrl: 't.png' },
+    privacy: 'public',
+    trendingScore: 100,
+    createdAt: new Date('2024-01-01T09:00:00Z'),
+  };
+
+  function mockTravelPlanFindSequence(followedPlans: any[], trendingPlans: any[]) {
+    // Mock the chain for followed plans
+    const followedChain = {
+      populate: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue(followedPlans),
+    };
+    // Mock the chain for trending plans
+    const trendingChain = {
+      populate: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue(trendingPlans),
+    };
+    mockedTravelPlan.find
+      .mockImplementationOnce(() => followedChain)
+      .mockImplementationOnce(() => trendingChain);
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should interleave followed and trending plans and paginate', async () => {
+    // User follows one user
+    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([{ following: followingId }]) }) });
+    mockTravelPlanFindSequence(
+      [followedPlan, { ...followedPlan, _id: new Types.ObjectId(), createdAt: new Date('2024-01-01T08:00:00Z') }],
+      [trendingPlan]
+    );
+    const result = await TravelPlanService.getFeedForUser(userId, { limit: 2 });
+    // Should interleave: 1st followed, 2nd followed, then trending injected (but limit=2, so only first two)
+    expect(result.data.length).toBe(2);
+    expect(result.data[0].author.username).toBe('followed');
+    expect(result.data[1].author.username).toBe('followed');
+    expect(result.pagination.has_next_page).toBe(true);
+    expect(result.pagination.next_cursor).toBeDefined();
+  });
+
+  it('should handle user following no one (only trending)', async () => {
+    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([]) }) });
+    mockTravelPlanFindSequence([], [trendingPlan]);
+    const result = await TravelPlanService.getFeedForUser(userId, { limit: 1 });
+    expect(result.data.length).toBe(0);
+    expect(result.pagination.has_next_page).toBe(false);
+  });
+
+  it('should use the after cursor for pagination', async () => {
+    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([{ following: followingId }]) }) });
+    mockTravelPlanFindSequence([followedPlan], [trendingPlan]);
+    const after = new Date('2024-01-01T11:00:00Z').toISOString();
+    await TravelPlanService.getFeedForUser(userId, { limit: 1, after });
+    // Check that the followed query was called with createdAt < after
+    expect(mockedTravelPlan.find).toHaveBeenCalledWith({ author: { $in: [followingId] }, privacy: 'public', createdAt: { $lt: new Date(after) } });
   });
 });

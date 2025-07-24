@@ -66,3 +66,20 @@ export interface ItineraryDay {
   subtitle: string;
   items: ItineraryItem[];
 }
+
+export interface IPlan {
+  _id: string;
+  title: string;
+  destination: { name: string };
+  coverImageUrl?: string;
+  author: {
+    _id: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string;
+  };
+  likesCount: number;
+  commentsCount: number;
+  createdAt: string; // The API sends timestamps as ISO strings
+  source_type?: 'followed' | 'trending'; // Optional field to identify post source
+}
