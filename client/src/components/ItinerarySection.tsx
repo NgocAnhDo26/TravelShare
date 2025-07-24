@@ -690,24 +690,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         })
       );
 
-      // TODO: Send payload to backend here
-      const sourceItems = newSourceItems.map((item, idx) => ({
-        _id: item._id,
-        order: idx,
-      }));
-
-      const targetItems = newTargetItems.map((item, idx) => ({
-        _id: item._id,
-        order: idx,
-      }));
-
-      const payload = {
-        sourceDayNumber: sourceDay.dayNumber,
-        targetDayNumber: targetDay.dayNumber,
-        sourceItems,
-        targetItems,
-      };
-
       // API call:
       try {
         await API.post(`/plans/${tripId}/items/move`, {
