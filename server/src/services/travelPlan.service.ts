@@ -582,6 +582,7 @@ const TravelPlanService: ITravelPlanService = {
         const interleavedList = [];
         let followedIndex = 0;
         const injectionRate = 4; // Inject one trending post every 4 followed posts
+        let trendingIndex = 0; // Use an index instead of shift()
 
         while (followedIndex < followedPlans.length) {
           // Add a chunk of followed plans
@@ -593,9 +594,10 @@ const TravelPlanService: ITravelPlanService = {
           followedIndex += injectionRate;
 
           // Inject one trending plan if available
-          if (trendingPlans.length > 0) {
-            // Take the top trending post and remove it from the list to avoid duplicates
-            interleavedList.push(trendingPlans.shift());
+          if (trendingIndex < trendingPlans.length) {
+            // Take the top trending post using the index and increment the index
+            interleavedList.push(trendingPlans[trendingIndex]);
+            trendingIndex++;
           }
         }
         feedPlans = interleavedList;

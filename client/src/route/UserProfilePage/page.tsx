@@ -249,7 +249,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
           <DialogHeader>
             <DialogTitle>Delete Plan</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the plan "{planToDelete?.title}"? This action cannot be undone.ap-0
+              Are you sure you want to delete the plan "{planToDelete?.title}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
