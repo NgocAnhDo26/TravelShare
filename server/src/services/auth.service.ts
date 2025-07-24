@@ -254,7 +254,7 @@ const AuthService: IAuthenticationService = {
       const refreshToken = createToken(user._id as string, 'refresh');
 
       const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-      
+
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: !isLocalDev,
@@ -285,7 +285,7 @@ const AuthService: IAuthenticationService = {
 
     if (!token) {
       res.status(400).json({ error: 'Google Access Token is required.' });
-      return 
+      return;
     }
 
     try {
@@ -302,20 +302,20 @@ const AuthService: IAuthenticationService = {
       const { email } = googleResponse.data;
       if (!email) {
         res.status(401).json({ error: 'Invalid Google token or email not found.' });
-        return 
+        return;
       }
 
       const user = await User.findOne({ email: email.toLowerCase() });
       if (!user) {
         res.status(404).json({ error: 'User not found. Please register first.' });
-        return 
+        return;
       }
 
       // Logic tạo token và cookie không đổi
       const accessToken = createToken(user._id as string, 'access');
       const refreshToken = createToken(user._id as string, 'refresh');
       const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-      
+
       res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: !isLocalDev, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
       res.cookie('accessToken', accessToken, { httpOnly: true, secure: !isLocalDev, maxAge: 3 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
 
@@ -332,7 +332,7 @@ const AuthService: IAuthenticationService = {
   },
 
   googleRegister: async (req: Request, res: Response) => {
-    const { token } = req.body; 
+    const { token } = req.body;
 
     if (!token) {
       res.status(400).json({ error: 'Google Access Token is required.' });
@@ -340,7 +340,7 @@ const AuthService: IAuthenticationService = {
     }
 
     try {
-      
+
       const googleResponse = await axios.get(
         `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`,
         {
@@ -349,18 +349,18 @@ const AuthService: IAuthenticationService = {
           },
         },
       );
-      
+
       const { email, name, picture } = googleResponse.data;
       if (!email) {
         res.status(401).json({ error: 'Invalid Google token or email not found.' });
-        return 
+        return;
       }
 
       const lowerCaseEmail = email.toLowerCase();
       let user = await User.findOne({ email: lowerCaseEmail });
       if (user) {
         res.status(409).json({ error: 'User already exists. Please login.' });
-        return 
+        return;
       }
 
       user = new User({
@@ -376,7 +376,7 @@ const AuthService: IAuthenticationService = {
       const accessToken = createToken(user._id as string, 'access');
       const refreshToken = createToken(user._id as string, 'refresh');
       const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-      
+
       res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: !isLocalDev, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
       res.cookie('accessToken', accessToken, { httpOnly: true, secure: !isLocalDev, maxAge: 3 * 60 * 60 * 1000, sameSite: isLocalDev ? 'lax' : 'none' });
 
@@ -431,7 +431,7 @@ const AuthService: IAuthenticationService = {
         }
         const newAccessToken = createToken(userId, 'access');
         const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-        
+
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
           secure: !isLocalDev,
@@ -555,7 +555,7 @@ const AuthService: IAuthenticationService = {
   logout: async (req: Request, res: Response) => {
     try {
       const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-      
+
       res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: !isLocalDev,

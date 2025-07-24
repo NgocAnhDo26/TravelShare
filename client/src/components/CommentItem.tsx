@@ -28,7 +28,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, isAuthor, onDelete }
         )}
       </Avatar>
       <div className="flex flex-col items-start">
-        <div className="flex flex-col items-start bg-gray-100 rounded-md px-3 py-2">
+        <div className="flex flex-col items-start bg-gray-100 rounded-md px-3 py-2 text-left">
           <div className="text-sm font-medium">{name}</div>
           <div className="text-sm">{message}</div>
         </div>

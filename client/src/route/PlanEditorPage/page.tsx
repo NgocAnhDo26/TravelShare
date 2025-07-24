@@ -193,7 +193,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
         />
       </Card>
 
-       {!actualEditMode && planData && (
+      {!actualEditMode && planData && (
         <SocialSection
           targetId={planData._id}
           onModel="TravelPlan"

@@ -1,12 +1,10 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import  CommentService  from '../../src/services/comment.service';
+import CommentService from '../../src/services/comment.service';
 import Comment from '../../src/models/comment.model';
 import TravelPlan from '../../src/models/travelPlan.model';
 import Post from '../../src/models/post.model';
-import { IComment } from '../../src/models/comment.model';
-
 
 vi.mock('../../src/models/comment.model');
 vi.mock('../../src/models/travelPlan.model');
@@ -16,6 +14,14 @@ const mockedComment = Comment as any;
 const mockedTravelPlan = TravelPlan as any;
 const mockedPost = Post as any;
 
+const mockSession = {
+  startTransaction: vi.fn(),
+  commitTransaction: vi.fn(),
+  abortTransaction: vi.fn(),
+  endSession: vi.fn(),
+};
+
+vi.spyOn(mongoose, 'startSession').mockResolvedValue(mockSession as any);
 
 type MockRequest = Partial<Request> & {
   user?: string | object;
@@ -30,13 +36,13 @@ describe('CommentService - Unit Tests', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
-    
+    vi.spyOn(mongoose, 'startSession').mockResolvedValue(mockSession as any);
+
     mockRequest = {
       params: {},
       body: {},
       query: {},
-      user: mockUserId, 
+      user: mockUserId,
     };
 
     mockResponse = {
@@ -45,20 +51,15 @@ describe('CommentService - Unit Tests', () => {
     };
   });
 
-  // ===================================
-  // TESTS FOR addComment
-  // ===================================
   describe('addComment', () => {
-    it('should add a comment and return 201 on success', async () => {
-      
+    it('should add a comment and commit transaction on success, returning 201', async () => {
       mockRequest.body = {
         content: 'A new test comment',
         targetId: mockTargetId,
         onModel: 'TravelPlan',
       };
 
-      mockedTravelPlan.findById.mockResolvedValue({ _id: mockTargetId });
-      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(true);
+      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue({ _id: mockTargetId });
 
       const mockSavedComment = {
         ...mockRequest.body,
@@ -66,93 +67,125 @@ describe('CommentService - Unit Tests', () => {
         user: { _id: mockUserId },
       };
       mockedComment.prototype.save = vi.fn().mockResolvedValue(mockSavedComment);
-      mockedComment.prototype.populate = vi.fn().mockResolvedValue({
-          ...mockSavedComment,
-          user: { _id: mockUserId, username: 'testuser' }
+
+      const mockPopulatedComment = {
+        ...mockSavedComment,
+        user: { _id: mockUserId, username: 'testuser' },
+      };
+      mockedComment.prototype.populate = vi.fn().mockResolvedValue(mockPopulatedComment);
+
+      await CommentService.addComment(mockRequest as Request, mockResponse as Response);
+
+      expect(mongoose.startSession).toHaveBeenCalled();
+      expect(mockSession.startTransaction).toHaveBeenCalled();
+
+      expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
+        mockTargetId,
+        { $inc: { commentsCount: 1 } },
+        { new: true, session: mockSession }
+      );
+
+      expect(mockedComment.prototype.save).toHaveBeenCalledWith({ session: mockSession });
+
+      expect(mockedComment.prototype.populate).toHaveBeenCalledWith({
+        path: 'user',
+        select: 'username displayName avatarUrl _id',
       });
 
-      await CommentService.addComment(mockRequest as Request, mockResponse as Response);
+      expect(mockSession.commitTransaction).toHaveBeenCalled();
+      expect(mockSession.abortTransaction).not.toHaveBeenCalled();
+      expect(mockSession.endSession).toHaveBeenCalled();
 
-      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(mockTargetId);
-      expect(mockedComment.prototype.save).toHaveBeenCalled();
-      expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(mockTargetId, { $inc: { commentsCount: 1 } });
       expect(mockResponse.status).toHaveBeenCalledWith(201);
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({ content: 'A new test comment' })
-      );
+      expect(mockResponse.json).toHaveBeenCalledWith(mockPopulatedComment);
     });
 
-    it('should return 404 if the target plan is not found', async () => {
-
+    it('should abort transaction and return 404 if the target is not found', async () => {
       mockRequest.body = { content: 'test', targetId: mockTargetId, onModel: 'TravelPlan' };
-      mockedTravelPlan.findById.mockResolvedValue(null);
+      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(null);
 
       await CommentService.addComment(mockRequest as Request, mockResponse as Response);
+
+      expect(mongoose.startSession).toHaveBeenCalled();
+      expect(mockSession.startTransaction).toHaveBeenCalled();
+      expect(mockSession.abortTransaction).toHaveBeenCalled();
+      expect(mockSession.commitTransaction).not.toHaveBeenCalled();
+      expect(mockSession.endSession).toHaveBeenCalled();
 
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'TravelPlan not found.' });
     });
 
-     it('should return 400 if required fields are missing', async () => {
+    it('should return 400 if required fields are missing', async () => {
       mockRequest.body = { targetId: mockTargetId, onModel: 'TravelPlan' };
-
       await CommentService.addComment(mockRequest as Request, mockResponse as Response);
 
+      expect(mongoose.startSession).not.toHaveBeenCalled();
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Content, targetId, and onModel are required.' });
     });
   });
 
-  // ===================================
-  // TESTS FOR deleteComment
-  // ===================================
   describe('deleteComment', () => {
-    it('should delete a comment and return 200 if user is the author', async () => {
+    it('should delete a comment, commit transaction and return 200', async () => {
       mockRequest.params = { commentId: mockCommentId.toHexString() };
+
       const mockExistingComment = {
         _id: mockCommentId,
         user: mockUserId,
         onModel: 'TravelPlan',
         targetId: mockTargetId,
-        deleteOne: vi.fn().mockResolvedValue({ acknowledged: true, deletedCount: 1 }),
       };
-      mockedComment.findById.mockResolvedValue(mockExistingComment);
+
+      mockedComment.findOneAndDelete.mockResolvedValue(mockExistingComment);
       mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(true);
 
       await CommentService.deleteComment(mockRequest as Request, mockResponse as Response);
 
-      expect(mockedComment.findById).toHaveBeenCalledWith(mockCommentId.toHexString());
-      expect(mockExistingComment.deleteOne).toHaveBeenCalled();
-      expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(mockTargetId, { $inc: { commentsCount: -1 } });
+      expect(mongoose.startSession).toHaveBeenCalled();
+      expect(mockSession.startTransaction).toHaveBeenCalled();
+
+      expect(mockedComment.findOneAndDelete).toHaveBeenCalledWith(
+        { _id: mockCommentId.toHexString(), user: mockUserId },
+        { session: mockSession }
+      );
+
+      expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
+        mockTargetId,
+        { $inc: { commentsCount: -1 } },
+        { session: mockSession }
+      );
+
+      expect(mockSession.commitTransaction).toHaveBeenCalled();
+      expect(mockSession.abortTransaction).not.toHaveBeenCalled();
+      expect(mockSession.endSession).toHaveBeenCalled();
+
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Comment deleted successfully.' });
     });
 
-    it('should return 403 if user is not the author', async () => {
-      const anotherUserId = new mongoose.Types.ObjectId().toHexString();
+    it('should return 404 and abort transaction if comment not found or user is not author', async () => {
       mockRequest.params = { commentId: mockCommentId.toHexString() };
-      mockRequest.user = anotherUserId;
-      const mockExistingComment = {
-        _id: mockCommentId,
-        user: mockUserId,
-      };
-      mockedComment.findById.mockResolvedValue(mockExistingComment);
+      mockedComment.findOneAndDelete.mockResolvedValue(null);
 
       await CommentService.deleteComment(mockRequest as Request, mockResponse as Response);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Forbidden. You do not have permission to delete this comment.' });
+      expect(mongoose.startSession).toHaveBeenCalled();
+      expect(mockSession.startTransaction).toHaveBeenCalled();
+      expect(mockSession.abortTransaction).toHaveBeenCalled();
+      expect(mockSession.commitTransaction).not.toHaveBeenCalled();
+      expect(mockSession.endSession).toHaveBeenCalled();
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Comment not found or you do not have permission to delete.' });
     });
   });
 
-  // ===================================
-  // TESTS FOR getCommentsForTarget
-  // ===================================
   describe('getCommentsForTarget', () => {
     it('should return a list of comments and status 200', async () => {
       mockRequest.query = { targetId: mockTargetId, onModel: 'TravelPlan' };
       const mockCommentList = [{ content: 'Comment 1' }, { content: 'Comment 2' }];
-      
+
       const mockQuery = {
         populate: vi.fn().mockReturnThis(),
         sort: vi.fn().mockResolvedValue(mockCommentList),
