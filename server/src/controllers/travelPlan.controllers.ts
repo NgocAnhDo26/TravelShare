@@ -40,6 +40,7 @@ interface ITravelPlanController {
 
    getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>;
    reorderItemsInDay(req: Request, res: Response, next: NextFunction): Promise<void>; 
+   moveItemToAnotherDay(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 /**
@@ -456,7 +457,43 @@ const TravelPlanController: ITravelPlanController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  /**
+ * Move an item from one day to another within a travel plan.
+ * POST /api/plans/:id/items/move
+ * Body: { sourceDayNumber, targetDayNumber, itemId, targetIndex }
+ */
+async moveItemToAnotherDay(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const planId = req.params.id;
+    const authorId = req.user as string;
+    const { sourceDayNumber, targetDayNumber, itemId, targetIndex } = req.body;
+
+    if (
+      typeof sourceDayNumber !== 'number' ||
+      typeof targetDayNumber !== 'number' ||
+      typeof itemId !== 'string' ||
+      typeof targetIndex !== 'number'
+    ) {
+      res.status(400).json({ error: 'sourceDayNumber, targetDayNumber, itemId, and targetIndex are required.' });
+      return;
+    }
+
+    await TravelPlanService.moveItemToAnotherDay(
+      planId,
+      sourceDayNumber,
+      targetDayNumber,
+      itemId,
+      targetIndex,
+      authorId
+    );
+
+    res.status(200).json({ message: 'Item moved successfully.' });
+  } catch (error) {
+    next(error);
   }
+},
 };
 
 export { TravelPlanController };

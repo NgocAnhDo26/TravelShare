@@ -181,4 +181,16 @@ router.delete(
     TravelPlanController.deletePlanItem
 );
 
+/**
+ * @route   POST /api/plans/:id/items/move
+ * @desc    Move an item from one day to another within a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.post(
+  '/:id/items/move',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.moveItemToAnotherDay
+);
+
 export default router;

@@ -58,6 +58,15 @@ interface ITravelPlanService {
     items: { _id: string; order: number }[],
     authorId: string
   ): Promise<boolean>;
+
+  moveItemToAnotherDay(
+    planId: string,
+    sourceDayNumber: number,
+    targetDayNumber: number,
+    itemId: string,
+    targetIndex: number,
+    authorId: string
+  ): Promise<boolean>;
 }
 
 interface CreateTravelPlanRequest {
@@ -563,6 +572,57 @@ const TravelPlanService: ITravelPlanService = {
       throw error;
     }
   }, 
+
+  /**
+ * Moves an item from one day to another within a travel plan.
+ * @param planId - The travel plan ID
+ * @param sourceDayNumber - The day number to move from
+ * @param targetDayNumber - The day number to move to
+ * @param itemId - The _id of the item to move
+ * @param targetIndex - The index in the target day's items array to insert at
+ * @param authorId - The user's ID (for authorization)
+ * @returns Promise<boolean> - true if successful
+ */
+async moveItemToAnotherDay(
+  planId: string,
+  sourceDayNumber: number,
+  targetDayNumber: number,
+  itemId: string,
+  targetIndex: number,
+  authorId: string
+): Promise<boolean> {
+  try {
+    const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
+    if (!plan) throw new Error('Plan not found or user not authorized.');
+
+    const sourceDay = plan.schedule.find(d => d.dayNumber === sourceDayNumber);
+    const targetDay = plan.schedule.find(d => d.dayNumber === targetDayNumber);
+
+    if (!sourceDay || !targetDay) throw new Error('Source or target day not found.');
+
+    // Find and remove the item from the source day
+    const itemIdx = sourceDay.items.findIndex(it => it._id.toString() === itemId);
+    if (itemIdx === -1) throw new Error('Item not found in source day.');
+
+    const [movingItem] = sourceDay.items.splice(itemIdx, 1);
+
+    // Update the item's dayNumber and order
+    (movingItem as any).dayNumber = targetDayNumber;
+
+    // Insert into target day's items at the specified index
+    targetDay.items.splice(targetIndex, 0, movingItem);
+
+    // Reorder items in both days
+    sourceDay.items.forEach((item, idx) => { item.order = idx; });
+    targetDay.items.forEach((item, idx) => { item.order = idx; });
+
+    await plan.save();
+    return true;
+  } catch (error) {
+    console.error('Error in moveItemToAnotherDay:', error);
+    throw error;
+  }
+},
 };
 
 export { TravelPlanService };

@@ -709,7 +709,18 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       };
 
       // API call:
-      // await API.post(`/plans/${tripId}/items/move`, payload);
+      try {
+        await API.post(`/plans/${tripId}/items/move`, {
+          sourceDayNumber: sourceDay.dayNumber,
+          targetDayNumber: targetDay.dayNumber,
+          itemId: movingItem._id,
+          targetIndex: overIndex,
+        });
+        toast.success('Item moved to another day!');
+      } catch (error) {
+        console.error('Error moving item:', error);
+        toast.error('Failed to move item. Please try again.');
+      }
     }
 
     setDraggedItem(null);
