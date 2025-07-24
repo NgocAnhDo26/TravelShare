@@ -105,7 +105,7 @@ router.put(
   '/:id/cover-image',
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
-  uploadUseCases.singleFileUpload('coverImage'),
+  uploadUseCases.singleFileUpload('coverImage', 'travel-plan-covers'),
   TravelPlanController.updateTravelPlanCoverImage,
 );
 

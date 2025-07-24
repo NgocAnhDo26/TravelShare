@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { X } from 'lucide-react'; // Add this import for the X icon
+import { X } from 'lucide-react';
 import API from '@/utils/axiosInstance';
 
 type Privacy = 'public' | 'private';
@@ -11,8 +11,8 @@ type Privacy = 'public' | 'private';
 interface FormState {
   title: string;
   content: string;
-  coverImage?: string;
-  images?: string[];
+  coverImage?: File; // Can be a file object or a base64 string
+  images?: File[]; // Array of file objects
   privacy: Privacy;
 }
 
@@ -33,10 +33,15 @@ export default function PostEditor() {
   );
   const [imagesPreviews, setImagesPreviews] = useState<string[]>([]);
 
+  // Add new state variables to store actual file objects
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+
   // Refs for file inputs
   const coverImageRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<HTMLInputElement>(null);
 
+  // Existing validation function remains unchanged
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -52,6 +57,7 @@ export default function PostEditor() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Existing handleInputChange function remains unchanged
   const handleInputChange = (field: keyof FormState, value: string) => {
     setFormState({
       ...formState,
@@ -67,68 +73,96 @@ export default function PostEditor() {
     }
   };
 
+  // Updated submit handler with logging statements removed
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      API.post('/posts/create', formState)
-        .then((response) => {
-          console.log('Post created successfully:', response.data);
-          toast.success('Post created successfully!');
-          // Reset form state after successful submission
-          setFormState({
-            title: '',
-            content: '',
-            coverImage: undefined,
-            images: [],
-            privacy: 'public',
+      try {
+        // Create a FormData object for multipart/form-data submission
+        const formData = new FormData();
+
+        // Add text fields
+        formData.append('title', formState.title);
+        formData.append('content', formState.content);
+        formData.append('privacy', formState.privacy);
+        
+        // Add the cover image file if it exists
+        if (coverImageFile) {
+          formData.append('coverImage', coverImageFile);
+        }
+        
+        // Add all image files if they exist
+        if (imageFiles && imageFiles.length > 0) {
+          imageFiles.forEach(file => {
+            formData.append('images', file);
           });
-          setCoverImagePreview(null);
-          setImagesPreviews([]);
-        })
-        .catch((error) => {
-          console.error('Error creating post:', error);
-          toast.error('Failed to create post. Please try again.');
-        });
+        }
+
+        API.post('/posts/create', formData)
+          .then((response) => {
+            toast.success('Post created successfully!');
+            console.log('Post created:', response.data);
+            // Reset all form state
+            setFormState({
+              title: '',
+              content: '',
+              privacy: 'public',
+            });
+            setCoverImagePreview(null);
+            setImagesPreviews([]);
+            setCoverImageFile(null);
+            setImageFiles([]);
+          })
+          .catch((error) => {
+            toast.error('Failed to create post. Please try again.');
+            console.error('Error creating post:', error);
+          });
+      } catch (error) {
+        toast.error('Something went wrong. Please try again.');
+      }
     } else {
       toast.error('Please fix the errors in the form.');
     }
   };
 
+  // Updated handleCoverImageChange - Fix the state reference issue
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Store the actual file object
+      setCoverImageFile(file);
+
+      // Generate preview as before
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setCoverImagePreview(result);
-        setFormState({
-          ...formState,
-          coverImage: result,
-        });
+        // Don't set file in formState, we already have coverImageFile state
       };
       reader.readAsDataURL(file);
     }
   };
 
+  // Updated handleImagesChange - Fix the state handling
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newPreviews: string[] = [];
-      const urls: string[] = [];
+      // Store the actual file objects
+      const filesArray = Array.from(files);
+      setImageFiles(filesArray);
 
-      Array.from(files).forEach((file, index) => {
+      // Generate previews as before
+      const newPreviews: string[] = [];
+      filesArray.forEach((file) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const result = e.target?.result as string;
           newPreviews.push(result);
-          urls.push(result);
-
-          if (newPreviews.length === files.length) {
+          
+          // When all previews are ready, update the state
+          if (newPreviews.length === filesArray.length) {
             setImagesPreviews(newPreviews);
-            setFormState({
-              ...formState,
-              images: urls,
-            });
+            // Don't set files in formState, we already have imageFiles state
           }
         };
         reader.readAsDataURL(file);
@@ -136,34 +170,45 @@ export default function PostEditor() {
     }
   };
 
-  const handlePrivacyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormState({
-      ...formState,
-      privacy: e.target.checked ? 'public' : 'private',
-    });
-  };
-
-  // Add these new handler methods
+  // Updated to clear both file and preview
   const handleRemoveCoverImage = () => {
     setCoverImagePreview(null);
+    setCoverImageFile(null);
     setFormState({
       ...formState,
       coverImage: undefined,
     });
   };
 
+  // Updated to remove both file and preview
   const handleRemoveImage = (indexToRemove: number) => {
+    // Remove from previews
     const updatedPreviews = imagesPreviews.filter(
       (_, index) => index !== indexToRemove,
     );
     setImagesPreviews(updatedPreviews);
 
+    // Remove from form state
     const updatedImages = formState.images?.filter(
       (_, index) => index !== indexToRemove,
     );
     setFormState({
       ...formState,
       images: updatedImages,
+    });
+
+    // Remove from file objects array
+    const updatedFiles = imageFiles.filter(
+      (_, index) => index !== indexToRemove,
+    );
+    setImageFiles(updatedFiles);
+  };
+
+  // Existing handlePrivacyChange function remains unchanged
+  const handlePrivacyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormState({
+      ...formState,
+      privacy: e.target.checked ? 'public' : 'private',
     });
   };
 

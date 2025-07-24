@@ -48,7 +48,7 @@ router.get(
 router.put(
   '/edit-profile',
   AuthJwtMiddleware.verifyToken,
-  uploadUseCases.singleFileUpload('avatar'),
+  uploadUseCases.singleFileUpload('avatar', 'avatars'),
   UserController.updateProfile,
 );
 

@@ -8,20 +8,28 @@ interface IPostService {
   // deletePost(req: Request, res: Response): Promise<void>;
 }
 
+interface IPostData {
+  title: string;
+  content: string;
+  privacy?: string;
+  coverImageUrl?: string;
+  imagesUrls?: string[];
+}
+
 const PostService: IPostService = {
   createPost: async (req: Request, res: Response) => {
     // creating a post is add the post data from the request body to the database
     try {
       console.log('Creating post with data:', req.body);
-      //TODO: add file upload handling for coverImageUrl and images
-      // SUGGESTION: Add user ID to the post data
+      
       const postData = {
         title: req.body.title,
         content: req.body.content,
-        coverImageUrl: req.body.coverImageUrl || null,
-        images: req.body.images || [],
         privacy: req.body.privacy || 'public',
-      }
+        coverImageUrl: req.body.coverImageUrl, // Get cover image URL from req.body.fileUrl
+        imagesUrls: req.body.images     // Get image URLs from req.body.images
+      };
+      
       Post.validate(postData); // Validate the post data against the model schema
       const post = new Post(postData);
       await post.save(); // Save the post to the database
@@ -32,7 +40,7 @@ const PostService: IPostService = {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       res.status(500).json({ message: 'Internal server error', error: errorMessage });
     }
-  }
-}
+  },
+};
 
 export default PostService;
