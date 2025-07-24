@@ -57,7 +57,17 @@ export function RegisterForm({
         navigate('/login'); 
 
       } catch (error: any) {
-     
+		toast.dismiss(loadingToast);
+
+                if (error.response?.status === 409) {
+                
+                    toast.error('This Google account is already registered. Please log in instead.');
+                    navigate('/login');
+                } else {
+               
+                    const errorMessage = error.response?.data?.error || 'Google registration failed. Please try again.';
+                    toast.error(errorMessage);
+                }
       }
     },
     onError: () => {
