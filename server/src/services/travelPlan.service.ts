@@ -546,7 +546,10 @@ const TravelPlanService: ITravelPlanService = {
       );
 
       // --- Step 2: Fetch a page of posts from FOLLOWED users ---
-      const followedQuery: any = { author: { $in: followingIds }, privacy: 'public' };
+      const followedQuery: any = {
+        author: { $in: followingIds },
+        privacy: 'public',
+      };
       if (after) {
         // Use the cursor to fetch items created before the last item of the previous page
         followedQuery.createdAt = { $lt: new Date(after) };
@@ -571,36 +574,24 @@ const TravelPlanService: ITravelPlanService = {
         .lean()
         .exec();
 
-      // --- Step 4: Interleave the two lists or show trending if feed is empty ---
-      let feedPlans = [];
+      // --- Step 4: Interleave the two lists for a better user experience ---
+      const feedPlans = [];
+      let followedIndex = 0;
+      const injectionRate = 4; // Inject one trending post every 4 followed posts
 
-      if (followedPlans.length === 0) {
-        // If the user follows no one, their feed is simply the trending plans.
-        feedPlans = trendingPlans;
-      } else {
-        // If they do follow people, interleave the two lists for better discovery.
-        const interleavedList = [];
-        let followedIndex = 0;
-        const injectionRate = 4; // Inject one trending post every 4 followed posts
-        let trendingIndex = 0; // Use an index instead of shift()
+      while (followedIndex < followedPlans.length) {
+        // Add a chunk of followed plans
+        const followedChunk = followedPlans.slice(
+          followedIndex,
+          followedIndex + injectionRate,
+        );
+        feedPlans.push(...followedChunk);
+        followedIndex += injectionRate;
 
-        while (followedIndex < followedPlans.length) {
-          // Add a chunk of followed plans
-          const followedChunk = followedPlans.slice(
-            followedIndex,
-            followedIndex + injectionRate,
-          );
-          interleavedList.push(...followedChunk);
-          followedIndex += injectionRate;
-
-          // Inject one trending plan if available
-          if (trendingIndex < trendingPlans.length) {
-            // Take the top trending post using the index and increment the index
-            interleavedList.push(trendingPlans[trendingIndex]);
-            trendingIndex++;
-          }
+        // Inject one trending plan if available
+        if (trendingPlans.length > 0) {
+          feedPlans.push(trendingPlans.shift()); // Take the first trending post and remove it
         }
-        feedPlans = interleavedList;
       }
 
       // --- Step 5: Prepare the response with the next cursor ---

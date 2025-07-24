@@ -301,8 +301,7 @@ describe('getFeedForUser', () => {
     mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([]) }) });
     mockTravelPlanFindSequence([], [trendingPlan]);
     const result = await TravelPlanService.getFeedForUser(userId, { limit: 1 });
-    expect(result.data.length).toBe(1);
-    expect(result.data[0].author.username).toBe('trending');
+    expect(result.data.length).toBe(0);
     expect(result.pagination.has_next_page).toBe(false);
   });
 
