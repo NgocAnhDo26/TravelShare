@@ -109,6 +109,8 @@ export interface ITravelPlan extends Document {
   remixCount: number;
   trendingScore: number;
   originalPlan?: Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const travelPlanSchema: Schema<ITravelPlan> = new Schema(

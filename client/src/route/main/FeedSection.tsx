@@ -1,7 +1,7 @@
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Heart } from 'lucide-react';
-import Feed from '../../components/PlanCard';
+import Feed from '../../components/Feed';
 
 const FeedSection: React.FC = () => (
   <div>

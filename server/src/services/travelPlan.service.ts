@@ -1,19 +1,41 @@
-import  mongoose, { Types } from 'mongoose';
-import TravelPlan, { ITravelPlan,IPlanItem, ILocation } from '../models/travelPlan.model';
+import mongoose, { Types } from 'mongoose';
+import TravelPlan, {
+  ITravelPlan,
+  IPlanItem,
+  ILocation,
+} from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
 import supabase from '../config/supabase.config';
 import Follow from '../models/follow.model';
-import { FollowService } from './user.service'; 
+import { FollowService } from './user.service';
 
 /**
  * @interface ITravelPlanService
  * @description Outlines the methods available in the TravelPlanService.
  */
 interface ITravelPlanService {
-    addPlanItem(planId: string, dayNumber: number, itemData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem>;
-  getPlanItem(planId: string, itemId: string, authorId: string): Promise<IPlanItem | null>;
-  updatePlanItem(planId: string, itemId: string, updateData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem | null>;
-  deletePlanItem(planId: string, itemId: string, authorId: string): Promise<boolean>;
+  addPlanItem(
+    planId: string,
+    dayNumber: number,
+    itemData: Partial<IPlanItem>,
+    authorId: string,
+  ): Promise<IPlanItem>;
+  getPlanItem(
+    planId: string,
+    itemId: string,
+    authorId: string,
+  ): Promise<IPlanItem | null>;
+  updatePlanItem(
+    planId: string,
+    itemId: string,
+    updateData: Partial<IPlanItem>,
+    authorId: string,
+  ): Promise<IPlanItem | null>;
+  deletePlanItem(
+    planId: string,
+    itemId: string,
+    authorId: string,
+  ): Promise<boolean>;
 
   createTravelPlan(planData: any, authorId: string): Promise<any>;
   getTravelPlanById(planId: string): Promise<any | null>;
@@ -47,10 +69,13 @@ interface ITravelPlanService {
   ): Promise<ITravelPlan>;
   deleteImageFromSupabase(imageUrl: string): Promise<void>;
 
-   getFeedForUser(
+  getFeedForUser(
     userId: string,
-    options: { page: number; limit: number },
-  ): Promise<any[]>;
+    options: { limit: number; after?: string },
+  ): Promise<{
+    data: any[];
+    pagination: { next_cursor: string | null; has_next_page: boolean };
+  }>;
 }
 
 interface CreateTravelPlanRequest {
@@ -59,8 +84,6 @@ interface CreateTravelPlanRequest {
   startDate: Date;
   endDate: Date;
 }
-
-
 
 /**
  * @const TravelPlanService
@@ -321,7 +344,12 @@ const TravelPlanService: ITravelPlanService = {
         throw new Error(`Failed to delete file: ${error.message}`);
       }
 
-      console.log('Successfully deleted old image:', filePath, 'from bucket:', bucketName);
+      console.log(
+        'Successfully deleted old image:',
+        filePath,
+        'from bucket:',
+        bucketName,
+      );
     } catch (error) {
       console.error('Error deleting image from Supabase:', error);
       throw error;
@@ -397,14 +425,19 @@ const TravelPlanService: ITravelPlanService = {
     return updatedPlan;
   },
 
-    /**
+  /**
    * Adds an item to a specific day in the schedule.
    */
-  async addPlanItem(planId: string, dayNumber: number, itemData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem> {
+  async addPlanItem(
+    planId: string,
+    dayNumber: number,
+    itemData: Partial<IPlanItem>,
+    authorId: string,
+  ): Promise<IPlanItem> {
     const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
     if (!plan) throw new Error('Plan not found or user not authorized.');
 
-    const daySchedule = plan.schedule.find(d => d.dayNumber === dayNumber);
+    const daySchedule = plan.schedule.find((d) => d.dayNumber === dayNumber);
     if (!daySchedule) throw new Error('Day not found in schedule.');
 
     const lastItem = daySchedule.items[daySchedule.items.length - 1];
@@ -420,16 +453,20 @@ const TravelPlanService: ITravelPlanService = {
     await plan.save();
     return newItem;
   },
-  
+
   /**
    * Retrieves a specific plan item from a plan.
    */
-  async getPlanItem(planId: string, itemId: string, authorId: string): Promise<IPlanItem | null> {
+  async getPlanItem(
+    planId: string,
+    itemId: string,
+    authorId: string,
+  ): Promise<IPlanItem | null> {
     const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
     if (!plan) return null;
 
     for (const day of plan.schedule) {
-      const item = day.items.find(it => it._id.toString() === itemId);
+      const item = day.items.find((it) => it._id.toString() === itemId);
       if (item) return item;
     }
     return null;
@@ -438,16 +475,21 @@ const TravelPlanService: ITravelPlanService = {
   /**
    * Updates a specific plan item.
    */
-  async updatePlanItem(planId: string, itemId: string, updateData: Partial<IPlanItem>, authorId: string): Promise<IPlanItem | null> {
+  async updatePlanItem(
+    planId: string,
+    itemId: string,
+    updateData: Partial<IPlanItem>,
+    authorId: string,
+  ): Promise<IPlanItem | null> {
     const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
     if (!plan) throw new Error('Plan not found or user not authorized.');
-    
+
     let itemToUpdate: IPlanItem | undefined;
     for (const day of plan.schedule) {
-      itemToUpdate = day.items.find(it => it._id.toString() === itemId);
+      itemToUpdate = day.items.find((it) => it._id.toString() === itemId);
       if (itemToUpdate) break;
     }
-    
+
     if (!itemToUpdate) return null;
 
     Object.assign(itemToUpdate, updateData);
@@ -458,13 +500,19 @@ const TravelPlanService: ITravelPlanService = {
   /**
    * Deletes a specific plan item.
    */
-  async deletePlanItem(planId: string, itemId: string, authorId: string): Promise<boolean> {
+  async deletePlanItem(
+    planId: string,
+    itemId: string,
+    authorId: string,
+  ): Promise<boolean> {
     const plan = await TravelPlan.findOne({ _id: planId, author: authorId });
     if (!plan) return false;
-    
+
     let itemDeleted = false;
     for (const day of plan.schedule) {
-      const itemIndex = day.items.findIndex(it => it._id.toString() === itemId);
+      const itemIndex = day.items.findIndex(
+        (it) => it._id.toString() === itemId,
+      );
       if (itemIndex > -1) {
         day.items.splice(itemIndex, 1);
         itemDeleted = true;
@@ -480,41 +528,100 @@ const TravelPlanService: ITravelPlanService = {
 
   async getFeedForUser(
     userId: string,
-    options: { page: number; limit: number },
-  ): Promise<any[]> {
+    options: { limit: number; after?: string },
+  ): Promise<{
+    data: any[];
+    pagination: { next_cursor: string | null; has_next_page: boolean };
+  }> {
     try {
-      const followingRelations = await FollowService.getFollowing(userId, {
-        page: 1,
-        limit: 5000,
-      });
+      const { limit = 20, after } = options;
+
+      // --- Step 1: Get the list of users the user is following ---
+      // This is more efficient than calling getFollowing, which populates a lot of data.
+      const followingRelations = await Follow.find({ follower: userId })
+        .select('following')
+        .lean();
       const followingIds = followingRelations.map(
-        (relation) => relation._id,
+        (relation) => relation.following,
       );
 
-      const followedPlans = await TravelPlan.find({
-        author: { $in: followingIds },
-      })
+      // --- Step 2: Fetch a page of posts from FOLLOWED users ---
+      const followedQuery: any = { author: { $in: followingIds }, privacy: 'public' };
+      if (after) {
+        // Use the cursor to fetch items created before the last item of the previous page
+        followedQuery.createdAt = { $lt: new Date(after) };
+      }
+      const followedPlans = await TravelPlan.find(followedQuery)
         .populate('author', 'username displayName avatarUrl')
         .sort({ createdAt: -1 })
+        .limit(limit) // Apply the limit to the database query
+        .lean()
         .exec();
 
-      const publicFeed = await TravelPlan.find({
+      // --- Step 3: Fetch a small, fixed number of TRENDING posts ---
+      // This is now incredibly fast because we sort by the pre-calculated, indexed score.
+      const trendingPlans = await TravelPlan.find({
         privacy: 'public',
-        author: { $nin: followingIds },
+        author: { $nin: [...followingIds, userId] },
       })
         .populate('author', 'username displayName avatarUrl')
-        .sort({ createdAt: -1 })
+        // THIS IS THE ONLY CHANGE NEEDED:
+        .sort({ trendingScore: -1 }) // Use the indexed score
+        .limit(5)
+        .lean()
         .exec();
-        
-      const feedPlans = [...followedPlans, ...publicFeed];
 
-      return feedPlans;
+      // --- Step 4: Interleave the two lists or show trending if feed is empty ---
+      let feedPlans = [];
+
+      if (followedPlans.length === 0) {
+        // If the user follows no one, their feed is simply the trending plans.
+        feedPlans = trendingPlans;
+      } else {
+        // If they do follow people, interleave the two lists for better discovery.
+        const interleavedList = [];
+        let followedIndex = 0;
+        const injectionRate = 4; // Inject one trending post every 4 followed posts
+
+        while (followedIndex < followedPlans.length) {
+          // Add a chunk of followed plans
+          const followedChunk = followedPlans.slice(
+            followedIndex,
+            followedIndex + injectionRate,
+          );
+          interleavedList.push(...followedChunk);
+          followedIndex += injectionRate;
+
+          // Inject one trending plan if available
+          if (trendingPlans.length > 0) {
+            // Take the top trending post and remove it from the list to avoid duplicates
+            interleavedList.push(trendingPlans.shift());
+          }
+        }
+        feedPlans = interleavedList;
+      }
+
+      // --- Step 5: Prepare the response with the next cursor ---
+      // This part remains the same and will correctly handle the case where
+      // there are no followed plans, resulting in no "next page".
+      let next_cursor = null;
+      if (followedPlans.length === limit) {
+        next_cursor =
+          followedPlans[followedPlans.length - 1].createdAt!.toISOString();
+      }
+
+      return {
+        data: feedPlans.slice(0, limit), // Ensure we don't exceed the limit after merging
+        pagination: {
+          next_cursor,
+          has_next_page: next_cursor !== null,
+        },
+      };
     } catch (error) {
       console.error('Error getting feed for user:', error);
       throw error;
     }
   },
-
 };
 
 export { TravelPlanService };

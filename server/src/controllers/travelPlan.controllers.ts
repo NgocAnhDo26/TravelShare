@@ -421,10 +421,10 @@ const TravelPlanController: ITravelPlanController = {
      
       const userId = req.user as string;
       
-      const page = parseInt(req.query.page as string) || 1;
+      const after = req.query.after as string | undefined;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      const feed = await TravelPlanService.getFeedForUser(userId, { page, limit });
+      const feed = await TravelPlanService.getFeedForUser(userId, { limit, after });
 
       res.status(HTTP_STATUS.OK).json(feed);
     } catch (error: any) {

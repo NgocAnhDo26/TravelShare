@@ -2,35 +2,34 @@ import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { MessageCircle, Heart, Share2, MapPin, Bookmark } from 'lucide-react';
+import {
+  MessageCircle,
+  Heart,
+  Share2,
+  MapPin,
+  Bookmark,
+  Zap,
+} from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
+import type { IPlan } from '@/types/trip';
+import timeAgo from '@/utils/time';
 
-interface Plan {
-  _id: string;
-  title: string;
-  destination: { name: string };
-  coverImageUrl?: string;
-  author: {
-    _id: string;
-    username: string;
-    displayName?: string;
-    avatarUrl?: string;
-  };
-  likesCount: number;
-  commentsCount: number;
+interface FeedPlanProps {
+  plan: IPlan;
 }
 
-interface FeedPostProps {
-  plan: Plan;
-}
-
-const FeedPost: React.FC<FeedPostProps> = ({ plan }) => {
+const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
   const navigate = useNavigate();
 
   if (!plan?.author) {
-    return null;
+    return null; // Don't render if plan or author is missing
   }
 
   const handleViewPlan = () => navigate(`/plans/${plan._id}`);
@@ -68,9 +67,18 @@ const FeedPost: React.FC<FeedPostProps> = ({ plan }) => {
             </h3>
             <p className='text-sm text-slate-500'>@{plan.author.username}</p>
           </div>
-          <Badge variant='secondary' className='bg-blue-100 text-blue-700'>
-            2h ago
-          </Badge>
+          {plan.source_type === 'trending' ? (
+            <Badge
+              variant='secondary'
+              className='bg-purple-100 text-purple-700 flex items-center gap-1'
+            >
+              <Zap className='w-3 h-3' /> Trending
+            </Badge>
+          ) : (
+            <Badge variant='secondary' className='bg-blue-100 text-blue-700'>
+              {timeAgo(plan.createdAt)}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent className='px-6 pb-4'>
@@ -83,7 +91,6 @@ const FeedPost: React.FC<FeedPostProps> = ({ plan }) => {
             Destination: {plan.destination.name}
           </p>
         </div>
-
         <div className='relative rounded-2xl overflow-hidden group'>
           <img
             src={plan.coverImageUrl}
@@ -104,31 +111,33 @@ const FeedPost: React.FC<FeedPostProps> = ({ plan }) => {
           <div className='flex items-center gap-6'>
             <button className='flex items-center gap-2 text-slate-600 hover:text-red-500 transition-colors duration-200 group'>
               <Heart className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
-              <span className='text-sm font-medium'>24</span>
+              <span className='text-sm font-medium'>{plan.likesCount}</span>
             </button>
             <button className='flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-colors duration-200 group'>
               <MessageCircle className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
-              <span className='text-sm font-medium'>8</span>
+              <span className='text-sm font-medium'>{plan.commentsCount}</span>
             </button>
             <button className='flex items-center gap-2 text-slate-600 hover:text-green-500 transition-colors duration-200 group'>
               <Share2 className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
               <span className='text-sm font-medium'>Share</span>
             </button>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button className='text-slate-600 hover:text-yellow-500 transition-colors duration-200'>
-                <Bookmark className='w-5 h-5 hover:scale-110 transition-transform duration-200' />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Save it</p>
-            </TooltipContent>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className='text-slate-600 hover:text-yellow-500 transition-colors duration-200'>
+                  <Bookmark className='w-5 h-5 hover:scale-110 transition-transform duration-200' />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Save it</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </CardFooter>
     </Card>
   );
 };
 
-export default FeedPost;
+export default FeedPlan;

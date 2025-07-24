@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 const tabs = [
   { label: 'For you', to: '/' },
   { label: 'Following', to: '/following' },
-  { label: 'Trending', to: '/saas-growth' },
+  { label: 'Search', to: '/search' },
 ];
 
 export default function HeaderTabs() {
