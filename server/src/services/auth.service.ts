@@ -281,7 +281,7 @@ const AuthService: IAuthenticationService = {
   },
 
   googleLogin: async (req: Request, res: Response) => {
-    const { token } = req.body; // Đây là access_token từ frontend
+    const { token } = req.body;
 
     if (!token) {
       res.status(400).json({ error: 'Google Access Token is required.' });
@@ -289,7 +289,6 @@ const AuthService: IAuthenticationService = {
     }
 
     try {
-      // Dùng access_token để lấy thông tin người dùng từ Google
       const googleResponse = await axios.get(
         `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`,
         {
@@ -311,7 +310,6 @@ const AuthService: IAuthenticationService = {
         return;
       }
 
-      // Logic tạo token và cookie không đổi
       const accessToken = createToken(user._id as string, 'access');
       const refreshToken = createToken(user._id as string, 'refresh');
       const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
@@ -372,7 +370,6 @@ const AuthService: IAuthenticationService = {
       });
       await user.save();
 
-      // Logic tạo token và cookie không đổi
       const accessToken = createToken(user._id as string, 'access');
       const refreshToken = createToken(user._id as string, 'refresh');
       const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');

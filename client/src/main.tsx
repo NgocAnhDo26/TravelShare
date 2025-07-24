@@ -7,7 +7,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 if (!googleClientId) {
-  console.error("Fatal Error: VITE_GOOGLE_CLIENT_ID is not defined in .env Google authentication will not work.");
+  console.error("Fatal Error: VITE_GOOGLE_CLIENT_ID is not defined in .env. Google authentication will not work.");
 }   
 
 const root = createRoot(document.getElementById('root')!);
