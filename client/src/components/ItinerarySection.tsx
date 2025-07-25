@@ -607,7 +607,19 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         })
       );
 
-      // TODO: Send payload to backend here
+      // Send payload to backend here
+      try {
+        await API.post(`/plans/${tripId}/items/move`, {
+          sourceDayNumber: sourceDay.dayNumber,
+          targetDayNumber: targetDay.dayNumber,
+          itemId: movingItem._id,
+          targetIndex: 0, // Always index 0 for empty day
+        });
+        toast.success('Item moved to another day!');
+      } catch (error) {
+        console.error('Error moving item:', error);
+        toast.error('Failed to move item. Please try again.');
+      }
 
       setDraggedItem(null);
       return;
