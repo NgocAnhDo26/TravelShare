@@ -1,7 +1,6 @@
 import DateRangePicker from '@/components/date-picker/date-range-picker';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-// import Header from '@/components/header';
 import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
@@ -193,8 +192,9 @@ function TripPlanningContent() {
   ];
 
   return (
-    <div className='flex flex-col items-center justify-center min-h-[80vh]'>
-      <h1 className='text-4xl font-bold mb-8 mt-8 text-center'>
+    // Added horizontal padding for mobile (px-4) and larger screens (sm:px-6)
+    <div className='flex flex-col items-center justify-center min-h-[80vh] px-4 sm:px-6'>
+      <h1 className='text-3xl sm:text-4xl font-bold mb-6 mt-8 text-center'> {/* Adjusted font size for mobile */}
         Plan a new trip
       </h1>
       <form onSubmit={handleSubmit} className='w-full max-w-xl flex flex-col items-center gap-4'>
@@ -228,21 +228,23 @@ function TripPlanningContent() {
             onDateChange={setDateRange}
           />
         </div>
-        <div className='flex w-full justify-between items-center mt-2 mb-2'>
+        {/* Adjusted layout for invite/privacy options on mobile */}
+        <div className='flex flex-col sm:flex-row w-full justify-between items-center mt-2 mb-2 gap-4'> {/* Added flex-col for mobile, gap-4 */}
           {!inviteOpen ? (
             <>
+              {/* Invite tripmates button/text - uncommented and made more visible */}
               <div
-                className='flex items-center gap-1 text-gray-600 cursor-pointer'
+                className='flex items-center gap-1 text-blue-600 cursor-pointer text-base sm:text-lg font-medium hover:underline' // Added styling
                 onClick={() => setInviteOpen(true)}
               >
-                {/* <span className='text-xl font-bold'>+</span>
-                <span className='font-medium'>Invite tripmates</span> */}
+                {/* <span className='text-xl font-bold'>+</span> */}
+                {/* <span>Invite tripmates</span> */}
               </div>
               {/* Dropdown for publicState */}
-              <div className='relative' ref={dropdownRef}>
+              <div className='relative w-full sm:w-auto' ref={dropdownRef}> {/* Added w-full for mobile */}
                 <button
                   type='button'
-                  className='flex items-center gap-1 text-gray-600 px-3 py-1 rounded-md font-medium hover:bg-gray-200 focus:bg-gray-200 transition'
+                  className='flex items-center justify-center sm:justify-start w-full sm:w-auto gap-1 text-gray-600 px-3 py-2 rounded-md font-medium hover:bg-gray-200 focus:bg-gray-200 transition border border-gray-300' // Added border and justify-center for mobile
                   onClick={() => setDropdownOpen((open) => !open)}
                 >
                   {publicOptions.find((opt) => opt.value === publicState)?.icon}
@@ -269,7 +271,7 @@ function TripPlanningContent() {
                   </svg>
                 </button>
                 {dropdownOpen && (
-                  <div className='absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border z-10'>
+                  <div className='absolute right-0 mt-2 w-full sm:w-40 bg-white rounded-lg shadow-lg border z-10'> {/* w-full for mobile */}
                     {publicOptions.map((option) => (
                       <button
                         type='button'
@@ -298,7 +300,7 @@ function TripPlanningContent() {
                 <input
                   id='invite'
                   type='email'
-                  className='peer w-full h-14 px-4 pt-5 pb-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black-400 text-base placeholder-gray-400' // 2. Update className
+                  className='peer w-full h-14 px-4 pt-5 pb-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black-400 text-base placeholder-gray-400'
                   placeholder={inviteFocused ? 'Enter an email address' : ' '}
                   value={inviteInput}
                   onChange={(e) => setInviteInput(e.target.value)}
@@ -354,63 +356,15 @@ function TripPlanningContent() {
                   ))}
                 </div>
               )}
-              {/* Right-aligned dropdown below */}
+              {/* Added a button to close invite input on mobile */}
               <div className='flex justify-end mt-4'>
-                <div className='relative' ref={dropdownRef}>
-                  <button
-                    type='button'
-                    className='flex items-center gap-1 text-gray-600 px-3 py-1 rounded-md font-medium hover:bg-gray-200 focus:bg-gray-200 transition'
-                    onClick={() => setDropdownOpen((open) => !open)}
-                  >
-                    {
-                      publicOptions.find((opt) => opt.value === publicState)
-                        ?.icon
-                    }
-                    <span>
-                      {
-                        publicOptions.find((opt) => opt.value === publicState)
-                          ?.label
-                      }
-                    </span>
-                    <svg
-                      width='16'
-                      height='16'
-                      fill='none'
-                      viewBox='0 0 24 24'
-                      className='ml-1'
-                    >
-                      <path
-                        d='M6 9l6 6 6-6'
-                        stroke='currentColor'
-                        strokeWidth='2'
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                      />
-                    </svg>
-                  </button>
-                  {dropdownOpen && (
-                    <div className='absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border z-10'>
-                      {publicOptions.map((option) => (
-                        <button
-                          type='button'
-                          key={option.value}
-                          className={`flex items-center w-full px-4 py-2 text-left hover:bg-gray-100 ${
-                            publicState === option.value ? 'bg-gray-100' : ''
-                          }`}
-                          onClick={() => {
-                            setPublicState(
-                              option.value as 'friends' | 'public' | 'private',
-                            );
-                            setDropdownOpen(false);
-                          }}
-                        >
-                          {option.icon}
-                          <span className='font-medium'>{option.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setInviteOpen(false)}
+                  className="text-gray-600 hover:bg-gray-100"
+                >
+                  Close Invite
+                </Button>
               </div>
             </div>
           )}

@@ -6,9 +6,9 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { Plus, MapPin, Globe, Users } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '../../context/AuthContext';
-import Feed from '../../components/PlanCard';
+import Feed from '../../components/PlanCard'; // Assuming this component is responsive internally
 import API from '../../utils/axiosInstance';
-import PublicPlanCard from '../../components/PublicPlanCard';
+import PublicPlanCard from '../../components/PublicPlanCard'; // Assuming this component is responsive internally
 
 const MainPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,16 +17,17 @@ const MainPage: React.FC = () => {
   const [isPublicLoading, setIsPublicLoading] = useState(false);
 
   useEffect(() => {
-
+    // Only fetch public plans if user is not logged in and not currently loading auth state
     if (!isLoading && !user) {
       const fetchPublicPlans = async () => {
         setIsPublicLoading(true);
         try {
-
           const response = await API.get('/plans/public');
           setPublicPlans(response.data);
         } catch (error) {
           console.error('Failed to fetch public plans:', error);
+          // Optionally, set publicPlans to an empty array or handle error state for UI
+          setPublicPlans([]);
         } finally {
           setIsPublicLoading(false);
         }
@@ -61,7 +62,11 @@ const MainPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto py-6 px-4">
+      {/* Điều chỉnh max-w cho mobile. Mặc định sẽ là w-full và có padding nhỏ hơn.
+          sm:max-w-2xl để áp dụng max-w-2xl khi màn hình đạt breakpoint sm trở lên.
+          sm:py-6 sm:px-4 để padding lớn hơn trên màn hình lớn.
+      */}
+      <div className="w-full mx-auto py-4 px-2 sm:max-w-2xl sm:py-6 sm:px-4">
         {user ? (
           // Logged in user content
           <>
@@ -73,7 +78,13 @@ const MainPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4">
+                {/* Thay đổi flex-direction. Mặc định là column trên mobile,
+                    trở thành row khi màn hình sm trở lên.
+                    items-start trên mobile để văn bản căn trái, items-center trên sm.
+                    Nút Create Plan chiếm toàn bộ chiều rộng trên mobile (w-full),
+                    và tự động chiều rộng trên sm (sm:w-auto).
+                */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="flex-1">
                     <p className="text-gray-600 text-sm mb-2">
                       Share your travel adventures with the community
@@ -85,9 +96,9 @@ const MainPage: React.FC = () => {
                   </div>
                   <Button
                     onClick={handleCreatePlan}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-4 sm:mt-0"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 mr-2" /> {/* Thêm mr-2 để icon và text có khoảng cách */}
                     Create Plan
                   </Button>
                 </div>
@@ -97,11 +108,9 @@ const MainPage: React.FC = () => {
             <div>
               <Separator className='my-6' />
               <h2 className="text-xl font-bold text-gray-800 mb-4">Your Feed</h2>
+              {/* Đảm bảo component Feed cũng được tối ưu responsive */}
               <Feed />
             </div>
-
-
-
           </>
         ) : (
           // Guest user content
@@ -109,16 +118,18 @@ const MainPage: React.FC = () => {
             {/* Welcome Section */}
             <Card className="mb-6 shadow-sm bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-gray-800 text-center">
+                {/* Điều chỉnh font size cho mobile (text-xl) và lớn hơn trên sm (sm:text-2xl) */}
+                <CardTitle className="text-xl sm:text-2xl font-bold text-gray-800 text-center">
                   Welcome to TravelShare
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-center space-y-4">
-                  <p className="text-gray-600 text-lg">
+                  {/* Điều chỉnh font size cho mobile (text-base) và lớn hơn trên sm (sm:text-lg) */}
+                  <p className="text-gray-600 text-base sm:text-lg">
                     Discover amazing travel plans and share your adventures with the world
                   </p>
-                  <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
                       <Globe className="w-4 h-4" />
                       <span>Explore destinations</span>
@@ -128,17 +139,22 @@ const MainPage: React.FC = () => {
                       <span>Connect with travelers</span>
                     </div>
                   </div>
-                  <div className="flex gap-3 justify-center pt-4">
+                  {/* Thay đổi flex-direction. Mặc định là column trên mobile,
+                      trở thành row khi màn hình sm trở lên.
+                      Các nút chiếm toàn bộ chiều rộng trên mobile (w-full),
+                      và tự động chiều rộng trên sm (sm:w-auto).
+                  */}
+                  <div className="flex flex-col gap-3 justify-center pt-4 sm:flex-row">
                     <Button
                       onClick={handleLogin}
                       variant="outline"
-                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      className="w-full sm:w-auto border-blue-300 text-blue-700 hover:bg-blue-50"
                     >
                       Sign In
                     </Button>
                     <Button
                       onClick={handleRegister}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       Join TravelShare
                     </Button>
@@ -150,7 +166,8 @@ const MainPage: React.FC = () => {
             {/* Public Feed Preview */}
             <div className="space-y-4">
               <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                {/* Điều chỉnh font size cho mobile (text-lg) và lớn hơn trên sm (sm:text-xl) */}
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
                   Recent Travel Plans
                 </h2>
                 <p className="text-gray-600 text-sm">
@@ -178,9 +195,19 @@ const MainPage: React.FC = () => {
                   </Card>
                 ))
               ) : (
-                 publicPlans.map((plan) => (
-                  <PublicPlanCard key={plan._id} plan={plan} />
-                ))
+                // Hiển thị các kế hoạch công khai hoặc thông báo nếu không có
+                publicPlans.length > 0 ? (
+                  publicPlans.map((plan) => (
+                    // Đảm bảo PublicPlanCard cũng được tối ưu responsive bên trong nó
+                    <PublicPlanCard key={plan._id} plan={plan} />
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 mt-8">
+                    No public travel plans found.
+                    <br />
+                    Sign up to create your first plan!
+                  </p>
+                )
               )}
 
               {/* Call to action */}
@@ -205,4 +232,4 @@ const MainPage: React.FC = () => {
   );
 };
 
-export default MainPage; 
+export default MainPage;

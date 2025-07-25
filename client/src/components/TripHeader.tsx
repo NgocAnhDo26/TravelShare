@@ -6,7 +6,7 @@ import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { canEditPlan } from '@/utils/planPermissions';
+import { canEditPlan } from '@/utils/planPermissions'; // Ensure this utility is correctly implemented
 
 import {
   Calendar,
@@ -68,20 +68,30 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const { user } = useAuth();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(trip.title);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Used for title save
   const [isEditingVisibility, setIsEditingVisibility] = useState(false);
   const [editedVisibility, setEditedVisibility] = useState<'public' | 'private'>(trip.privacy);
   const [isVisibilityLoading, setIsVisibilityLoading] = useState(false);
   const [isCoverImageModalOpen, setIsCoverImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isCoverImageLoading, setIsCoverImageLoading] = useState(false);
+  const [isCoverImageLoading, setIsCoverImageLoading] = useState(false); // Used for cover image upload
   // Add state for author profile
   const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null);
   const [authorLoading, setAuthorLoading] = useState(true);
   const [authorError, setAuthorError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Helper to get initials for AvatarFallback
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    const parts = name.split(' ');
+    if (parts.length > 1) {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    return name.charAt(0).toUpperCase();
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -106,6 +116,12 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       isMounted = false;
     };
   }, [trip.author]);
+
+  // Sync editedTitle and editedVisibility with trip prop when trip changes
+  useEffect(() => {
+    setEditedTitle(trip.title);
+    setEditedVisibility(trip.privacy);
+  }, [trip.title, trip.privacy]);
 
   const handleEditTitle = () => {
     setIsEditingTitle(true);
@@ -293,29 +309,29 @@ const TripHeader: React.FC<TripHeaderProps> = ({
 
   return (
     <>
-      <div className='relative'>
+      <div className='relative w-full'> {/* Container for the cover image */}
         <img
           src={trip.coverImageUrl}
           alt='Trip cover image'
-          className='w-full max-h-72 object-cover'
+          className='w-full max-h-48 sm:max-h-72 object-cover' // Adjusted max-height for responsiveness
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.onerror = null;
             target.src =
-              'https://placehold.co/1200x400/cccccc/ffffff?text=Image+Not+Found';
+              'https://placehold.co/1200x400/cccccc/ffffff?text=Image+Not+Found'; // Fallback image
           }}
         />
-        {editMode && (
+        {editMode && ( // Show edit cover image button only in edit mode
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant='secondary'
                 size='icon'
-                className='absolute top-4 right-4 size-10 bg-white/90 hover:bg-white'
+                className='absolute top-2 right-2 size-8 sm:top-4 sm:right-4 sm:size-10 bg-white/90 hover:bg-white' // Responsive size and position
                 onClick={handleCoverImageEdit}
                 disabled={isCoverImageLoading}
               >
-                <Camera className='w-5 h-5' />
+                <Camera className='w-4 h-4 sm:w-5 sm:h-5' /> {/* Responsive icon size */}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -324,34 +340,36 @@ const TripHeader: React.FC<TripHeaderProps> = ({
           </Tooltip>
         )}
       </div>
-      <Card className='relative lg:mx-16 mx-10 bg-white px-6 pt-8 shadow-lg -mt-28 rounded-md'>
-        <div className='flex items-center'>
-          <div className='flex items-center flex-1'>
+      {/* Main content area of the header, acting as a card */}
+      <Card className='relative mx-4 sm:mx-10 lg:mx-16 bg-white px-4 pt-6 shadow-lg -mt-20 sm:-mt-28 rounded-md sm:px-6 sm:pt-8 pb-4'> {/* Added pb-4 for bottom padding */}
+        <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0'> {/* Flex container for title/edit and action buttons */}
+          {/* Title and its edit buttons */}
+          <div className='flex items-center flex-1 flex-wrap gap-2'>
             {isEditingTitle ? (
               <Input
                 value={editedTitle}
                 onChange={(e) => setEditedTitle(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className='text-gray-800 mr-2'
+                className='text-gray-800 flex-1 min-w-0'
                 autoFocus
                 disabled={isLoading}
               />
             ) : (
-              <h1 className='text-4xl font-bold text-gray-800 text-left'>
+              <h1 className='text-2xl sm:text-4xl font-bold text-gray-800 text-left flex-1 min-w-0'>
                 {trip.title}
               </h1>
             )}
-            {editMode && (
+            {editMode && ( // Show edit title button only in edit mode
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant='secondary'
                     size='icon'
-                    className='size-8 ml-4'
+                    className='size-7 sm:size-8'
                     onClick={isEditingTitle ? handleSaveTitle : handleEditTitle}
                     disabled={isLoading}
                   >
-                    {isEditingTitle ? <Save /> : <Pencil />}
+                    {isEditingTitle ? <Save className='w-4 h-4' /> : <Pencil className='w-4 h-4' />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -359,11 +377,11 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                 </TooltipContent>
               </Tooltip>
             )}
-            {isEditingTitle && (
+            {isEditingTitle && ( // Show cancel title edit button when editing title
               <Button
                 variant='outline'
                 size='sm'
-                className='ml-2'
+                className='ml-2 h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm'
                 onClick={handleCancelEdit}
                 disabled={isLoading}
               >
@@ -372,82 +390,32 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             )}
           </div>
           
-          {/* Show edit button in header for plan authors in view mode */}
-          {!editMode && canEditPlan(trip, user) && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant='outline' 
-                  size='sm'
-                  onClick={handleEditPlan}
-                  className='flex items-center gap-2'
-                >
-                  <Pencil className='w-4 h-4' />
-                  Edit Plan
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Switch to edit mode</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          
-          {/* Show view button in header when in edit mode */}
-          {editMode && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant='outline' 
-                  size='sm'
-                  onClick={handleViewPlan}
-                  className='flex items-center gap-2'
-                >
-                  <Eye className='w-4 h-4' />
-                  View Plan
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Switch to view mode</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {/* Delete Plan button for author, only in edit mode */}
-          {editMode && canEditPlan(trip, user) && (
-            <>
-              <Button
-                variant='destructive'
-                size='sm'
-                className='flex items-center gap-2 ml-2'
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <TrashIcon className='w-4 h-4' />
-                Delete
-              </Button>
-              <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Delete Plan</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to delete this plan? This action cannot be undone.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant='outline'>Cancel</Button>
-                    </DialogClose>
-                    <Button variant='destructive' onClick={handleDeletePlan} autoFocus>
-                      Delete
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </>
-          )}
+          {/* Top-right action button: Edit Plan (only in view mode for author) */}
+          <div className="flex items-center justify-end"> {/* Container for the single top-right button */}
+            {!editMode && canEditPlan(trip, user) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant='outline' 
+                    size='sm'
+                    onClick={handleEditPlan}
+                    className='flex items-center gap-2 px-3 h-8' // Standard desktop size
+                  >
+                    <Pencil className='w-4 h-4' />
+                    Edit Plan
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Switch to edit mode</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
         
         {/* Visibility Section - Only show in edit mode */}
         {editMode && (
-          <div className='flex items-center'>
+          <div className='flex flex-col sm:flex-row items-start sm:items-center mt-4 gap-2'>
             <div className='flex items-center text-gray-600 text-sm'>
               {trip.privacy === 'public' ? (
                 <Eye className='w-4 h-4 mr-1' />
@@ -521,8 +489,10 @@ const TripHeader: React.FC<TripHeaderProps> = ({
           </div>
         )}
         
-        <p className='text-gray-600 text-left text-sm'>{trip.destination.name}</p>
-        <div className='flex justify-between items-center mt-4'>
+        <p className='text-gray-600 text-left text-sm mt-4'>
+          {trip.destination.name}
+        </p>
+        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-4 pb-4'> {/* Added pb-4 for spacing before bottom buttons */}
           <div className='flex items-center text-gray-500'>
             <Calendar className='w-5 h-5 mr-2' />
             <span className='text-sm font-medium'>
@@ -565,25 +535,69 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                 </button>
               </>
             ) : (
-              <>
-                <div className='flex items-center'>
-                  <Button variant='ghost'>
-                    <Heart />
-                    {trip.likesCount ?? 0}
-                  </Button>
-                  <Button variant='ghost'>
-                    <MessageCircle />
-                    {trip.commentsCount ?? 0}
-                  </Button>
-                  <Button className='ml-2'>
-                    <Repeat />
-                    Remix
-                  </Button>
-                </div>
-              </>
+              <div className='flex flex-wrap justify-end gap-2'>
+                <Button variant='ghost' className="px-2 py-1 h-auto">
+                  <Heart className='w-4 h-4 mr-1' />
+                  <span className="text-sm">{trip.likesCount ?? 0}</span>
+                </Button>
+                <Button variant='ghost' className="px-2 py-1 h-auto">
+                  <MessageCircle className='w-4 h-4 mr-1' />
+                  <span className="text-sm">{trip.commentsCount ?? 0}</span>
+                </Button>
+                <Button className='ml-2 px-3 py-1 h-auto text-sm'>
+                  <Repeat className='w-4 h-4 mr-1' />
+                  Remix
+                </Button>
+              </div>
             )}
           </div>
         </div>
+
+        {/* NEW: Bottom action buttons (View Plan and Delete) - only visible in edit mode */}
+        {editMode && (
+            <div className='flex flex-col sm:flex-row justify-end gap-2 mt-4 pt-4 border-t border-gray-200'> {/* Added border-t for separation */}
+                <Button 
+                    variant='outline' 
+                    size='sm'
+                    onClick={handleViewPlan}
+                    className='flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2' // Full width on mobile, auto on desktop
+                >
+                    <Eye className='w-4 h-4' />
+                    View Plan
+                </Button>
+                {canEditPlan(trip, user) && (
+                    <>
+                        <Button
+                            variant='destructive'
+                            size='sm'
+                            onClick={() => setDeleteDialogOpen(true)}
+                            className='flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2' // Full width on mobile, auto on desktop
+                        >
+                            <TrashIcon className='w-4 h-4' />
+                            Delete
+                        </Button>
+                        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Delete Plan</DialogTitle>
+                                    <DialogDescription>
+                                        Are you sure you want to delete this plan? This action cannot be undone.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                                    <DialogClose asChild>
+                                        <Button variant='outline' className="w-full sm:w-auto">Cancel</Button>
+                                    </DialogClose>
+                                    <Button variant='destructive' onClick={handleDeletePlan} autoFocus className="w-full sm:w-auto">
+                                        Delete
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </>
+                )}
+            </div>
+        )}
       </Card>
 
       {/* Cover Image Edit Modal */}
@@ -641,9 +655,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                 <label className='text-sm font-medium'>Preview</label>
                 <div className='relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden'>
                   <img
-                    src={previewUrl}
-                    alt='Preview'
-                    className='w-full h-full object-cover'
+                  src={previewUrl}
+                  alt='Preview'
+                  className='w-full h-full object-cover'
                   />
                   <Button
                     variant='ghost'
@@ -656,22 +670,24 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                   >
                     <X className='w-3 h-3' />
                   </Button>
-                </div>
               </div>
+            </div>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
             <Button
               variant='outline'
               onClick={handleCoverImageCancel}
               disabled={isCoverImageLoading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCoverImageSave}
               disabled={isCoverImageLoading || !selectedImage}
+              className="w-full sm:w-auto"
             >
               {isCoverImageLoading ? 'Uploading...' : 'Save Image'}
             </Button>
