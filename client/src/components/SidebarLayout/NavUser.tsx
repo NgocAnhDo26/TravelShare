@@ -32,13 +32,14 @@ export function NavUser() {
   const { user, logout } = useAuth();
   const { isMobile } = useSidebar();
 
-  if (!user) return (
-    <Link to="/login">
-      <Button className="w-50 mb-4 bg-gradient-to-br from-teal-500 to-blue-600 text-white px-8 py-3 shadow-lg shadow-blue-500/25 transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/30">
-        Login / Register
-      </Button>
-    </Link>
-  );
+  if (!user)
+    return (
+      <Link to='/login'>
+        <Button className='w-50 mb-4 bg-gradient-to-br from-teal-500 to-blue-600 text-white px-8 py-3 shadow-lg shadow-blue-500/25 transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/30'>
+          Login / Register
+        </Button>
+      </Link>
+    );
 
   return (
     <SidebarMenu>

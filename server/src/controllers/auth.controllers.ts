@@ -38,7 +38,7 @@ const AuthController: IAuthController = {
   },
   googleRegister: async (req: Request, res: Response) => {
     await AuthService.googleRegister(req, res);
-  },  
+  },
 };
 
 export default AuthController;

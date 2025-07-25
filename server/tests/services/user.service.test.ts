@@ -6,7 +6,10 @@ import { Types } from 'mongoose';
 import * as TravelPlanServiceModule from '../../src/services/travelPlan.service';
 
 // Mock TravelPlanService.getTravelPlansByAuthor to return an empty array
-vi.spyOn(TravelPlanServiceModule.TravelPlanService, 'getTravelPlansByAuthor').mockResolvedValue([]);
+vi.spyOn(
+  TravelPlanServiceModule.TravelPlanService,
+  'getTravelPlansByAuthor',
+).mockResolvedValue([]);
 
 // Mock the Mongoose models
 vi.mock('../../src/models/user.model');
@@ -40,7 +43,9 @@ describe('UserService', () => {
         select: vi.fn().mockResolvedValue(null),
       });
 
-      await expect(UserService.getEditProfile(userId)).rejects.toThrow('User not found.');
+      await expect(UserService.getEditProfile(userId)).rejects.toThrow(
+        'User not found.',
+      );
     });
   });
 
@@ -69,7 +74,9 @@ describe('UserService', () => {
       const updateData = { username: 'existinguser' };
       mockedUser.findOne.mockResolvedValue({ _id: new Types.ObjectId() });
 
-      await expect(UserService.updateProfile(userId, updateData)).rejects.toThrow('Username already exists.');
+      await expect(
+        UserService.updateProfile(userId, updateData),
+      ).rejects.toThrow('Username already exists.');
     });
 
     it('should throw an error if email already exists', async () => {
@@ -77,7 +84,9 @@ describe('UserService', () => {
       const updateData = { email: 'existing@test.com' };
       mockedUser.findOne.mockResolvedValue({ _id: new Types.ObjectId() });
 
-      await expect(UserService.updateProfile(userId, updateData)).rejects.toThrow('Email already exists.');
+      await expect(
+        UserService.updateProfile(userId, updateData),
+      ).rejects.toThrow('Email already exists.');
     });
   });
 
@@ -111,7 +120,9 @@ describe('UserService', () => {
         select: vi.fn().mockResolvedValue(null),
       });
 
-      await expect(UserService.getProfile(userId)).rejects.toThrow('User not found.');
+      await expect(UserService.getProfile(userId)).rejects.toThrow(
+        'User not found.',
+      );
     });
   });
 });
@@ -128,17 +139,25 @@ describe('FollowService', () => {
 
       mockedUser.countDocuments.mockResolvedValue(2);
       mockedFollow.findOne.mockResolvedValue(null);
-      mockedFollow.create.mockResolvedValue({ follower: followerId, following: followingId });
+      mockedFollow.create.mockResolvedValue({
+        follower: followerId,
+        following: followingId,
+      });
 
       await FollowService.followUser(followerId, followingId);
 
       expect(mockedUser.updateOne).toHaveBeenCalledTimes(2);
-      expect(mockedFollow.create).toHaveBeenCalledWith({ follower: followerId, following: followingId });
+      expect(mockedFollow.create).toHaveBeenCalledWith({
+        follower: followerId,
+        following: followingId,
+      });
     });
 
     it('should throw an error if user tries to follow themselves', async () => {
       const userId = new Types.ObjectId().toHexString();
-      await expect(FollowService.followUser(userId, userId)).rejects.toThrow('You cannot follow yourself.');
+      await expect(FollowService.followUser(userId, userId)).rejects.toThrow(
+        'You cannot follow yourself.',
+      );
     });
 
     it('should throw an error if already following', async () => {
@@ -147,7 +166,9 @@ describe('FollowService', () => {
       mockedUser.countDocuments.mockResolvedValue(2);
       mockedFollow.findOne.mockResolvedValue({});
 
-      await expect(FollowService.followUser(followerId, followingId)).rejects.toThrow('You are already following this user.');
+      await expect(
+        FollowService.followUser(followerId, followingId),
+      ).rejects.toThrow('You are already following this user.');
     });
   });
 
@@ -159,7 +180,10 @@ describe('FollowService', () => {
 
       await FollowService.unfollowUser(followerId, followingId);
 
-      expect(mockedFollow.deleteOne).toHaveBeenCalledWith({ follower: followerId, following: followingId });
+      expect(mockedFollow.deleteOne).toHaveBeenCalledWith({
+        follower: followerId,
+        following: followingId,
+      });
       expect(mockedUser.updateOne).toHaveBeenCalledTimes(2);
     });
 
@@ -168,7 +192,9 @@ describe('FollowService', () => {
       const followingId = new Types.ObjectId().toHexString();
       mockedFollow.deleteOne.mockResolvedValue({ deletedCount: 0 });
 
-      await expect(FollowService.unfollowUser(followerId, followingId)).rejects.toThrow('You are not following this user.');
+      await expect(
+        FollowService.unfollowUser(followerId, followingId),
+      ).rejects.toThrow('You are not following this user.');
     });
   });
 
@@ -194,26 +220,28 @@ describe('FollowService', () => {
     it('should return a paginated list of followers with follow status', async () => {
       const userId = new Types.ObjectId().toHexString();
       const followerId = new Types.ObjectId();
-      const followers = [{
-        _id: new Types.ObjectId(),
-        follower: {
-          _id: followerId,
-          username: 'testuser',
-          displayName: 'Test User',
-          avatarUrl: ''
-        },
-        createdDate: new Date(),
-        toObject: vi.fn().mockReturnValue({
+      const followers = [
+        {
+          _id: new Types.ObjectId(),
           follower: {
             _id: followerId,
             username: 'testuser',
             displayName: 'Test User',
-            avatarUrl: ''
+            avatarUrl: '',
           },
-          createdDate: new Date()
-        })
-      }];
-      
+          createdDate: new Date(),
+          toObject: vi.fn().mockReturnValue({
+            follower: {
+              _id: followerId,
+              username: 'testuser',
+              displayName: 'Test User',
+              avatarUrl: '',
+            },
+            createdDate: new Date(),
+          }),
+        },
+      ];
+
       // Mock the first query (main followers query)
       const mockQueryChain = {
         populate: vi.fn().mockReturnThis(),
@@ -226,7 +254,10 @@ describe('FollowService', () => {
 
       mockedFollow.find.mockReturnValueOnce(mockQueryChain);
 
-      const result = await FollowService.getFollowers(userId, { page: 1, limit: 10 });
+      const result = await FollowService.getFollowers(userId, {
+        page: 1,
+        limit: 10,
+      });
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('_id');
       expect(result[0]).toHaveProperty('username');
@@ -241,26 +272,28 @@ describe('FollowService', () => {
     it('should return a paginated list of following users with follow status', async () => {
       const userId = new Types.ObjectId().toHexString();
       const followingId = new Types.ObjectId();
-      const following = [{
-        _id: new Types.ObjectId(),
-        following: {
-          _id: followingId,
-          username: 'testuser',
-          displayName: 'Test User',
-          avatarUrl: ''
-        },
-        createdDate: new Date(),
-        toObject: vi.fn().mockReturnValue({
+      const following = [
+        {
+          _id: new Types.ObjectId(),
           following: {
             _id: followingId,
             username: 'testuser',
             displayName: 'Test User',
-            avatarUrl: ''
+            avatarUrl: '',
           },
-          createdDate: new Date()
-        })
-      }];
-      
+          createdDate: new Date(),
+          toObject: vi.fn().mockReturnValue({
+            following: {
+              _id: followingId,
+              username: 'testuser',
+              displayName: 'Test User',
+              avatarUrl: '',
+            },
+            createdDate: new Date(),
+          }),
+        },
+      ];
+
       // Mock the first query (main following query)
       const mockQueryChain = {
         populate: vi.fn().mockReturnThis(),
@@ -273,7 +306,10 @@ describe('FollowService', () => {
 
       mockedFollow.find.mockReturnValueOnce(mockQueryChain);
 
-      const result = await FollowService.getFollowing(userId, { page: 1, limit: 10 });
+      const result = await FollowService.getFollowing(userId, {
+        page: 1,
+        limit: 10,
+      });
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('_id');
       expect(result[0]).toHaveProperty('username');

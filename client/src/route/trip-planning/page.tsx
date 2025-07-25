@@ -3,11 +3,16 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 // import Header from '@/components/header';
 import { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import API from '@/utils/axiosInstance';
-import type { ILocation } from '@/types/trip';
+import type { ITomTomLocationBase } from '@/types/trip';
 import type { DateRange } from 'react-day-picker';
+import TomTomAutocomplete from '@/components/TomTomAutocomplete';
+import { TOMTOM_CONFIG } from '@/config/env';
+import type { Destination } from '@/types/destination';
+import { destinationToTomTomLocation } from '@/utils/tomtomHelpers';
+import { LocationPermissionDialog } from '@/components/LocationPermissionDialog';
+import { LocationService } from '@/utils/locationService';
 
 function TripPlanningContent() {
   const navigate = useNavigate();
@@ -22,10 +27,70 @@ function TripPlanningContent() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Form state
-  const [destination, setDestination] = useState('');
+  const [destination, setDestination] = useState<ITomTomLocationBase | null>(
+    null,
+  );
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Location permission state
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+
+  // Check GPS permission status when component loads
+  useEffect(() => {
+    const checkLocationPermission = async () => {
+      const permissionInfo = LocationService.getPermissionInfo();
+
+      // If permission status is not granted, show dialog
+      if (permissionInfo.status !== 'granted') {
+        setShowLocationDialog(true);
+      } else {
+        // Location is already stored in LocationService, no need to do anything
+      }
+    };
+
+    checkLocationPermission();
+  }, []);
+
+  const handleLocationPermissionComplete = () => {
+    // Location is already stored by LocationService
+    setShowLocationDialog(false);
+
+    // If user was trying to submit the form, continue with submission
+    if (destination && dateRange?.from && dateRange?.to) {
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        if (form) {
+          form.requestSubmit();
+        }
+      }, 100);
+    }
+  };
+
+  const handleLocationPermissionSkip = async () => {
+    // Get IP-based location as fallback
+    try {
+      const ipLocation = await LocationService.getIPLocation();
+      LocationService.storeLocation(ipLocation);
+      // Location is now stored in LocationService
+    } catch (error) {
+      console.error('Failed to get IP location:', error);
+    }
+    setShowLocationDialog(false);
+
+    // If user was trying to submit the form, continue with submission
+    if (destination && dateRange?.from && dateRange?.to) {
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        if (form) {
+          form.requestSubmit();
+        }
+      }, 100);
+    }
+  };
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -49,30 +114,33 @@ function TripPlanningContent() {
     setIsLoading(true);
 
     try {
-      // Validate form data
-      if (!destination.trim()) {
+      // Check GPS permission status before creating plan
+      const permissionInfo = LocationService.getPermissionInfo();
+
+      // If permission is not granted, show location dialog again
+      if (permissionInfo.status !== 'granted') {
+        setShowLocationDialog(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Validation
+      if (!destination) {
         throw new Error('Destination is required');
       }
 
       if (!dateRange?.from || !dateRange?.to) {
-        throw new Error('Please select start and end dates');
+        throw new Error('Please select travel dates');
       }
 
       if (dateRange.from > dateRange.to) {
         throw new Error('Start date cannot be after end date');
       }
 
-      // Create destination location object
-      const destinationLocation: ILocation = {
-        placeId: '', // Will be empty for now, can be enhanced with Google Places API later
-        name: destination.trim(),
-        address: destination.trim(),
-      };
-
-      // Prepare request data
+      // Prepare request data with complete TomTom destination data
       const planData = {
-        title: `${destination.trim()}`, // Auto-generate title from destination
-        destination: destinationLocation,
+        title: destination.name, // Use the location name as title
+        destination: destination, // Send complete TomTom location data
         startDate: dateRange.from.toISOString(),
         endDate: dateRange.to.toISOString(),
         privacy: publicState,
@@ -80,12 +148,20 @@ function TripPlanningContent() {
 
       // Make API call
       const response = await API.post('/plans', planData);
-      
+
       // Navigate to the created plan
       navigate(`/plans/${response.data._id}/edit`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating travel plan:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to create travel plan');
+      const error = err as {
+        response?: { data?: { error?: string } };
+        message?: string;
+      };
+      setError(
+        error.response?.data?.error ||
+          error.message ||
+          'Failed to create travel plan',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -197,33 +273,35 @@ function TripPlanningContent() {
       <h1 className='text-4xl font-bold mb-8 mt-8 text-center'>
         Plan a new trip
       </h1>
-      <form onSubmit={handleSubmit} className='w-full max-w-xl flex flex-col items-center gap-4'>
+      <form
+        onSubmit={handleSubmit}
+        className='w-full max-w-xl flex flex-col items-center gap-4'
+      >
         {error && (
           <div className='w-full p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
             {error}
           </div>
         )}
         <div className='w-full relative'>
-          <Input
-            id='destination'
-            type='text'
-            placeholder=' '
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            className='peer w-full h-14 px-4 pt-5 pb-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black-400 text-base placeholder-transparent'
-            autoComplete='off'
-            required
+          <TomTomAutocomplete
+            apiKey={TOMTOM_CONFIG.API_KEY}
+            apiType='destination'
+            placeholder='Where to?'
+            onSelect={(result) => {
+              if ('address' in result) {
+                // Convert TomTom Destination to ITomTomLocationBase
+                const tomtomLocation = destinationToTomTomLocation(
+                  result as Destination,
+                );
+                setDestination(tomtomLocation);
+              }
+            }}
+            className='w-full h-14'
           />
-          <Label
-            htmlFor='destination'
-            className='absolute left-4 top-2 text-gray-500 text-base transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-sm peer-focus:text-black-600'
-          >
-            Where to?
-          </Label>
         </div>
         <div className='w-full'>
-          <DateRangePicker 
-            id='dateRange' 
+          <DateRangePicker
+            id='dateRange'
             className='w-full'
             onDateChange={setDateRange}
           />
@@ -423,6 +501,13 @@ function TripPlanningContent() {
           {isLoading ? 'Creating plan...' : 'Start planning'}
         </Button>
       </form>
+
+      {/* Location Permission Dialog */}
+      <LocationPermissionDialog
+        isOpen={showLocationDialog}
+        onComplete={handleLocationPermissionComplete}
+        onSkip={handleLocationPermissionSkip}
+      />
     </div>
   );
 }

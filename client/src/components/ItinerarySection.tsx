@@ -5,11 +5,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
-import {
-  Card,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -41,9 +37,14 @@ import {
   X,
   Loader2,
 } from 'lucide-react';
-import type { IDailySchedule, IPlanItem } from '@/types/trip';
+import type { IDailySchedule, IPlanItem, IPOILocation } from '@/types/trip';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
+import TomTomAutocomplete from './TomTomAutocomplete';
+import type { Destination } from '@/types/destination';
+import type { POI } from '@/types/poi';
+import { TOMTOM_CONFIG } from '@/config/env';
+import { poiToTomTomLocation } from '@/utils/tomtomHelpers';
 
 interface ItinerarySectionProps {
   itinerary: IDailySchedule[];
@@ -52,6 +53,7 @@ interface ItinerarySectionProps {
   onItemAdded?: (dayNumber: number, item: IPlanItem) => void;
   onItemUpdated?: (dayNumber: number, itemId: string, item: IPlanItem) => void;
   onItemDeleted?: (dayNumber: number, itemId: string) => void;
+  itineraryDestination?: Destination;
 }
 
 interface ItemFormData {
@@ -60,6 +62,7 @@ interface ItemFormData {
   startTime: string;
   endTime: string;
   location: string;
+  locationData: IPOILocation | null; // Store complete POI location data
   category: string;
   cost: string;
   notes: string;
@@ -71,6 +74,7 @@ const initialFormData: ItemFormData = {
   startTime: '',
   endTime: '',
   location: '',
+  locationData: null,
   category: 'activity',
   cost: '',
   notes: '',
@@ -87,6 +91,7 @@ const ItemForm: React.FC<{
   isSubmitting: boolean;
   isEditing?: boolean;
   dayDate: string; // Added to show which day this item belongs to
+  destination?: Destination;
 }> = ({
   formData,
   onFormDataChange,
@@ -95,6 +100,7 @@ const ItemForm: React.FC<{
   isSubmitting,
   isEditing = false,
   dayDate,
+  destination,
 }) => {
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -113,7 +119,9 @@ const ItemForm: React.FC<{
       {/* Day Info Display */}
       <div className='bg-gray-50 p-3 rounded-md'>
         <p className='text-sm text-gray-600'>
-          <span className='font-medium'>{isEditing ? "Day:" : "Adding to:"}</span>{' '}
+          <span className='font-medium'>
+            {isEditing ? 'Day:' : 'Adding to:'}
+          </span>{' '}
           {new Date(dayDate).toLocaleDateString()}
         </p>
       </div>
@@ -171,6 +179,36 @@ const ItemForm: React.FC<{
       {/* Location */}
       <div className='grid gap-2'>
         <Label htmlFor='location'>Location *</Label>
+        <TomTomAutocomplete
+          apiKey={TOMTOM_CONFIG.API_KEY}
+          apiType='poi'
+          placeholder='Search for a place or address'
+          destination={destination}
+          onSelect={(result) => {
+            // result: POI
+            if ('poi' in result) {
+              const locationText =
+                result.poi.name || result.address.freeformAddress || '';
+              const poiLocationData = poiToTomTomLocation(result as POI);
+              onFormDataChange({
+                ...formData,
+                location: locationText,
+                locationData: poiLocationData,
+              });
+            } else {
+              // Destination result
+              const locationText = result.address.freeformAddress || '';
+              onFormDataChange({
+                ...formData,
+                location: locationText,
+                locationData: null, // Destinations don't have POI data
+              });
+            }
+          }}
+          className='w-full'
+        />
+        {/* Nếu muốn cho phép nhập tay, có thể giữ lại Input bên dưới */}
+        {/*
         <Input
           id='location'
           name='location'
@@ -179,6 +217,7 @@ const ItemForm: React.FC<{
           placeholder='Enter location or address'
           required
         />
+        */}
       </div>
 
       {/* Category */}
@@ -439,6 +478,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   onItemAdded,
   onItemUpdated,
   onItemDeleted,
+  itineraryDestination,
 }) => {
   // By default, open the first day or any day that has items.
   const defaultOpenItems = itinerary
@@ -475,8 +515,12 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       notes: data.notes,
     };
 
-    // Add location if provided
-    if (data.location) {
+    // Add location if provided - use complete POI data if available
+    if (data.locationData) {
+      // Use the complete POI location data
+      apiData.location = data.locationData;
+    } else if (data.location) {
+      // Fallback to simple location if only text is provided
       apiData.location = {
         placeId: '',
         name: data.location,
@@ -490,23 +534,38 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       ? dayData.date
       : new Date().toISOString().split('T')[0];
 
-    if(data.startTime && data.endTime) {
-      const startDate = new Date(data.startTime).toISOString().split('T')[1];
-      const endDate = new Date(data.endTime).toISOString().split('T')[1];
-      if (startDate > endDate) {
+    // Validate time format before processing
+    if (data.startTime && data.endTime) {
+      // Times are in HH:MM format, compare them directly
+      if (data.startTime > data.endTime) {
         throw new Error('Start time cannot be after end time');
       }
     }
 
     if (data.startTime) {
       // Create date in UTC to avoid timezone conversion
-      const startDateTime = new Date(`${dayDate.split('T')[0]}T${data.startTime}:00.000Z`);
+      // dayDate is already in YYYY-MM-DD format or ISO string
+      const dateOnly = dayDate.split('T')[0]; // Extract date part
+      const startDateTime = new Date(`${dateOnly}T${data.startTime}:00.000Z`);
+
+      // Validate the created date
+      if (isNaN(startDateTime.getTime())) {
+        throw new Error('Invalid start time format');
+      }
+
       apiData.startTime = startDateTime.toISOString();
     }
 
     if (data.endTime) {
       // Create date in UTC to avoid timezone conversion
-      const endDateTime = new Date(`${dayDate.split('T')[0]}T${data.endTime}:00.000Z`);
+      const dateOnly = dayDate.split('T')[0]; // Extract date part
+      const endDateTime = new Date(`${dateOnly}T${data.endTime}:00.000Z`);
+
+      // Validate the created date
+      if (isNaN(endDateTime.getTime())) {
+        throw new Error('Invalid end time format');
+      }
+
       apiData.endTime = endDateTime.toISOString();
     }
 
@@ -529,6 +588,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       startTime: getTimeFromISO(item.startTime),
       endTime: getTimeFromISO(item.endTime),
       location: item.location?.address || '',
+      locationData: item.location || null,
       category: item.type,
       cost: item.cost || '',
       notes: item.notes || '',
@@ -605,7 +665,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       if (onItemAdded) {
         onItemAdded(currentDayNumber, response.data.data);
       }
-      
 
       setIsAddModalOpen(false);
       setFormData(initialFormData);
@@ -698,6 +757,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
               itinerary.find((day) => day.dayNumber === currentDayNumber)
                 ?.date || new Date().toISOString()
             }
+            destination={itineraryDestination}
           />
         </DialogContent>
       </Dialog>
@@ -722,6 +782,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                   )?.date || new Date().toISOString()
                 : new Date().toISOString()
             }
+            destination={itineraryDestination}
           />
         </DialogContent>
       </Dialog>
@@ -734,7 +795,8 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
           </DialogHeader>
           <div>
             <p className='text-sm text-gray-600'>
-              Are you sure you want to delete "{currentDeleteItem?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{currentDeleteItem?.title}"? This
+              action cannot be undone.
             </p>
           </div>
           <DialogFooter>

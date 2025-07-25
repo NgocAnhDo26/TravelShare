@@ -118,7 +118,8 @@ const FollowController: IFollowController = {
         page,
         limit,
       });
-      const totalFollowers = await FollowService.getFollowerCount(currentUserId);
+      const totalFollowers =
+        await FollowService.getFollowerCount(currentUserId);
 
       res.status(200).json({
         data: followers,
@@ -158,7 +159,8 @@ const FollowController: IFollowController = {
         page,
         limit,
       });
-      const totalFollowing = await FollowService.getFollowingCount(currentUserId);
+      const totalFollowing =
+        await FollowService.getFollowingCount(currentUserId);
 
       res.status(200).json({
         data: following,
@@ -199,7 +201,10 @@ const FollowController: IFollowController = {
         return;
       }
 
-      const isFollowing = await FollowService.isFollowing(followerId, followingId);
+      const isFollowing = await FollowService.isFollowing(
+        followerId,
+        followingId,
+      );
       res.status(HTTP_STATUS.OK).json({ isFollowing });
     } catch (error: any) {
       next(error);
