@@ -11,7 +11,7 @@ export const canEditPlan = (plan: Trip, user: User | null): boolean => {
   if (!user || !plan) {
     return false;
   }
-  
+
   return plan.author === user.userId;
 };
 
@@ -25,7 +25,7 @@ export const isPlanAuthor = (plan: Trip, user: User | null): boolean => {
   if (!user || !plan) {
     return false;
   }
-  
+
   return plan.author === user.userId;
 };
 
@@ -39,11 +39,11 @@ export const isPlanAuthor = (plan: Trip, user: User | null): boolean => {
 export const getActualEditMode = (
   requestedEditMode: boolean,
   plan: Trip,
-  user: User | null
+  user: User | null,
 ): boolean => {
   if (!requestedEditMode) {
     return false; // If not requesting edit mode, return false
   }
-  
+
   return canEditPlan(plan, user);
-}; 
+};

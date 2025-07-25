@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import { logger, morganStream } from './utils/logger';
 import commentRouter from './routes/comment.routes';
 import morgan from 'morgan';
+import locationRouter from './routes/location.routes';
 dotenv.config();
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/plans', travelPlanRouter);
 app.use('/api/comments', commentRouter);
+app.use('/api/location', locationRouter);
 
 // Global error handler (should be after routes)
 app.use(errorHandler);

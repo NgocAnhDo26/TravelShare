@@ -5,7 +5,6 @@ import AuthJwtMiddleware from '../middlewares/authJwt';
 
 const commentRouter: Router = Router();
 
-
 commentRouter.get('/', CommentController.getCommentsForTarget);
 commentRouter.post(
   '/',

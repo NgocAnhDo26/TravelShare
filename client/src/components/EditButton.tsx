@@ -11,7 +11,13 @@ interface EditButtonProps {
   onClick: () => void;
   className?: string;
   size?: 'default' | 'sm' | 'lg' | 'icon';
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  variant?:
+    | 'default'
+    | 'destructive'
+    | 'outline'
+    | 'secondary'
+    | 'ghost'
+    | 'link';
   children?: React.ReactNode;
 }
 
@@ -25,7 +31,7 @@ const EditButton: React.FC<EditButtonProps> = ({
   className = '',
   size = 'sm',
   variant = 'outline',
-  children
+  children,
 }) => {
   if (!canEditPlan(plan, user)) {
     return null;
@@ -38,10 +44,10 @@ const EditButton: React.FC<EditButtonProps> = ({
       onClick={onClick}
       className={className}
     >
-      <Pencil className="w-4 h-4 mr-2" />
+      <Pencil className='w-4 h-4 mr-2' />
       {children || 'Edit'}
     </Button>
   );
 };
 
-export default EditButton; 
+export default EditButton;

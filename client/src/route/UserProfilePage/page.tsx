@@ -17,7 +17,14 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 
-import { EllipsisVerticalIcon, Milestone, NotepadText, PencilIcon, Share, TrashIcon } from 'lucide-react';
+import {
+  EllipsisVerticalIcon,
+  Milestone,
+  NotepadText,
+  PencilIcon,
+  Share,
+  TrashIcon,
+} from 'lucide-react';
 import EditProfileForm from '@/components/edit-profile-form';
 import FollowersFollowingDialog from '@/components/FollowersFollowingDialog';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -26,6 +33,7 @@ import toast from 'react-hot-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
+import type { Trip } from '@/types/trip';
 
 // --- ProfileCard Component (can be a separate file like components/profile/ProfileCard.tsx) ---
 interface ProfileCardProps {
@@ -76,10 +84,10 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 
       {/* Follow Stats */}
       <div className='flex space-x-6 mb-6'>
-        <div 
+        <div
           className={`text-center transition-opacity p-2 rounded-lg ${
-            isMyProfile 
-              ? 'cursor-pointer hover:opacity-80 hover:bg-gray-50' 
+            isMyProfile
+              ? 'cursor-pointer hover:opacity-80 hover:bg-gray-50'
               : ''
           }`}
           onClick={isMyProfile ? onFollowersClick : undefined}
@@ -89,10 +97,10 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           </span>
           <span className='text-gray-500 text-xs uppercase'>Followers</span>
         </div>
-        <div 
+        <div
           className={`text-center transition-opacity p-2 rounded-lg ${
-            isMyProfile 
-              ? 'cursor-pointer hover:opacity-80 hover:bg-gray-50' 
+            isMyProfile
+              ? 'cursor-pointer hover:opacity-80 hover:bg-gray-50'
               : ''
           }`}
           onClick={isMyProfile ? onFollowingClick : undefined}
@@ -112,7 +120,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
               displayName: displayName,
               username: userName,
               avatarUrl: avatarUrl ?? '',
-              email: email, 
+              email: email,
             }}
           />
           <Button onClick={onShare} className='flex-1 cursor-pointer'>
@@ -121,8 +129,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           </Button>
         </div>
       ) : (
-        <Button 
-          className='cursor-pointer' 
+        <Button
+          className='cursor-pointer'
           onClick={onFollowToggle}
           disabled={isLoading}
           variant={isFollowing ? 'outline' : 'default'}
@@ -208,7 +216,7 @@ const TravelLogCard: React.FC<TravelLogCardProps> = ({
 
 // --- TabsSection Component (can be a separate file like components/profile/TabsSection.tsx) ---
 interface TabsSectionProps {
-  tripPlans: any[];
+  tripPlans: Trip[];
   guidesCount: number;
   isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
 }
@@ -220,7 +228,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
   const [activeTab, setActiveTab] = useState('tripPlans');
   const [plans, setPlans] = useState(tripPlans);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [planToDelete, setPlanToDelete] = useState<any>(null);
+  const [planToDelete, setPlanToDelete] = useState<Trip | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -234,8 +242,20 @@ const TabsSection: React.FC<TabsSectionProps> = ({
       await API.delete(`/plans/${planToDelete._id}`);
       setPlans((prev) => prev.filter((p) => p._id !== planToDelete._id));
       toast.success('Plan deleted successfully');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to delete plan');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error &&
+        'response' in err &&
+        typeof err.response === 'object' &&
+        err.response !== null &&
+        'data' in err.response &&
+        typeof err.response.data === 'object' &&
+        err.response.data !== null &&
+        'error' in err.response.data &&
+        typeof err.response.data.error === 'string'
+          ? err.response.data.error
+          : 'Failed to delete plan';
+      toast.error(errorMessage);
     } finally {
       setDeleteDialogOpen(false);
       setPlanToDelete(null);
@@ -249,7 +269,8 @@ const TabsSection: React.FC<TabsSectionProps> = ({
           <DialogHeader>
             <DialogTitle>Delete Plan</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the plan "{planToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete the plan "{planToDelete?.title}"?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -309,16 +330,20 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                   className='relative p-0 overflow-hidden group gap-0 cursor-pointer hover:scale-105 transition-transform duration-250'
                   onClick={() => navigate(`/plans/${plan._id}`)}
                 >
-                  <div className="relative w-full h-20">
+                  <div className='relative w-full h-20'>
                     <img
                       src={plan.coverImageUrl}
                       alt={plan.title}
                       className='w-full h-20 object-cover'
                     />
-                    <div className="absolute top-2 right-2 z-10">
+                    <div className='absolute top-2 right-2 z-10'>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button size='icon' variant='ghost' className="w-7 h-7">
+                          <Button
+                            size='icon'
+                            variant='ghost'
+                            className='w-7 h-7'
+                          >
                             <EllipsisVerticalIcon />
                           </Button>
                         </DropdownMenuTrigger>
@@ -329,30 +354,35 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                             <PencilIcon />
                             Edit plan
                           </DropdownMenuItem>
-                          {user && plan.author && user.userId === plan.author.toString() && (
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-700"
-                              onClick={() => {
-                                setPlanToDelete(plan);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <TrashIcon className="text-red-600" />
-                              Delete plan
-                            </DropdownMenuItem>
-                          )}
+                          {user &&
+                            plan.author &&
+                            user.userId === plan.author.toString() && (
+                              <DropdownMenuItem
+                                className='text-red-600 focus:text-red-700'
+                                onClick={() => {
+                                  setPlanToDelete(plan);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <TrashIcon className='text-red-600' />
+                                Delete plan
+                              </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                     <div
-                      className="pointer-events-none absolute bottom-0 left-0 w-full h-1/2"
+                      className='pointer-events-none absolute bottom-0 left-0 w-full h-1/2'
                       style={{
-                        background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)',
+                        background:
+                          'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)',
                       }}
                     />
                   </div>
                   <div className='px-4 mt-0 pb-2'>
-                    <h3 className='text-lg font-bold mb-1 text-left'>{plan.title}</h3>
+                    <h3 className='text-lg font-bold mb-1 text-left'>
+                      {plan.title}
+                    </h3>
                     <p className='text-gray-500 text-sm mb-2 text-left'>
                       {plan.destination?.name}
                     </p>
@@ -400,7 +430,7 @@ interface UserProfileData {
   followingCount: number;
   followers: string[];
   following: string[];
-  tripPlans: string[];
+  tripPlans: Trip[];
   guides: string[];
   travelLog: string[];
   faqs: string[];
@@ -416,8 +446,10 @@ const UserProfilePage: React.FC = () => {
   );
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [followersDialogOpen, setFollowersDialogOpen] = useState<boolean>(false);
-  const [followingDialogOpen, setFollowingDialogOpen] = useState<boolean>(false);
+  const [followersDialogOpen, setFollowersDialogOpen] =
+    useState<boolean>(false);
+  const [followingDialogOpen, setFollowingDialogOpen] =
+    useState<boolean>(false);
 
   // Use userId prop to fetch user data from API
   // Call API to fetch user data based on userId
@@ -447,7 +479,7 @@ const UserProfilePage: React.FC = () => {
   useEffect(() => {
     const checkFollowStatus = async () => {
       if (!user || !userId || user.userId === userId) return;
-      
+
       try {
         const response = await API.get(`/users/${userId}/is-following`);
         setIsFollowing(response.data.isFollowing);
@@ -475,18 +507,34 @@ const UserProfilePage: React.FC = () => {
         // Unfollow
         await API.delete(`/users/${userId}/unfollow`);
         setIsFollowing(false);
-        setUserData(prev => prev ? { ...prev, followerCount: prev.followerCount - 1 } : prev);
+        setUserData((prev) =>
+          prev ? { ...prev, followerCount: prev.followerCount - 1 } : prev,
+        );
         toast.success('Unfollowed successfully');
       } else {
         // Follow
         await API.post(`/users/${userId}/follow`);
         setIsFollowing(true);
-        setUserData(prev => prev ? { ...prev, followerCount: prev.followerCount + 1 } : prev);
+        setUserData((prev) =>
+          prev ? { ...prev, followerCount: prev.followerCount + 1 } : prev,
+        );
         toast.success('Followed successfully');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error toggling follow:', error);
-      toast.error(error.response?.data?.message || 'Failed to update follow status');
+      const errorMessage =
+        error instanceof Error &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'data' in error.response &&
+        typeof error.response.data === 'object' &&
+        error.response.data !== null &&
+        'message' in error.response.data &&
+        typeof error.response.data.message === 'string'
+          ? error.response.data.message
+          : 'Failed to update follow status';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -544,18 +592,17 @@ const UserProfilePage: React.FC = () => {
 
         {/* Right Column (Travel Log and Tabs Section) */}
         <div className='lg:col-span-2 space-y-6'>
-          
           {/* Followers/Following Dialogs */}
           <FollowersFollowingDialog
             isOpen={followersDialogOpen}
             onClose={() => setFollowersDialogOpen(false)}
-            type="followers"
+            type='followers'
             currentUserId={user?.userId || ''}
           />
           <FollowersFollowingDialog
             isOpen={followingDialogOpen}
             onClose={() => setFollowingDialogOpen(false)}
-            type="following"
+            type='following'
             currentUserId={user?.userId || ''}
           />
           <TravelLogCard

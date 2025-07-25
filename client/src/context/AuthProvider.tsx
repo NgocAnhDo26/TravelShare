@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser({
           userId: data.userId,
           username: data.username,
-          avatarUrl: data.avatarUrl
+          avatarUrl: data.avatarUrl,
         });
       } else {
         // The API returned an error (e.g., 401), so user is not logged in
@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       // Network error or other issues
-      console.error("Failed to fetch auth status:", error);
+      console.error('Failed to fetch auth status:', error);
       setUser(null);
     } finally {
       // We are done checking, so set loading to false
@@ -48,9 +48,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     const response = await API.post('/auth/logout');
     if (response.status != 200) {
-      toast.error("Error occured while logging out. Please try again.");
+      toast.error('Error occured while logging out. Please try again.');
     } else {
-      toast.success("Logged out successfully!");
+      toast.success('Logged out successfully!');
     }
   };
 
@@ -60,13 +60,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []); // The empty dependency array ensures this runs only once on mount
 
   const value = { user, isLoading, logout, refreshUser };
-  
+
   // Debug log when user state changes
   console.log('AuthProvider state:', { user, isLoading });
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

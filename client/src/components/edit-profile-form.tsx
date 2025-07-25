@@ -22,7 +22,7 @@ type EditProfileFormProps = {
     username: string;
     avatarUrl: string;
     email?: string;
-    displayName?: string; 
+    displayName?: string;
   };
   onSuccess?: () => void;
 } & React.ComponentProps<'div'>;
@@ -109,15 +109,11 @@ const EditProfileForm = ({ user, onSuccess }: EditProfileFormProps) => {
           </div>
           <div className='grid gap-3'>
             <Label htmlFor='email'>Email</Label>
-            <Input
-              id='email'
-              value={email}
-              readOnly
-            />
+            <Input id='email' value={email} readOnly />
           </div>
           <div className='grid gap-3'>
             <Label>Current Avatar</Label>
-            <Avatar className="w-24 h-24">
+            <Avatar className='w-24 h-24'>
               <AvatarImage src={previewUrl} />
               <AvatarFallback className='text-2xl font-bold'>
                 {user.username.charAt(0).toUpperCase()}

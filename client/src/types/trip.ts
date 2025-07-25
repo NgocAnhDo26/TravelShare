@@ -1,4 +1,35 @@
-// Location data interface from Google Maps
+// Base interface for TomTom location data (shared fields)
+export interface ITomTomLocationBase {
+  placeId?: string;
+  name: string;
+  address: string;
+  coordinates?: { lat: number; lng: number };
+  entityType?: string;
+  countryCode?: string;
+  country?: string;
+  countryCodeISO3?: string;
+  boundingBox?: {
+    topLeftPoint: { lat: number; lon: number };
+    btmRightPoint: { lat: number; lon: number };
+  };
+  viewport?: {
+    topLeftPoint: { lat: number; lon: number };
+    btmRightPoint: { lat: number; lon: number };
+  };
+  dataSources?: Record<string, unknown>;
+}
+
+// Interface for a POI location from TomTom API (extends ITomTomLocationBase)
+export interface IPOILocation extends ITomTomLocationBase {
+  phone?: string;
+  categories?: string[];
+  classifications?: {
+    code: string;
+    names: { nameLocale: string; name: string }[];
+  }[];
+}
+
+// Legacy interface for backward compatibility
 export interface ILocation {
   placeId: string;
   name: string;
@@ -9,12 +40,18 @@ export interface ILocation {
 // Defines the structure for a single event or activity in a daily schedule.
 export interface IPlanItem {
   _id: string;
-  type: 'activity' | 'food' | 'accommodation' | 'transportation' | 'shopping' | 'other';
+  type:
+    | 'activity'
+    | 'food'
+    | 'accommodation'
+    | 'transportation'
+    | 'shopping'
+    | 'other';
   title: string;
   description?: string;
   startTime?: string; // non-ISO date string, e.g., '10:00 AM'
   endTime?: string; // non-ISO date string, e.g., '10:00 AM'
-  location?: ILocation;
+  location?: IPOILocation; // Updated to use TomTom POI location
   cost?: string; // Changed from number to string
   notes?: string;
   order: number;
@@ -32,7 +69,7 @@ export interface IDailySchedule {
 export interface Trip {
   _id: string;
   title: string;
-  destination: ILocation;
+  destination: ITomTomLocationBase; // Updated to use TomTom location data
   coverImageUrl?: string;
   author: string; // User ID
   startDate?: string; // not ISO, but hh:mm AM/PM format
