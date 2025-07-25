@@ -13,7 +13,7 @@ const suppressedErrors = [
   'Error deleting image from Supabase:',
   'Failed to delete old cover image:',
   'Token verification error:',
-  'Password reset requested for non-existent user:'
+  'Password reset requested for non-existent user:',
 ];
 
 // Suppress console.log for expected test messages and dotenv
@@ -21,12 +21,12 @@ const originalConsoleLog = console.log;
 const suppressedLogs = [
   'Password reset requested for non-existent user:',
   '[dotenv@',
-  'injecting env'
+  'injecting env',
 ];
 
 console.log = (...args) => {
   const message = args.join(' ');
-  const shouldSuppress = suppressedLogs.some(log => message.includes(log));
+  const shouldSuppress = suppressedLogs.some((log) => message.includes(log));
   if (!shouldSuppress) {
     originalConsoleLog(...args);
   }
@@ -34,7 +34,9 @@ console.log = (...args) => {
 
 console.error = (...args) => {
   const message = args.join(' ');
-  const shouldSuppress = suppressedErrors.some(error => message.includes(error));
+  const shouldSuppress = suppressedErrors.some((error) =>
+    message.includes(error),
+  );
   if (!shouldSuppress) {
     originalConsoleError(...args);
   }
@@ -92,7 +94,7 @@ afterEach(async () => {
     const collection = collections[key];
     await collection.deleteMany({});
   }
-  
+
   // Clear all mocks
   vi.clearAllMocks();
 });
@@ -104,7 +106,7 @@ export { sendMailMock };
 export const suppressConsoleError = (callback: () => void | Promise<void>) => {
   const originalError = console.error;
   console.error = vi.fn();
-  
+
   try {
     callback();
   } finally {
@@ -113,13 +115,15 @@ export const suppressConsoleError = (callback: () => void | Promise<void>) => {
 };
 
 // Utility function to suppress console.error for async test contexts
-export const suppressConsoleErrorAsync = async (callback: () => Promise<void>) => {
+export const suppressConsoleErrorAsync = async (
+  callback: () => Promise<void>,
+) => {
   const originalError = console.error;
   console.error = vi.fn();
-  
+
   try {
     await callback();
   } finally {
     console.error = originalError;
   }
-}; 
+};

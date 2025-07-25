@@ -2,7 +2,8 @@ import mongoose, { Types } from 'mongoose';
 import TravelPlan, {
   ITravelPlan,
   IPlanItem,
-  ILocation,
+  ITomTomLocationBase,
+  IPOILocation,
 } from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
 import supabase from '../config/supabase.config';
@@ -37,7 +38,10 @@ interface ITravelPlanService {
     authorId: string,
   ): Promise<boolean>;
 
-  createTravelPlan(planData: any, authorId: string): Promise<any>;
+  createTravelPlan(
+    planData: CreateTravelPlanRequest,
+    authorId: string,
+  ): Promise<any>;
   getTravelPlanById(planId: string): Promise<any | null>;
   getTravelPlansByAuthor(authorId: string): Promise<any[]>;
   getPublicTravelPlans(): Promise<any[]>;
@@ -80,9 +84,10 @@ interface ITravelPlanService {
 
 interface CreateTravelPlanRequest {
   title: string;
-  destination: ILocation;
+  destination: ITomTomLocationBase;
   startDate: Date;
   endDate: Date;
+  privacy?: 'public' | 'private';
 }
 
 /**
@@ -104,13 +109,14 @@ const TravelPlanService: ITravelPlanService = {
       // Generate schedule array for each day from startDate to endDate
       const schedule = generateSchedule(planData.startDate, planData.endDate);
 
-      // Create the travel plan object
+      // Create the travel plan object with complete TomTom destination data
       const travelPlanData = {
         title: planData.title,
-        destination: planData.destination,
+        destination: planData.destination, // Use complete TomTom location data
         author: new Types.ObjectId(authorId),
         startDate: planData.startDate,
         endDate: planData.endDate,
+        privacy: planData.privacy || 'private',
         schedule,
       };
 

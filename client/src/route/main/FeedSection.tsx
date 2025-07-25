@@ -14,4 +14,4 @@ const FeedSection: React.FC = () => (
   </div>
 );
 
-export default FeedSection; 
+export default FeedSection;

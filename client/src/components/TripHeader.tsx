@@ -71,14 +71,18 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [editedTitle, setEditedTitle] = useState(trip.title);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditingVisibility, setIsEditingVisibility] = useState(false);
-  const [editedVisibility, setEditedVisibility] = useState<'public' | 'private'>(trip.privacy);
+  const [editedVisibility, setEditedVisibility] = useState<
+    'public' | 'private'
+  >(trip.privacy);
   const [isVisibilityLoading, setIsVisibilityLoading] = useState(false);
   const [isCoverImageModalOpen, setIsCoverImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCoverImageLoading, setIsCoverImageLoading] = useState(false);
   // Add state for author profile
-  const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(
+    null,
+  );
   const [authorLoading, setAuthorLoading] = useState(true);
   const [authorError, setAuthorError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -152,7 +156,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
 
       // Update the local trip data
       const updatedTrip = { ...trip, title: editedTitle.trim() };
-      
+
       // Call the parent component's update function if provided
       if (onTripUpdate) {
         onTripUpdate(updatedTrip);
@@ -200,7 +204,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
 
       // Update the local trip data
       const updatedTrip = { ...trip, privacy: newPrivacy };
-      
+
       // Call the parent component's update function if provided
       if (onTripUpdate) {
         onTripUpdate(updatedTrip);
@@ -245,24 +249,28 @@ const TripHeader: React.FC<TripHeaderProps> = ({
     }
 
     setIsCoverImageLoading(true);
-    
+
     // Show loading toast
     const loadingToast = toast.loading('Uploading cover image...');
-    
+
     try {
       // Single step: Upload file and update travel plan in one request
       const formData = new FormData();
       formData.append('coverImage', selectedImage);
 
-      const response = await API.put(`/plans/${trip._id}/cover-image`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      const response = await API.put(
+        `/plans/${trip._id}/cover-image`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
-      });
+      );
 
       // Update the local trip data with the response
       const updatedTrip = response.data;
-      
+
       // Call the parent component's update function if provided
       if (onTripUpdate) {
         onTripUpdate(updatedTrip);
@@ -271,13 +279,13 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       setIsCoverImageModalOpen(false);
       setSelectedImage(null);
       setPreviewUrl(null);
-      
+
       // Dismiss loading toast and show success
       toast.dismiss(loadingToast);
       toast.success('Cover image updated successfully!');
     } catch (error) {
       console.error('Error updating cover image:', error);
-      
+
       // Dismiss loading toast and show error
       toast.dismiss(loadingToast);
       toast.error('Failed to update cover image. Please try again.');
@@ -305,8 +313,20 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       await API.delete(`/plans/${trip._id}`);
       toast.success('Plan deleted successfully');
       navigate(`/users/${user?.userId}/profile`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to delete plan');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error &&
+        'response' in err &&
+        typeof err.response === 'object' &&
+        err.response !== null &&
+        'data' in err.response &&
+        typeof err.response.data === 'object' &&
+        err.response.data !== null &&
+        'error' in err.response.data &&
+        typeof err.response.data.error === 'string'
+          ? err.response.data.error
+          : 'Failed to delete plan';
+      toast.error(errorMessage);
     } finally {
       setDeleteDialogOpen(false);
     }
@@ -376,7 +396,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{isEditingTitle ? 'Save title' : 'Edit plan\'s title'}</p>
+                  <p>{isEditingTitle ? 'Save title' : "Edit plan's title"}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -392,13 +412,13 @@ const TripHeader: React.FC<TripHeaderProps> = ({
               </Button>
             )}
           </div>
-          
+
           {/* Show edit button in header for plan authors in view mode */}
           {!editMode && canEditPlan(trip, user) && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant='outline' 
+                <Button
+                  variant='outline'
                   size='sm'
                   onClick={handleEditPlan}
                   className='flex items-center gap-2'
@@ -412,13 +432,13 @@ const TripHeader: React.FC<TripHeaderProps> = ({
               </TooltipContent>
             </Tooltip>
           )}
-          
+
           {/* Show view button in header when in edit mode */}
           {editMode && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant='outline' 
+                <Button
+                  variant='outline'
                   size='sm'
                   onClick={handleViewPlan}
                   className='flex items-center gap-2'
@@ -444,19 +464,27 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                 <TrashIcon className='w-4 h-4' />
                 Delete
               </Button>
-              <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <Dialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+              >
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Delete Plan</DialogTitle>
                     <DialogDescription>
-                      Are you sure you want to delete this plan? This action cannot be undone.
+                      Are you sure you want to delete this plan? This action
+                      cannot be undone.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
                     <DialogClose asChild>
                       <Button variant='outline'>Cancel</Button>
                     </DialogClose>
-                    <Button variant='destructive' onClick={handleDeletePlan} autoFocus>
+                    <Button
+                      variant='destructive'
+                      onClick={handleDeletePlan}
+                      autoFocus
+                    >
                       Delete
                     </Button>
                   </DialogFooter>
@@ -465,7 +493,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             </>
           )}
         </div>
-        
+
         {/* Visibility Section - Only show in edit mode */}
         {editMode && (
           <div className='flex items-center'>
@@ -507,7 +535,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <span className='font-medium capitalize ml-1'>{trip.privacy}</span>
+                <span className='font-medium capitalize ml-1'>
+                  {trip.privacy}
+                </span>
               )}
             </div>
             {!isEditingVisibility && (
@@ -541,8 +571,10 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             )}
           </div>
         )}
-        
-        <p className='text-gray-600 text-left text-sm'>{trip.destination.name}</p>
+
+        <p className='text-gray-600 text-left text-sm'>
+          {trip.destination.name}
+        </p>
         <div className='flex justify-between items-center mt-4'>
           <div className='flex items-center text-gray-500'>
             <Calendar className='w-5 h-5 mr-2' />
@@ -565,11 +597,16 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.onerror = null;
-                        target.src = 'https://placehold.co/40x40/cccccc/ffffff?text=U';
+                        target.src =
+                          'https://placehold.co/40x40/cccccc/ffffff?text=U';
                       }}
                     />
                     <AvatarFallback>
-                      {(authorProfile.displayName || authorProfile.username || 'U')
+                      {(
+                        authorProfile.displayName ||
+                        authorProfile.username ||
+                        'U'
+                      )
                         .split(' ')
                         .map((n) => n[0])
                         .join('')
@@ -634,12 +671,15 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       </Card>
 
       {/* Cover Image Edit Modal */}
-      <Dialog open={isCoverImageModalOpen} onOpenChange={setIsCoverImageModalOpen}>
+      <Dialog
+        open={isCoverImageModalOpen}
+        onOpenChange={setIsCoverImageModalOpen}
+      >
         <DialogContent className='sm:max-w-md'>
           <DialogHeader>
             <DialogTitle>Edit Cover Image</DialogTitle>
           </DialogHeader>
-          
+
           <div className='space-y-4'>
             {/* Current Image Preview */}
             <div className='space-y-2 grid'>

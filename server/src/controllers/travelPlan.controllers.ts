@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { TravelPlanService } from '../services/travelPlan.service';
 import { LikeService } from '../services/like.service';
-import { ITravelPlan } from '../models/travelPlan.model'; 
+import {
+  ITravelPlan,
+  ITomTomLocationBase,
+  IPOILocation,
+} from '../models/travelPlan.model';
 import { HTTP_STATUS } from '../constants/http';
 import { Types } from 'mongoose'; // Make sure this is imported
 
@@ -12,8 +16,16 @@ import { Types } from 'mongoose'; // Make sure this is imported
 interface ITravelPlanController {
   addPlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
   getPlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
-  updatePlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
-  deletePlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
+  updatePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
+  deletePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
   createTravelPlan(req: Request, res: Response): Promise<void>;
   getTravelPlanById(req: Request, res: Response): Promise<void>;
   getTravelPlansByAuthor(req: Request, res: Response): Promise<void>;
@@ -40,7 +52,7 @@ interface ITravelPlanController {
     next: NextFunction,
   ): Promise<void>;
 
-   getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>; 
+  getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 /**
@@ -340,7 +352,7 @@ const TravelPlanController: ITravelPlanController = {
     try {
       const userId = req.user as string;
       const planId = req.params.id;
-      
+
       // Check if file was uploaded
       if (!req.file) {
         res
@@ -351,7 +363,7 @@ const TravelPlanController: ITravelPlanController = {
 
       // Get the file URL from req.file (location for S3, path for local)
       const coverImageUrl = (req.file as any).location || req.file.path;
-      
+
       if (!coverImageUrl) {
         res
           .status(HTTP_STATUS.BAD_REQUEST)
@@ -405,24 +417,41 @@ const TravelPlanController: ITravelPlanController = {
     }
   },
 
-  async addPlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async addPlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, dayNumber } = req.params;
       const authorId = req.user as string;
-      const newItem = await TravelPlanService.addPlanItem(id, parseInt(dayNumber, 10), req.body, authorId);
-      res.status(HTTP_STATUS.CREATED).json({ message: 'Item added successfully!', data: newItem });
+      const newItem = await TravelPlanService.addPlanItem(
+        id,
+        parseInt(dayNumber, 10),
+        req.body,
+        authorId,
+      );
+      res
+        .status(HTTP_STATUS.CREATED)
+        .json({ message: 'Item added successfully!', data: newItem });
     } catch (error) {
       next(error);
     }
   },
 
-  async getPlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getPlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, itemId } = req.params;
       const authorId = req.user as string;
       const item = await TravelPlanService.getPlanItem(id, itemId, authorId);
       if (!item) {
-        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found in this plan.' });
+        res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json({ error: 'Item not found in this plan.' });
         return;
       }
       res.status(HTTP_STATUS.OK).json(item);
@@ -431,42 +460,75 @@ const TravelPlanController: ITravelPlanController = {
     }
   },
 
-  async updatePlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updatePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, itemId } = req.params;
       const authorId = req.user as string;
-      const updatedItem = await TravelPlanService.updatePlanItem(id, itemId, req.body, authorId);
-       if (!updatedItem) {
-        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found or not authorized.' });
+      const updatedItem = await TravelPlanService.updatePlanItem(
+        id,
+        itemId,
+        req.body,
+        authorId,
+      );
+      if (!updatedItem) {
+        res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json({ error: 'Item not found or not authorized.' });
         return;
       }
-      res.status(HTTP_STATUS.OK).json({ message: 'Item updated successfully!', data: updatedItem });
+      res
+        .status(HTTP_STATUS.OK)
+        .json({ message: 'Item updated successfully!', data: updatedItem });
     } catch (error) {
       next(error);
     }
   },
 
-  async deletePlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deletePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, itemId } = req.params;
       const authorId = req.user as string;
-      const deleted = await TravelPlanService.deletePlanItem(id, itemId, authorId);
+      const deleted = await TravelPlanService.deletePlanItem(
+        id,
+        itemId,
+        authorId,
+      );
       if (!deleted) {
-        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found or not authorized.' });
+        res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json({ error: 'Item not found or not authorized.' });
         return;
       }
-      res.status(HTTP_STATUS.OK).json({ message: 'Item deleted successfully!' });
+      res
+        .status(HTTP_STATUS.OK)
+        .json({ message: 'Item deleted successfully!' });
     } catch (error) {
       next(error);
     }
   },
-   async getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getHomeFeed(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const userId = req.user as string;
+
       const after = req.query.after as string | undefined;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      const feed = await TravelPlanService.getFeedForUser(userId, { limit, after });
+      const feed = await TravelPlanService.getFeedForUser(userId, {
+        limit,
+        after,
+      });
 
       let likes: any[] = [];
       if (userId && feed.data.length > 0) {

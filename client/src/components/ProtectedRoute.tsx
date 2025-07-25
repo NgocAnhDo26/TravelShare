@@ -12,7 +12,7 @@ const ProtectedRoute: React.FC = () => {
 
   // 2. If loading is finished and there's no user, redirect to login
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to='/login' replace />;
   }
 
   // 3. If loading is finished and user exists, render the child route

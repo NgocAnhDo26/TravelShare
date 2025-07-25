@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import { logger, morganStream } from './utils/logger';
 import commentRouter from './routes/comment.routes';
 import morgan from 'morgan';
+import locationRouter from './routes/location.routes';
 import { createLikeRoutes } from './routes/like.routes';
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/plans', travelPlanRouter);
 app.use('/api/comments', commentRouter);
+app.use('/api/location', locationRouter);
 app.use('/api/plans', createLikeRoutes('TravelPlan'));
 // When you implement posts, add:
 // import postRouter from './routes/post.routes';

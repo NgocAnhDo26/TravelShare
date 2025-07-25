@@ -45,7 +45,11 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className='bg-white'>
         <Link to='/'>
-          <img src='/logo_title.png' alt='Logo' className='h-14 my-2 ml-3 mb-2' />
+          <img
+            src='/logo_title.png'
+            alt='Logo'
+            className='h-14 my-2 ml-3 mb-2'
+          />
         </Link>
       </SidebarHeader>
       <SidebarContent>

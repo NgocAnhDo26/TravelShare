@@ -18,4 +18,4 @@ export default function timeAgo(date: Date | string): string {
   interval = seconds / 60;
   if (interval > 1) return Math.floor(interval) + 'm ago';
   return Math.floor(seconds) + 's ago';
-};
+}
