@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -20,7 +20,7 @@ import {
 } from './ui/tooltip';
 import type { IPlan } from '@/types/trip';
 import timeAgo from '@/utils/time';
-import API from '../utils/axiosInstance';
+import { useLikeToggle } from '@/hooks/useLikeToggle';
 
 interface FeedPlanProps {
   plan: IPlan;
@@ -43,30 +43,18 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
     .charAt(0)
     .toUpperCase();
 
-  const [isLiked, setIsLiked] = useState(!!plan.isLiked);
-  const [likesCount, setLikesCount] = useState(plan.likesCount);
-  const [pop, setPop] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-
-  const handleToggleLike = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPop(true);
-    setTimeout(() => setPop(false), 200);
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount(count => newLikedState ? count + 1 : count - 1);
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(async () => {
-      try {
-        await API.post(`/plans/${plan._id}/like`);
-      } catch (err) {
-        setIsLiked(prev => !prev);
-        setLikesCount(count => newLikedState ? count - 1 : count + 1);
-      }
-    }, 700);
-  };
+  const {
+    isLiked,
+    likesCount,
+    pop,
+    handleToggleLike
+  } = useLikeToggle({
+    targetId: plan._id,
+    initialIsLiked: !!plan.isLiked,
+    initialLikesCount: plan.likesCount,
+    onModel: 'TravelPlan',
+    apiPath: '/plans',
+  });
 
   return (
     <Card

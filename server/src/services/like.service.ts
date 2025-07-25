@@ -4,6 +4,11 @@ import { Types } from 'mongoose';
 
 type OnModel = 'Post' | 'TravelPlan';
 
+export interface LikeFilter {
+  user: Types.ObjectId;
+  onModel?: OnModel;
+}
+
 export class LikeService {
   /**
    * Like a post or travel plan (idempotent)
@@ -143,7 +148,7 @@ export class LikeService {
     userId: Types.ObjectId;
     onModel?: OnModel;
   }) {
-    const filter: any = { user: userId };
+    const filter: LikeFilter = { user: userId };
     if (onModel) filter.onModel = onModel;
     return Like.find(filter);
   }

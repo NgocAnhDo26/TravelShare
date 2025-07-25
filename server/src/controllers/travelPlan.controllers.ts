@@ -44,6 +44,23 @@ interface ITravelPlanController {
 }
 
 /**
+ * Attach isLiked to any array of items (plans, posts, etc.) based on likes array.
+ * @param items Array of items (must have _id)
+ * @param likes Array of likes (must have targetId)
+ * @returns Array of items with isLiked property
+ */
+function attachIsLikedToItems(items: any[], likes: any[]): any[] {
+  const likedMap: Record<string, boolean> = likes.reduce((acc: Record<string, boolean>, like: any) => {
+    acc[like.targetId.toString()] = true;
+    return acc;
+  }, {});
+  return items.map((item: any) => ({
+    ...item.toObject?.() || item,
+    isLiked: likedMap[item._id.toString()] || false,
+  }));
+}
+
+/**
  * @const TravelPlanController
  * @description Controller for handling travel plan-related API requests.
  */
@@ -164,25 +181,17 @@ const TravelPlanController: ITravelPlanController = {
       const userId = req.user as string;
       const travelPlans = await TravelPlanService.getTravelPlansByAuthor(authorId);
 
-      // Get all liked plan ids for this user
-      let likedMap: Record<string, boolean> = {};
+      let likes: any[] = [];
       if (userId && travelPlans.length > 0) {
-        const likes = await LikeService.getUserLikesForTargets({
+        likes = await LikeService.getUserLikesForTargets({
           userId: new Types.ObjectId(userId),
           targetIds: travelPlans.map((plan: any) => plan._id),
           onModel: 'TravelPlan',
         });
-        likedMap = likes.reduce((acc: Record<string, boolean>, like: any) => {
-          acc[like.targetId.toString()] = true;
-          return acc;
-        }, {});
       }
 
       res.status(HTTP_STATUS.OK).json(
-        travelPlans.map((plan: any) => ({
-          ...plan.toObject?.() || plan,
-          isLiked: likedMap[plan._id.toString()] || false,
-        }))
+        attachIsLikedToItems(travelPlans, likes)
       );
     } catch (error) {
       console.error('Error in getTravelPlansByAuthor controller:', error);
@@ -459,26 +468,17 @@ const TravelPlanController: ITravelPlanController = {
 
       const feed = await TravelPlanService.getFeedForUser(userId, { limit, after });
 
-      // 2. Get all liked plan ids for this user
-      let likedMap: Record<string, boolean> = {};
+      let likes: any[] = [];
       if (userId && feed.data.length > 0) {
-        const likes = await LikeService.getUserLikesForTargets({
+        likes = await LikeService.getUserLikesForTargets({
           userId: new Types.ObjectId(userId),
           targetIds: feed.data.map((plan: any) => plan._id),
           onModel: 'TravelPlan',
         });
-        likedMap = likes.reduce((acc: Record<string, boolean>, like: any) => {
-          acc[like.targetId.toString()] = true;
-          return acc;
-        }, {});
       }
 
-      // 3. Attach isLiked to each plan
       res.status(HTTP_STATUS.OK).json({
-        data: feed.data.map((plan: any) => ({
-          ...plan.toObject?.() || plan,
-          isLiked: likedMap[plan._id.toString()] || false,
-        })),
+        data: attachIsLikedToItems(feed.data, likes),
         pagination: feed.pagination,
       });
     } catch (error: any) {

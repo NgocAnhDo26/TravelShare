@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { canEditPlan } from '@/utils/planPermissions';
+import { useLikeToggle } from '@/hooks/useLikeToggle';
 
 import {
   Calendar,
@@ -82,10 +83,19 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [authorError, setAuthorError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isLiked, setIsLiked] = useState(!!trip.isLiked);
-  const [likesCount, setLikesCount] = useState(trip.likesCount ?? 0);
-  const [pop, setPop] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const {
+    isLiked,
+    likesCount,
+    pop,
+    handleToggleLike
+  } = useLikeToggle({
+    targetId: trip._id,
+    initialIsLiked: !!trip.isLiked,
+    initialLikesCount: trip.likesCount ?? 0,
+    onModel: 'TravelPlan',
+    apiPath: '/plans',
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -114,9 +124,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   useEffect(() => {
     // Clear the timer if the component is unmounted
     return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
+      // The debounceTimer is now managed by useLikeToggle
     };
   }, []);
 
@@ -303,36 +311,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       setDeleteDialogOpen(false);
     }
   };
-
-  const handleToggleLike = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // 1. Trigger animation and perform an immediate, optimistic UI update.
-    setPop(true);
-    setTimeout(() => setPop(false), 200); // Reset pop animation
-    // Use the previous state to determine the new state
-    const newLikedState = !isLiked;
-    // Update state separately to avoid nesting
-    setIsLiked(newLikedState);
-    setLikesCount(count => newLikedState ? count + 1 : count - 1);
-    // 2. Clear any pending API call to debounce.
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    // 3. Schedule the API call after a delay.
-    debounceTimer.current = setTimeout(async () => {
-      try {
-        await API.post(`/plans/${trip._id}/like`);
-        // On success, the optimistic UI is already correct. Nothing more to do.
-      } catch (err) {
-        // 4. On error, revert the optimistic UI changes.
-        toast.error('Could not update like status.');
-        // Revert by performing the opposite action
-        setIsLiked(prev => !prev);
-        setLikesCount(count => newLikedState ? count - 1 : count + 1);
-      }
-    }, 700); // 700ms delay
-  };
-
 
   return (
     <>
