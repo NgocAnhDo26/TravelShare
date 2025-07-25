@@ -20,9 +20,9 @@ const corsOptions = {
 };
 const morganFormat =
   ':method :url :status :res[content-length] - :response-time ms';
-
-app.use(morgan(morganFormat, { stream: morganStream }));
+  
 app.use(cors(corsOptions));
+app.use(morgan(morganFormat, { stream: morganStream }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

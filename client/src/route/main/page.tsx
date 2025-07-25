@@ -17,16 +17,16 @@ const MainPage: React.FC = () => {
   const [isPublicLoading, setIsPublicLoading] = useState(false);
 
   useEffect(() => {
-
     if (!isLoading && !user) {
       const fetchPublicPlans = async () => {
         setIsPublicLoading(true);
         try {
-
           const response = await API.get('/plans/public');
-          setPublicPlans(response.data);
+          // Ensure we always set an array
+          setPublicPlans(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
           console.error('Failed to fetch public plans:', error);
+          setPublicPlans([]); // Set empty array on error
         } finally {
           setIsPublicLoading(false);
         }
@@ -178,7 +178,7 @@ const MainPage: React.FC = () => {
                   </Card>
                 ))
               ) : (
-                 publicPlans.map((plan) => (
+                publicPlans.map((plan) => (
                   <PublicPlanCard key={plan._id} plan={plan} />
                 ))
               )}
@@ -205,4 +205,4 @@ const MainPage: React.FC = () => {
   );
 };
 
-export default MainPage; 
+export default MainPage;

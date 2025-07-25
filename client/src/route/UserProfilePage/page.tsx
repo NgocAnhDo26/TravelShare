@@ -409,7 +409,7 @@ interface UserProfileData {
 // --- Main User Profile Page Component ---
 const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
-  let { userId } = useParams();
+  const { userId } = useParams();
   const navigate = useNavigate();
   const [userData, setUserData] = useState<UserProfileData | undefined>(
     undefined,
