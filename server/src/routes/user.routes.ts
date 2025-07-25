@@ -32,6 +32,12 @@ router.get(
   FollowController.getFollowing,
 );
 
+router.get(
+  '/:id/is-following',
+  AuthJwtMiddleware.verifyToken,
+  FollowController.isFollowing,
+);
+
 /** Get user (only current user) edit profile */
 router.get(
   '/edit-profile',

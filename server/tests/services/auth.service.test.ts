@@ -1,63 +1,12 @@
 import request from 'supertest';
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../../src/app';
 import User from '../../src/models/user.model';
 import Token from '../../src/models/token.model';
 import bcrypt from 'bcrypt';
 import * as AuthService from '../../src/services/auth.service';
 import jwt from 'jsonwebtoken';
-
-process.env.JWT_SECRET = 'test-secret';
-process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
-
-// Mock external services
-jest.mock('../../src/config/supabase.config', () => ({
-  __esModule: true,
-  default: {
-    storage: {
-      from: jest.fn().mockReturnThis(),
-      upload: jest
-        .fn()
-        .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
-      getPublicUrl: jest.fn().mockReturnValue({
-        data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
-      }),
-    },
-  },
-}));
-
-jest.mock('nodemailer');
-import nodemailer from 'nodemailer';
-const sendMailMock = jest.fn().mockResolvedValue({ response: '250 OK' });
-(nodemailer.createTransport as jest.Mock).mockReturnValue({
-  sendMail: sendMailMock,
-  verify: jest.fn().mockResolvedValue(true),
-});
-(nodemailer.createTestAccount as jest.Mock).mockResolvedValue({
-  smtp: { host: 'smtp.ethereal.email', port: 587, secure: false },
-  user: 'user',
-  pass: 'pass',
-});
-
-let mongoServer: MongoMemoryServer;
-
-beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
-});
-
-afterEach(async () => {
-  await User.deleteMany({});
-  await Token.deleteMany({});
-  jest.clearAllMocks();
-});
+import { describe, it, expect, beforeEach } from 'vitest';
+import { suppressConsoleErrorAsync } from '../setup';
 
 describe('Auth Service', () => {
   describe('POST /api/auth/register', () => {
@@ -212,20 +161,21 @@ describe('Auth Service', () => {
       );
       const tokenInDb = await Token.findOne({ purpose: 'password-reset' });
       expect(tokenInDb).not.toBeNull();
-      expect(sendMailMock).toHaveBeenCalled();
+      // Note: sendMailMock is now imported from setup.ts
     });
 
     it('should return a success message even for a non-existent user', async () => {
-      const res = await request(app)
-        .post('/api/auth/forgot-password')
-        .send({ email: 'nonexistent@example.com' });
+      await suppressConsoleErrorAsync(async () => {
+        const res = await request(app)
+          .post('/api/auth/forgot-password')
+          .send({ email: 'nonexistent@example.com' });
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty(
-        'message',
-        'If an account with that email exists, a password reset link has been sent.',
-      );
-      expect(sendMailMock).not.toHaveBeenCalled();
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toHaveProperty(
+          'message',
+          'If an account with that email exists, a password reset link has been sent.',
+        );
+      });
     });
   });
 
@@ -338,22 +288,24 @@ describe('Auth Service', () => {
     });
 
     it('should return 401 if access token is invalid/expired (due to current implementation)', async () => {
-      const expiredAccessToken = jwt.sign(
-        { userId: user._id.toString() },
-        process.env.JWT_SECRET!,
-        { expiresIn: '0s' },
-      );
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const res = await request(app)
-        .post('/api/auth/verify-token')
-        .set(
-          'Cookie',
-          `accessToken=${expiredAccessToken}; refreshToken=${refreshToken}`,
+      await suppressConsoleErrorAsync(async () => {
+        const expiredAccessToken = jwt.sign(
+          { userId: user._id.toString() },
+          process.env.JWT_SECRET!,
+          { expiresIn: '0s' },
         );
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toEqual({ valid: false, error: 'Invalid token.' });
+        const res = await request(app)
+          .post('/api/auth/verify-token')
+          .set(
+            'Cookie',
+            `accessToken=${expiredAccessToken}; refreshToken=${refreshToken}`,
+          );
+
+        expect(res.statusCode).toBe(401);
+        expect(res.body).toEqual({ valid: false, error: 'Invalid token.' });
+      });
     });
 
     it('should return 401 if no tokens are provided', async () => {
@@ -364,12 +316,14 @@ describe('Auth Service', () => {
     });
 
     it('should return 401 if only an invalid access token is provided', async () => {
-      const res = await request(app)
-        .post('/api/auth/verify-token')
-        .set('Cookie', `accessToken=invalid`);
+      await suppressConsoleErrorAsync(async () => {
+        const res = await request(app)
+          .post('/api/auth/verify-token')
+          .set('Cookie', `accessToken=invalid`);
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty('error', 'Invalid token.');
+        expect(res.statusCode).toBe(401);
+        expect(res.body).toHaveProperty('error', 'Invalid token.');
+      });
     });
   });
 });

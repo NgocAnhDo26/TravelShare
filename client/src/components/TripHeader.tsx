@@ -85,6 +85,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [isLiked, setIsLiked] = useState(!!trip.isLiked);
   const [likesCount, setLikesCount] = useState(trip.likesCount ?? 0);
   const [pop, setPop] = useState(false);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -109,6 +110,15 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       isMounted = false;
     };
   }, [trip.author]);
+
+  useEffect(() => {
+    // Clear the timer if the component is unmounted
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   const handleEditTitle = () => {
     setIsEditingTitle(true);
@@ -294,27 +304,35 @@ const TripHeader: React.FC<TripHeaderProps> = ({
     }
   };
 
-  const handleToggleLike = async (e: React.MouseEvent) => {
+  const handleToggleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // 1. Trigger animation and perform an immediate, optimistic UI update.
     setPop(true);
-
-    setIsLiked(prevLiked => {
-      setLikesCount(prevCount => prevLiked ? prevCount - 1 : prevCount + 1);
-      return !prevLiked;
-    });
-
-    try {
-      await API.post(`/plans/${trip._id}/like`);
-    } catch (err) {
-      // Revert both states if error
-      setIsLiked(prevLiked => {
-        setLikesCount(prevCount => prevLiked ? prevCount - 1 : prevCount + 1);
-        return !prevLiked;
-      });
-    } finally {
-      setTimeout(() => setPop(false), 200);
+    setTimeout(() => setPop(false), 200); // Reset pop animation
+    // Use the previous state to determine the new state
+    const newLikedState = !isLiked;
+    // Update state separately to avoid nesting
+    setIsLiked(newLikedState);
+    setLikesCount(count => newLikedState ? count + 1 : count - 1);
+    // 2. Clear any pending API call to debounce.
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
+    // 3. Schedule the API call after a delay.
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        await API.post(`/plans/${trip._id}/like`);
+        // On success, the optimistic UI is already correct. Nothing more to do.
+      } catch (err) {
+        // 4. On error, revert the optimistic UI changes.
+        toast.error('Could not update like status.');
+        // Revert by performing the opposite action
+        setIsLiked(prev => !prev);
+        setLikesCount(count => newLikedState ? count - 1 : count + 1);
+      }
+    }, 700); // 700ms delay
   };
+
 
   return (
     <>
@@ -599,7 +617,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                     onMouseDown={e => e.stopPropagation()}
                     className={`
                       group flex items-center gap-2 px-2 py-1 rounded-full
-                      transition bg-transparent hover:bg-red-50 active:bg-red-100
+                      transition bg-transparent hover:bg-gray-100 active:bg-gray-200
                       focus:outline-none cursor-pointer active:scale-95
                     `}
                     aria-label={isLiked ? "Unlike" : "Like"}

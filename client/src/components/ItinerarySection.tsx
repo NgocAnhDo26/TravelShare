@@ -490,14 +490,23 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       ? dayData.date
       : new Date().toISOString().split('T')[0];
 
+    if(data.startTime && data.endTime) {
+      const startDate = new Date(data.startTime).toISOString().split('T')[1];
+      const endDate = new Date(data.endTime).toISOString().split('T')[1];
+      if (startDate > endDate) {
+        throw new Error('Start time cannot be after end time');
+      }
+    }
+
     if (data.startTime) {
-      const startDateTime = new Date(
-        `${dayDate.split('T')[0]}T${data.startTime}`,
-      );
+      // Create date in UTC to avoid timezone conversion
+      const startDateTime = new Date(`${dayDate.split('T')[0]}T${data.startTime}:00.000Z`);
       apiData.startTime = startDateTime.toISOString();
     }
+
     if (data.endTime) {
-      const endDateTime = new Date(`${dayDate.split('T')[0]}T${data.endTime}`);
+      // Create date in UTC to avoid timezone conversion
+      const endDateTime = new Date(`${dayDate.split('T')[0]}T${data.endTime}:00.000Z`);
       apiData.endTime = endDateTime.toISOString();
     }
 
@@ -508,8 +517,10 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   const convertApiFormatToFormData = (item: IPlanItem): ItemFormData => {
     const getTimeFromISO = (isoString?: string): string => {
       if (!isoString) return '';
-      const date = new Date(isoString);
-      return date.toTimeString().slice(0, 5); // HH:MM format
+      const date = new Date(isoString); // Parse ISO string that has timezone
+      const hours = date.getUTCHours().toString().padStart(2, '0'); // UTC to avoid timezone issues
+      const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`; // Returns in HH:mm format
     };
 
     return {
@@ -594,6 +605,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       if (onItemAdded) {
         onItemAdded(currentDayNumber, response.data.data);
       }
+      
 
       setIsAddModalOpen(false);
       setFormData(initialFormData);

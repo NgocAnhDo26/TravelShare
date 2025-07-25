@@ -1,42 +1,9 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import mongoose, { Document } from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../../src/app';
 import User from '../../src/models/user.model';
 import Follow from '../../src/models/follow.model';
-let mongoServer: MongoMemoryServer;
-
-process.env.JWT_SECRET = 'test-secret';
-process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
-
-// --- Mock Supabase ---
-jest.mock('../../src/config/supabase.config', () => ({
-  __esModule: true,
-  default: {
-    storage: {
-      from: jest.fn().mockReturnThis(),
-      upload: jest
-        .fn()
-        .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
-      getPublicUrl: jest.fn().mockReturnValue({
-        data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
-      }),
-    },
-  },
-}));
-
-// --- Database Setup and Teardown ---
-
-beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
-});
 
 // --- Follow Test Suite ---
 

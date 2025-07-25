@@ -454,18 +454,17 @@ const TravelPlanController: ITravelPlanController = {
    async getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user as string;
-      const page = parseInt(req.query.page as string) || 1;
+      const after = req.query.after as string | undefined;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      // 1. Get feed plans
-      const feed = await TravelPlanService.getFeedForUser(userId, { page, limit });
+      const feed = await TravelPlanService.getFeedForUser(userId, { limit, after });
 
       // 2. Get all liked plan ids for this user
       let likedMap: Record<string, boolean> = {};
-      if (userId && feed.length > 0) {
+      if (userId && feed.data.length > 0) {
         const likes = await LikeService.getUserLikesForTargets({
           userId: new Types.ObjectId(userId),
-          targetIds: feed.map((plan: any) => plan._id),
+          targetIds: feed.data.map((plan: any) => plan._id),
           onModel: 'TravelPlan',
         });
         likedMap = likes.reduce((acc: Record<string, boolean>, like: any) => {
@@ -475,12 +474,13 @@ const TravelPlanController: ITravelPlanController = {
       }
 
       // 3. Attach isLiked to each plan
-      res.status(HTTP_STATUS.OK).json(
-        feed.map((plan: any) => ({
+      res.status(HTTP_STATUS.OK).json({
+        data: feed.data.map((plan: any) => ({
           ...plan.toObject?.() || plan,
           isLiked: likedMap[plan._id.toString()] || false,
-        }))
-      );
+        })),
+        pagination: feed.pagination,
+      });
     } catch (error: any) {
       next(error);
     }

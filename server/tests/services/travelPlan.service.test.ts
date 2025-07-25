@@ -1,28 +1,23 @@
+import { vi, describe, it, expect, afterEach } from 'vitest';
 import { TravelPlanService } from '../../src/services/travelPlan.service';
 import TravelPlan from '../../src/models/travelPlan.model';
 import { generateSchedule } from '../../src/utils/travelPlan';
 import { Types } from 'mongoose';
+import { suppressConsoleErrorAsync } from '../setup';
+import Follow from '../../src/models/follow.model';
 
 // Mock the Mongoose model and utility functions
-jest.mock('../../src/models/travelPlan.model');
-jest.mock('../../src/utils/travelPlan');
-jest.mock('../../src/config/supabase.config', () => ({
-  __esModule: true,
-  default: {
-    storage: {
-      from: () => ({
-        remove: jest.fn().mockResolvedValue({ error: null }),
-      }),
-    },
-  },
-}));
+vi.mock('../../src/models/travelPlan.model');
+vi.mock('../../src/utils/travelPlan');
+vi.mock('../../src/models/follow.model');
 
-const mockedTravelPlan = TravelPlan as jest.Mocked<typeof TravelPlan>;
-const mockedGenerateSchedule = generateSchedule as jest.Mock;
+const mockedTravelPlan = TravelPlan as any;
+const mockedGenerateSchedule = generateSchedule as any;
+const mockedFollow = Follow as any;
 
 describe('TravelPlanService', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('createTravelPlan', () => {
@@ -45,7 +40,7 @@ describe('TravelPlanService', () => {
       const newPlan = { ...planData, author: authorId, schedule };
 
       mockedGenerateSchedule.mockReturnValue(schedule);
-      (mockedTravelPlan.create as jest.Mock).mockResolvedValue(newPlan);
+      mockedTravelPlan.create.mockResolvedValue(newPlan);
 
       const result = await TravelPlanService.createTravelPlan(planData, authorId);
 
@@ -63,7 +58,7 @@ describe('TravelPlanService', () => {
     it('should return a travel plan by its ID', async () => {
       const planId = new Types.ObjectId().toHexString();
       const plan = { _id: planId, title: 'Test Plan' };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
 
       const result = await TravelPlanService.getTravelPlanById(planId);
 
@@ -76,7 +71,7 @@ describe('TravelPlanService', () => {
     it('should return all travel plans for a given author', async () => {
       const authorId = new Types.ObjectId().toHexString();
       const plans = [{ title: 'Plan 1' }, { title: 'Plan 2' }];
-      (mockedTravelPlan.find as jest.Mock).mockResolvedValue(plans);
+      mockedTravelPlan.find.mockResolvedValue(plans);
 
       const result = await TravelPlanService.getTravelPlansByAuthor(authorId);
 
@@ -88,7 +83,7 @@ describe('TravelPlanService', () => {
   describe('getPublicTravelPlans', () => {
     it('should return all public travel plans', async () => {
       const publicPlans = [{ title: 'Public Plan', privacy: 'public' }];
-      (mockedTravelPlan.find as jest.Mock).mockResolvedValue(publicPlans);
+      mockedTravelPlan.find.mockResolvedValue(publicPlans);
 
       const result = await TravelPlanService.getPublicTravelPlans();
 
@@ -101,8 +96,8 @@ describe('TravelPlanService', () => {
     it('should delete a travel plan if the user is the author', async () => {
       const planId = new Types.ObjectId().toHexString();
       const authorId = new Types.ObjectId().toHexString();
-      (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue({ _id: planId, author: authorId });
-      (mockedTravelPlan.findByIdAndDelete as jest.Mock).mockResolvedValue(true);
+      mockedTravelPlan.findOne.mockResolvedValue({ _id: planId, author: authorId });
+      mockedTravelPlan.findByIdAndDelete.mockResolvedValue(true);
 
       const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
 
@@ -114,7 +109,7 @@ describe('TravelPlanService', () => {
     it('should not delete a travel plan if the user is not the author', async () => {
       const planId = new Types.ObjectId().toHexString();
       const authorId = new Types.ObjectId().toHexString();
-      (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(null);
+      mockedTravelPlan.findOne.mockResolvedValue(null);
 
       const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
 
@@ -133,9 +128,9 @@ describe('TravelPlanService', () => {
         _id: planId,
         author: authorId,
         title: 'Old Title',
-        save: jest.fn().mockResolvedValue({ title: newTitle }),
+        save: vi.fn().mockResolvedValue({ title: newTitle }),
       };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
 
       const result = await TravelPlanService.updateTravelPlanTitle(planId, authorId, newTitle);
 
@@ -154,9 +149,9 @@ describe('TravelPlanService', () => {
         _id: planId,
         author: authorId,
         privacy: 'private',
-        save: jest.fn().mockResolvedValue({ privacy: newPrivacy }),
+        save: vi.fn().mockResolvedValue({ privacy: newPrivacy }),
       };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
 
       const result = await TravelPlanService.updateTravelPlanPrivacy(planId, authorId, newPrivacy);
 
@@ -168,22 +163,24 @@ describe('TravelPlanService', () => {
 
   describe('updateTravelPlanCoverImage', () => {
     it('should update the cover image URL of a travel plan', async () => {
-      const planId = new Types.ObjectId().toHexString();
-      const authorId = new Types.ObjectId().toHexString();
-      const newCoverUrl = 'http://example.com/new-cover.jpg';
-      const plan = {
-        _id: planId,
-        author: authorId,
-        coverImageUrl: 'http://example.com/old-cover.jpg',
-        save: jest.fn().mockResolvedValue({ coverImageUrl: newCoverUrl }),
-      };
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      await suppressConsoleErrorAsync(async () => {
+        const planId = new Types.ObjectId().toHexString();
+        const authorId = new Types.ObjectId().toHexString();
+        const newCoverUrl = 'http://example.com/new-cover.jpg';
+        const plan = {
+          _id: planId,
+          author: authorId,
+          coverImageUrl: 'http://example.com/old-cover.jpg',
+          save: vi.fn().mockResolvedValue({ coverImageUrl: newCoverUrl }),
+        };
+        mockedTravelPlan.findById.mockResolvedValue(plan);
 
-      const result = await TravelPlanService.updateTravelPlanCoverImage(planId, authorId, newCoverUrl);
+        const result = await TravelPlanService.updateTravelPlanCoverImage(planId, authorId, newCoverUrl);
 
-      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
-      expect(plan.save).toHaveBeenCalled();
-      expect(result.coverImageUrl).toBe(newCoverUrl);
+        expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
+        expect(plan.save).toHaveBeenCalled();
+        expect(result.coverImageUrl).toBe(newCoverUrl);
+      });
     });
   });
 
@@ -200,22 +197,120 @@ describe('TravelPlanService', () => {
         author: authorId,
         startDate: oldStartDate,
         endDate: oldEndDate,
-        schedule: [],
+        schedule: [{ dayNumber: 1, date: oldStartDate, items: [] }],
       };
-      const newSchedule = [{ day: 1 }];
+      const newSchedule = [{ dayNumber: 1, date: newStartDate, items: [] }];
+      const updatedPlan = {
+        _id: planId,
+        author: authorId,
+        startDate: newStartDate,
+        endDate: newEndDate,
+        schedule: newSchedule,
+      };
 
-      (mockedTravelPlan.findById as jest.Mock).mockResolvedValue(plan);
+      mockedTravelPlan.findById.mockResolvedValue(plan);
+      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(updatedPlan);
       mockedGenerateSchedule.mockReturnValue(newSchedule);
-      (mockedTravelPlan.findByIdAndUpdate as jest.Mock).mockResolvedValue({ schedule: newSchedule });
 
-      await TravelPlanService.updateTravelPlanDates(planId, authorId, newStartDate, newEndDate);
+      const result = await TravelPlanService.updateTravelPlanDates(
+        planId,
+        authorId,
+        newStartDate,
+        newEndDate,
+      );
 
+      expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
       expect(mockedGenerateSchedule).toHaveBeenCalledWith(newStartDate, newEndDate);
       expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
         planId,
-        { startDate: newStartDate, endDate: newEndDate, schedule: newSchedule },
+        {
+          startDate: newStartDate,
+          endDate: newEndDate,
+          schedule: newSchedule,
+        },
         { new: true }
       );
+      expect(result.startDate).toBe(newStartDate);
+      expect(result.endDate).toBe(newEndDate);
     });
+  });
+});
+
+// --- getFeedForUser ---
+describe('getFeedForUser', () => {
+  const userId = new Types.ObjectId().toHexString();
+  const followingId = new Types.ObjectId().toHexString();
+  const trendingId = new Types.ObjectId().toHexString();
+  const followedPlan = {
+    _id: new Types.ObjectId(),
+    author: { _id: followingId, username: 'followed', displayName: 'Followed User', avatarUrl: 'f.png' },
+    privacy: 'public',
+    createdAt: new Date('2024-01-01T10:00:00Z'),
+  };
+  const trendingPlan = {
+    _id: new Types.ObjectId(),
+    author: { _id: trendingId, username: 'trending', displayName: 'Trending User', avatarUrl: 't.png' },
+    privacy: 'public',
+    trendingScore: 100,
+    createdAt: new Date('2024-01-01T09:00:00Z'),
+  };
+
+  function mockTravelPlanFindSequence(followedPlans: any[], trendingPlans: any[]) {
+    // Mock the chain for followed plans
+    const followedChain = {
+      populate: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue(followedPlans),
+    };
+    // Mock the chain for trending plans
+    const trendingChain = {
+      populate: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue(trendingPlans),
+    };
+    mockedTravelPlan.find
+      .mockImplementationOnce(() => followedChain)
+      .mockImplementationOnce(() => trendingChain);
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should interleave followed and trending plans and paginate', async () => {
+    // User follows one user
+    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([{ following: followingId }]) }) });
+    mockTravelPlanFindSequence(
+      [followedPlan, { ...followedPlan, _id: new Types.ObjectId(), createdAt: new Date('2024-01-01T08:00:00Z') }],
+      [trendingPlan]
+    );
+    const result = await TravelPlanService.getFeedForUser(userId, { limit: 2 });
+    // Should interleave: 1st followed, 2nd followed, then trending injected (but limit=2, so only first two)
+    expect(result.data.length).toBe(2);
+    expect(result.data[0].author.username).toBe('followed');
+    expect(result.data[1].author.username).toBe('followed');
+    expect(result.pagination.has_next_page).toBe(true);
+    expect(result.pagination.next_cursor).toBeDefined();
+  });
+
+  it('should handle user following no one (only trending)', async () => {
+    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([]) }) });
+    mockTravelPlanFindSequence([], [trendingPlan]);
+    const result = await TravelPlanService.getFeedForUser(userId, { limit: 1 });
+    expect(result.data.length).toBe(0);
+    expect(result.pagination.has_next_page).toBe(false);
+  });
+
+  it('should use the after cursor for pagination', async () => {
+    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([{ following: followingId }]) }) });
+    mockTravelPlanFindSequence([followedPlan], [trendingPlan]);
+    const after = new Date('2024-01-01T11:00:00Z').toISOString();
+    await TravelPlanService.getFeedForUser(userId, { limit: 1, after });
+    // Check that the followed query was called with createdAt < after
+    expect(mockedTravelPlan.find).toHaveBeenCalledWith({ author: { $in: [followingId] }, privacy: 'public', createdAt: { $lt: new Date(after) } });
   });
 });

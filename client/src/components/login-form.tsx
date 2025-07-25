@@ -14,6 +14,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
+import { useGoogleLogin } from '@react-oauth/google';
 
 export function LoginForm({
   className,
@@ -33,6 +34,39 @@ export function LoginForm({
       navigate('/');
     }
   }, [user, navigate]);
+
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true);
+      const loadingToast = toast.loading('Logging in with Google...');
+      try {
+        const response = await API.post('/auth/google-login', {
+          token: tokenResponse.access_token,
+        });
+        toast.dismiss(loadingToast);
+        toast.success(response.data.message || 'Login successful!');
+        await refreshUser();
+        navigate('/');
+      } catch (error: any) {
+        toast.dismiss(loadingToast);
+         if (error.response?.status === 404) {
+
+          toast.error('No account found with this Google account. Please register first.');
+          navigate('/register');
+        } else {
+
+          const errorMessage = error.response?.data?.error || 'Google login failed. Please try again.';
+          toast.error(errorMessage);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    onError: () => {
+      toast.error('Google login failed. Please try again.');
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +112,8 @@ export function LoginForm({
         });
     }
   };
+ 
+ 
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -129,14 +165,17 @@ export function LoginForm({
                 >
                   {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
-                <Button
+                <div className='flex justify-center'>
+                  <Button
                   variant='outline'
                   className='w-full'
                   disabled={isLoading}
                   type='button'
+                  onClick={() => handleGoogleLogin()}
                 >
                   Login with Google
                 </Button>
+                </div>
               </div>
             </div>
             <div className='mt-4 text-center text-sm'>

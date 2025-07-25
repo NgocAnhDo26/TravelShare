@@ -1,39 +1,29 @@
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { TravelPlanService } from '../../src/services/travelPlan.service';
 import TravelPlan from '../../src/models/travelPlan.model';
 import { IPlanItem } from '../../src/models/travelPlan.model';
 
-// Giả lập (mock) model TravelPlan
-jest.mock('../../src/models/travelPlan.model');
+// Mock TravelPlan model
+vi.mock('../../src/models/travelPlan.model');
 
-jest.mock('../../src/config/supabase.config', () => ({
-  __esModule: true,
-  default: {
-    storage: {
-      from: () => ({
-        remove: jest.fn().mockResolvedValue({ error: null }),
-      }),
-    },
-  },
-}));
-
-const mockedTravelPlan = TravelPlan as jest.Mocked<typeof TravelPlan>;
+const mockedTravelPlan = TravelPlan as any;
 
 describe('TravelPlanService - Plan Item Management', () => {
     let mockRequest: Partial<Request>;
     let mockResponse: Partial<Response>;
     const mockUserId = new mongoose.Types.ObjectId().toHexString();
     const mockPlanId = new mongoose.Types.ObjectId().toHexString();
-    const mockItemId = new mongoose.Types.ObjectId(); // Giữ ở dạng ObjectId để so sánh
+    const mockItemId = new mongoose.Types.ObjectId(); // Keep as ObjectId for comparison
 
-    // Hàm beforeEach sẽ chạy trước mỗi bài test
+    // beforeEach function runs before each test
     beforeEach(() => {
-        jest.resetAllMocks(); // Xóa tất cả các mock cũ
+        vi.resetAllMocks(); // Clear all old mocks
         mockRequest = { params: {}, body: {}, user: mockUserId };
         mockResponse = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
+            status: vi.fn().mockReturnThis(),
+            json: vi.fn(),
         };
     });
 
@@ -42,7 +32,7 @@ describe('TravelPlanService - Plan Item Management', () => {
     // ===================================
     describe('addPlanItem', () => {
         it('should add an item to a specific day successfully', async () => {
-            // Arrange: Chuẩn bị dữ liệu
+            // Arrange: Prepare data
             const newItemData = {
                 type: 'activity',
                 title: 'Thăm Cổng Tò Vò',
@@ -68,14 +58,14 @@ describe('TravelPlanService - Plan Item Management', () => {
                     date: new Date('2025-07-20'),
                     items: [] as IPlanItem[],
                 }],
-                save: jest.fn().mockResolvedValue(true),
+                save: vi.fn().mockResolvedValue(true),
             };
-            (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(mockPlan);
+            mockedTravelPlan.findOne.mockResolvedValue(mockPlan);
 
-            // Act: Thực thi hàm cần test
+            // Act: Execute the function to test
             await TravelPlanService.addPlanItem(mockRequest.params.id, parseInt(mockRequest.params.dayNumber, 10), mockRequest.body, mockRequest.user as string);
 
-            // Assert: Kiểm tra kết quả
+            // Assert: Check the result
             expect(mockedTravelPlan.findOne).toHaveBeenCalledWith({ _id: mockPlanId, author: mockUserId });
             expect(mockPlan.save).toHaveBeenCalled();
             expect(mockPlan.schedule[0].items.length).toBe(1);
@@ -87,7 +77,7 @@ describe('TravelPlanService - Plan Item Management', () => {
 
         it('should return an error if plan is not found', async () => {
             // Arrange
-            (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(null);
+            mockedTravelPlan.findOne.mockResolvedValue(null);
             mockRequest.params = { id: mockPlanId, dayNumber: '1' };
 
             // Act & Assert
@@ -111,7 +101,7 @@ describe('TravelPlanService - Plan Item Management', () => {
                     items: [mockItem]
                 }]
             };
-            (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(mockPlan);
+            mockedTravelPlan.findOne.mockResolvedValue(mockPlan);
 
             // Act
             const result = await TravelPlanService.getPlanItem(mockPlanId, mockItemId.toHexString(), mockUserId);
@@ -137,9 +127,9 @@ describe('TravelPlanService - Plan Item Management', () => {
                     dayNumber: 1,
                     items: [mockItem as IPlanItem]
                 }],
-                save: jest.fn().mockResolvedValue(true),
+                save: vi.fn().mockResolvedValue(true),
             };
-            (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(mockPlan);
+            mockedTravelPlan.findOne.mockResolvedValue(mockPlan);
 
             // Act
             const result = await TravelPlanService.updatePlanItem(mockPlanId, mockItemId.toHexString(), updateData, mockUserId);
@@ -165,16 +155,16 @@ describe('TravelPlanService - Plan Item Management', () => {
                     dayNumber: 1,
                     items: [mockItem as IPlanItem]
                 }],
-                save: jest.fn().mockResolvedValue(true),
+                save: vi.fn().mockResolvedValue(true),
             };
-            (mockedTravelPlan.findOne as jest.Mock).mockResolvedValue(mockPlan);
+            mockedTravelPlan.findOne.mockResolvedValue(mockPlan);
 
             // Act
             const result = await TravelPlanService.deletePlanItem(mockPlanId, mockItemId.toHexString(), mockUserId);
 
             // Assert
             expect(mockPlan.save).toHaveBeenCalled();
-            expect(mockPlan.schedule[0].items.length).toBe(0); // Mảng items giờ phải rỗng
+            expect(mockPlan.schedule[0].items.length).toBe(0); // Items array should now be empty
             expect(result).toBe(true);
         });
     });

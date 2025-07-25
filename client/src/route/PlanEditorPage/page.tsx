@@ -23,7 +23,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
 
   useEffect(() => {
     console.log('PlanEditorPage useEffect triggered:', { planId, user, editMode });
-    
+
     const fetchTripData = async () => {
       try {
         setIsLoading(true);
@@ -31,11 +31,11 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
         const { data } = await API.get(`/plans/${planId}`);
         console.log('Plan data received:', data);
         setPlanData(data);
-        
+
         // Validate if user can edit this plan
         const canEdit = getActualEditMode(editMode, data, user);
         console.log('Can edit check:', { editMode, canEdit, user: user?.userId, planAuthor: data.author });
-        
+
         if (editMode && !canEdit) {
           toast.error('You can only edit your own plans');
           setActualEditMode(false);
@@ -44,7 +44,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
         } else {
           setActualEditMode(canEdit);
         }
-        
+
       } catch (error) {
         console.error('Error fetching plan:', error);
         toast.error('Failed to load plan');
@@ -53,7 +53,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
         setIsLoading(false);
       }
     };
-    
+
     // Fetch data if we have a planId, regardless of user state
     // The user can be null (not logged in) and we should still show public plans
     if (planId) {
@@ -68,7 +68,6 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Handle item added to a specific day
   const handleItemAdded = (dayNumber: number, item: IPlanItem) => {
     if (!planData) return;
-    
     const updatedSchedule = planData.schedule.map(day => {
       if (day.dayNumber === dayNumber) {
         return {
@@ -88,12 +87,20 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Handle item updated in a specific day
   const handleItemUpdated = (dayNumber: number, itemId: string, updatedItem: IPlanItem) => {
     if (!planData) return;
-    
+    if (updatedItem.startTime && updatedItem.endTime) {
+      const startDate = new Date(updatedItem.startTime).toISOString().split('T')[1];
+      const endDate = new Date(updatedItem.endTime).toISOString().split('T')[1];
+      if (startDate > endDate) {
+        toast.error('Start time cannot be after end time');
+        return;
+      }
+    }
+
     const updatedSchedule = planData.schedule.map(day => {
       if (day.dayNumber === dayNumber) {
         return {
           ...day,
-          items: day.items.map(item => 
+          items: day.items.map(item =>
             item._id === itemId ? updatedItem : item
           )
         };
@@ -110,7 +117,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Handle item deleted from a specific day
   const handleItemDeleted = (dayNumber: number, itemId: string) => {
     if (!planData) return;
-    
+
     const updatedSchedule = planData.schedule.map(day => {
       if (day.dayNumber === dayNumber) {
         return {
@@ -128,12 +135,12 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   };
 
   // Debug logging
-  console.log('PlanEditorPage render state:', { 
-    isLoading, 
-    planData: !!planData, 
-    planId, 
-    user: !!user, 
-    actualEditMode 
+  console.log('PlanEditorPage render state:', {
+    isLoading,
+    planData: !!planData,
+    planId,
+    user: !!user,
+    actualEditMode
   });
 
   // Show loading state – skeleton placeholders
@@ -173,11 +180,11 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   }
 
   return (
-    <div className='flex flex-col h-full justify-center lg:mx-60 mx-24 my-10'>
-      <Card className='w-full overflow-hidden pt-0'>
+    <div className='flex flex-col justify-center lg:mx-60 mx-24 my-10'>
+      <Card className='w-full overflow-hidden pt-0 bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left gap-0'>
         <TripHeader trip={planData} editMode={actualEditMode} onTripUpdate={handleTripUpdate} />
-        <ItinerarySection 
-          itinerary={planData?.schedule || []} 
+        <ItinerarySection
+          itinerary={planData?.schedule || []}
           editMode={actualEditMode}
           tripId={planData._id}
           onItemAdded={handleItemAdded}
@@ -186,7 +193,15 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
         />
       </Card>
 
-      {!actualEditMode && <SocialSection />}
+      {!actualEditMode && planData && (
+        <SocialSection
+          targetId={planData._id}
+          onModel="TravelPlan"
+          initialLikesCount={planData.likesCount}
+          initialCommentsCount={planData.commentsCount}
+          currentUser={user}
+        />
+      )}
     </div>
   );
 };
