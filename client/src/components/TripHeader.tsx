@@ -88,12 +88,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const {
-    isLiked,
-    likesCount,
-    pop,
-    handleToggleLike
-  } = useLikeToggle({
+  const { isLiked, likesCount, pop, handleToggleLike } = useLikeToggle({
     targetId: trip._id,
     initialIsLiked: !!trip.isLiked,
     initialLikesCount: trip.likesCount ?? 0,
@@ -627,33 +622,37 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                 <div className='flex items-center'>
                   <Button
                     variant='ghost'
-                    type="button"
+                    type='button'
                     onClick={handleToggleLike}
-                    onMouseDown={e => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
                     className={`
                       group flex items-center gap-2 px-2 py-1 rounded-full
                       transition bg-transparent hover:bg-gray-100 active:bg-gray-200
                       focus:outline-none cursor-pointer active:scale-95
                     `}
-                    aria-label={isLiked ? "Unlike" : "Like"}
+                    aria-label={isLiked ? 'Unlike' : 'Like'}
                     tabIndex={0}
                   >
                     <Heart
                       size={22}
                       className={`
                         transition-all duration-200
-                        ${isLiked
-                          ? 'text-red-500 fill-red-500 group-hover:scale-125 group-hover:fill-red-500 group-hover:text-red-500'
-                          : 'text-gray-400 fill-transparent group-hover:scale-125 group-hover:text-red-500 group-hover:fill-red-200'
+                        ${
+                          isLiked
+                            ? 'text-red-500 fill-red-500 group-hover:scale-125 group-hover:fill-red-500 group-hover:text-red-500'
+                            : 'text-gray-400 fill-transparent group-hover:scale-125 group-hover:text-red-500 group-hover:fill-red-200'
                         }
                         ${pop ? 'scale-150' : ''}
                       `}
                       style={{
-                        filter: isLiked ? 'drop-shadow(0 0 4px #f87171)' : undefined,
-                        transition: 'transform 0.05s, color 0.05s, fill 0.05s, filter 0.05s'
+                        filter: isLiked
+                          ? 'drop-shadow(0 0 4px #f87171)'
+                          : undefined,
+                        transition:
+                          'transform 0.05s, color 0.05s, fill 0.05s, filter 0.05s',
                       }}
                     />
-                    <span className="font-medium">{likesCount}</span>
+                    <span className='font-medium'>{likesCount}</span>
                   </Button>
                   <Button variant='ghost'>
                     <MessageCircle />

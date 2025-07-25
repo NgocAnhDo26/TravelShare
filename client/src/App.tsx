@@ -33,7 +33,10 @@ function App() {
             <Route path='login' element={<LoginPage />} />
             <Route path='forgot-password' element={<ForgotPasswordPage />} />
             <Route path='reset-password' element={<ResetPasswordPage />} />
-            <Route path='plans/:planId' element={<PlanEditorPage editMode={false} />} />
+            <Route
+              path='plans/:planId'
+              element={<PlanEditorPage editMode={false} />}
+            />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
@@ -41,9 +44,15 @@ function App() {
                 <Route index element={<UserProfilePage />} />
                 <Route path=':userId' element={<UserProfilePage />} />
               </Route>
-              <Route path='other-profile/:userId' element={<OtherProfilePage />} />
+              <Route
+                path='other-profile/:userId'
+                element={<OtherProfilePage />}
+              />
               <Route path='plans/create' element={<TripPlanningPage />} />
-              <Route path='plans/:planId/edit' element={<PlanEditorPage editMode={true} />} />
+              <Route
+                path='plans/:planId/edit'
+                element={<PlanEditorPage editMode={true} />}
+              />
               <Route path='itinerary' element={<ItineraryPage />} />
               <Route path='test' element={<ItineraryPage />} />
             </Route>

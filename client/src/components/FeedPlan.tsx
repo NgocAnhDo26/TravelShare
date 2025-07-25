@@ -43,12 +43,7 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
     .charAt(0)
     .toUpperCase();
 
-  const {
-    isLiked,
-    likesCount,
-    pop,
-    handleToggleLike
-  } = useLikeToggle({
+  const { isLiked, likesCount, pop, handleToggleLike } = useLikeToggle({
     targetId: plan._id,
     initialIsLiked: !!plan.isLiked,
     initialLikesCount: plan.likesCount,
@@ -124,33 +119,35 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
         <div className='flex items-center justify-between w-full'>
           <div className='flex items-center gap-6'>
             <button
-              type="button"
+              type='button'
               onClick={handleToggleLike}
-              onMouseDown={e => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
               className={`
                 group flex items-center gap-2 px-2 py-1 rounded-full
                 transition bg-transparent hover:bg-gray-100 active:bg-gray-200
                 focus:outline-none cursor-pointer active:scale-95
               `}
-              aria-label={isLiked ? "Unlike" : "Like"}
+              aria-label={isLiked ? 'Unlike' : 'Like'}
               tabIndex={0}
             >
               <Heart
                 size={22}
                 className={`
                   transition-all duration-200
-                  ${isLiked
-                    ? 'text-red-500 fill-red-500 group-hover:scale-125 group-hover:fill-red-500 group-hover:text-red-500'
-                    : 'text-gray-400 fill-transparent group-hover:scale-125 group-hover:text-red-500 group-hover:fill-red-200'
+                  ${
+                    isLiked
+                      ? 'text-red-500 fill-red-500 group-hover:scale-125 group-hover:fill-red-500 group-hover:text-red-500'
+                      : 'text-gray-400 fill-transparent group-hover:scale-125 group-hover:text-red-500 group-hover:fill-red-200'
                   }
                   ${pop ? 'scale-150' : ''}
                 `}
                 style={{
                   filter: isLiked ? 'drop-shadow(0 0 4px #f87171)' : undefined,
-                  transition: 'transform 0.05s, color 0.05s, fill 0.05s, filter 0.05s'
+                  transition:
+                    'transform 0.05s, color 0.05s, fill 0.05s, filter 0.05s',
                 }}
               />
-              <span className="font-medium">{likesCount}</span>
+              <span className='font-medium'>{likesCount}</span>
             </button>
             <button className='flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-colors duration-200 group'>
               <MessageCircle className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />

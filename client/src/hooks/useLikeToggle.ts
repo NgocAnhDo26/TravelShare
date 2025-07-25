@@ -15,7 +15,6 @@ export function useLikeToggle({
   targetId,
   initialIsLiked,
   initialLikesCount,
-  onModel,
   apiPath,
 }: UseLikeToggleOptions) {
   const [isLiked, setIsLiked] = useState(initialIsLiked);
@@ -38,26 +37,29 @@ export function useLikeToggle({
     setLikesCount(initialLikesCount);
   }, [initialIsLiked, initialLikesCount, targetId]);
 
-  const handleToggleLike = useCallback((e: React.MouseEvent) => {
-    e?.stopPropagation?.();
-    setPop(true);
-    setTimeout(() => setPop(false), 200);
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount(count => newLikedState ? count + 1 : count - 1);
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(async () => {
-      try {
-        await API.post(`${apiPath}/${targetId}/like`);
-        // Optionally: refetch or update state from server
-      } catch (err) {
-        setIsLiked(prev => !prev);
-        setLikesCount(count => newLikedState ? count - 1 : count + 1);
+  const handleToggleLike = useCallback(
+    (e: React.MouseEvent) => {
+      e?.stopPropagation?.();
+      setPop(true);
+      setTimeout(() => setPop(false), 200);
+      const newLikedState = !isLiked;
+      setIsLiked(newLikedState);
+      setLikesCount((count) => (newLikedState ? count + 1 : count - 1));
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
       }
-    }, 700);
-  }, [isLiked, apiPath, targetId]);
+      debounceTimer.current = setTimeout(async () => {
+        try {
+          await API.post(`${apiPath}/${targetId}/like`);
+          // Optionally: refetch or update state from server
+        } catch (err) {
+          setIsLiked((prev) => !prev);
+          setLikesCount((count) => (newLikedState ? count - 1 : count + 1));
+        }
+      }, 700);
+    },
+    [isLiked, apiPath, targetId],
+  );
 
   return { isLiked, likesCount, pop, handleToggleLike };
-} 
+}

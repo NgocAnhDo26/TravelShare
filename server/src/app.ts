@@ -33,13 +33,13 @@ app.use(cookieParser());
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/plans', travelPlanRouter);
-app.use('/api/comments', commentRouter);
-app.use('/api/location', locationRouter);
 app.use('/api/plans', createLikeRoutes('TravelPlan'));
 // When you implement posts, add:
 // import postRouter from './routes/post.routes';
 // app.use('/api/posts', postRouter);
 // app.use('/api/posts', createLikeRoutes('Post'));
+app.use('/api/comments', commentRouter);
+app.use('/api/location', locationRouter);
 
 // Global error handler (should be after routes)
 app.use(errorHandler);
