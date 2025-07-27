@@ -5,11 +5,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
-import {
-  Card,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -45,11 +41,7 @@ import {
 import type { IDailySchedule, IPlanItem } from '@/types/trip';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
-import {
-  DndContext,
-  closestCenter,
-  DragOverlay,
-} from '@dnd-kit/core';
+import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -128,7 +120,9 @@ const ItemForm: React.FC<{
     <form onSubmit={onSubmit} className='space-y-4'>
       <div className='bg-gray-50 p-3 rounded-md'>
         <p className='text-sm text-gray-600'>
-          <span className='font-medium'>{isEditing ? "Day:" : "Adding to:"}</span>{' '}
+          <span className='font-medium'>
+            {isEditing ? 'Day:' : 'Adding to:'}
+          </span>{' '}
           {new Date(dayDate).toLocaleDateString()}
         </p>
       </div>
@@ -260,12 +254,27 @@ const ItemActionsMenu: React.FC<{
   setOpenSections?: (v: string[]) => void;
   openSections?: string[];
   sortableId?: string;
-}> = ({ onEdit, onDelete, dayNumber, setOpenSections, openSections, sortableId }) => {
+}> = ({
+  onEdit,
+  onDelete,
+  dayNumber,
+  setOpenSections,
+  openSections,
+  sortableId,
+}) => {
   // Only useSortable if sortableId is provided
-  const { setNodeRef, isOver } = sortableId ? useSortable({ id: sortableId }) : { setNodeRef: undefined, isOver: false };
+  const { setNodeRef, isOver } = sortableId
+    ? useSortable({ id: sortableId })
+    : { setNodeRef: undefined, isOver: false };
 
   React.useEffect(() => {
-    if (isOver && setOpenSections && openSections && dayNumber && !openSections.includes(dayNumber.toString())) {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      dayNumber &&
+      !openSections.includes(dayNumber.toString())
+    ) {
       setOpenSections([...openSections, dayNumber.toString()]);
     }
   }, [isOver, dayNumber, openSections, setOpenSections]);
@@ -278,9 +287,9 @@ const ItemActionsMenu: React.FC<{
           variant='secondary'
           size='icon'
           className='ml-auto size-8 flex-shrink-0'
-          onPointerDown={e => e.stopPropagation()}
-          onPointerUp={e => e.stopPropagation()}
-          onClick={e => e.stopPropagation()} // Also prevent click bubbling
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()} // Also prevent click bubbling
         >
           <Ellipsis />
         </Button>
@@ -317,7 +326,14 @@ const ItineraryItemCard: React.FC<{
   openSections?: string[];
   dragHandleProps?: any;
 }> = ({
-  item, editMode = false, onEdit, onDelete, dayNumber, setOpenSections, openSections, dragHandleProps
+  item,
+  editMode = false,
+  onEdit,
+  onDelete,
+  dayNumber,
+  setOpenSections,
+  openSections,
+  dragHandleProps,
 }) => {
   const badgeColors = {
     activity: 'bg-blue-100 text-blue-800',
@@ -359,12 +375,12 @@ const ItineraryItemCard: React.FC<{
           {editMode && dragHandleProps && (
             <span
               {...dragHandleProps}
-              className="cursor-grab active:cursor-grabbing mr-2"
+              className='cursor-grab active:cursor-grabbing mr-2'
               tabIndex={-1}
-              aria-label="Drag to reorder"
-              onClick={e => e.stopPropagation()}
+              aria-label='Drag to reorder'
+              onClick={(e) => e.stopPropagation()}
             >
-              <GripVertical className="w-4 h-4 text-gray-400" />
+              <GripVertical className='w-4 h-4 text-gray-400' />
             </span>
           )}
           <Badge className={`${badgeColors[item.type]} mr-2`}>
@@ -423,7 +439,10 @@ const ItineraryItemCard: React.FC<{
   );
 };
 
-const SortableItem: React.FC<{ id: string; children: React.ReactElement<any> }> = ({ id, children }) => {
+const SortableItem: React.FC<{
+  id: string;
+  children: React.ReactElement<any>;
+}> = ({ id, children }) => {
   const {
     attributes,
     listeners,
@@ -443,7 +462,9 @@ const SortableItem: React.FC<{ id: string; children: React.ReactElement<any> }> 
   // Pass dragHandleProps to children
   return (
     <div ref={setNodeRef} style={style}>
-      {React.cloneElement(children, { dragHandleProps: { ...attributes, ...listeners } })}
+      {React.cloneElement(children, {
+        dragHandleProps: { ...attributes, ...listeners },
+      })}
     </div>
   );
 };
@@ -488,7 +509,9 @@ const AccordionTriggerDropTarget: React.FC<{
   openSections?: string[];
   children: React.ReactNode;
 }> = ({ dayNumber, setOpenSections, openSections, children }) => {
-  const { setNodeRef, isOver } = useSortable({ id: `trigger-day-${dayNumber}` });
+  const { setNodeRef, isOver } = useSortable({
+    id: `trigger-day-${dayNumber}`,
+  });
 
   React.useEffect(() => {
     if (
@@ -501,11 +524,7 @@ const AccordionTriggerDropTarget: React.FC<{
     }
   }, [isOver, dayNumber, openSections, setOpenSections]);
 
-  return (
-    <div ref={setNodeRef}>
-      {children}
-    </div>
-  );
+  return <div ref={setNodeRef}>{children}</div>;
 };
 
 /**
@@ -530,12 +549,17 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentDayNumber, setCurrentDayNumber] = useState<number>(1);
-  const [currentEditItem, setCurrentEditItem] = useState<IPlanItem | null>(null);
-  const [currentDeleteItem, setCurrentDeleteItem] = useState<IPlanItem | null>(null);
+  const [currentEditItem, setCurrentEditItem] = useState<IPlanItem | null>(
+    null,
+  );
+  const [currentDeleteItem, setCurrentDeleteItem] = useState<IPlanItem | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [draggedItem, setDraggedItem] = useState<IPlanItem | null>(null);
-  const [localItinerary, setLocalItinerary] = useState<IDailySchedule[]>(itinerary);
+  const [localItinerary, setLocalItinerary] =
+    useState<IDailySchedule[]>(itinerary);
   const [formData, setFormData] = useState<ItemFormData>(initialFormData);
 
   // Sensors for dnd-kit
@@ -576,7 +600,9 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     if (overId.startsWith('empty-day-')) {
       const targetDayNumber = Number(overId.replace('empty-day-', ''));
       const sourceDay = findDayByItemId(activeId);
-      const targetDay = localItinerary.find((day) => day.dayNumber === targetDayNumber);
+      const targetDay = localItinerary.find(
+        (day) => day.dayNumber === targetDayNumber,
+      );
 
       if (!sourceDay || !targetDay) {
         setDraggedItem(null);
@@ -589,22 +615,32 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         setDraggedItem(null);
         return;
       }
-      const newSourceItems = sourceDay.items.filter((item) => item._id !== activeId);
+      const newSourceItems = sourceDay.items.filter(
+        (item) => item._id !== activeId,
+      );
 
       // Add to target (empty day)
-      const newTargetItems = [{ ...movingItem, order: 0, dayNumber: targetDay.dayNumber }];
+      const newTargetItems = [
+        { ...movingItem, order: 0, dayNumber: targetDay.dayNumber },
+      ];
 
       // Update state
       setLocalItinerary((prev) =>
         prev.map((day) => {
           if (day.dayNumber === sourceDay.dayNumber) {
-            return { ...day, items: newSourceItems.map((item, idx) => ({ ...item, order: idx })) };
+            return {
+              ...day,
+              items: newSourceItems.map((item, idx) => ({
+                ...item,
+                order: idx,
+              })),
+            };
           }
           if (day.dayNumber === targetDay.dayNumber) {
             return { ...day, items: newTargetItems };
           }
           return day;
-        })
+        }),
       );
 
       // Send payload to backend here
@@ -638,10 +674,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     const newIndex = targetDay.items.findIndex((item) => item._id === overId);
 
     // If same day and same index, do nothing
-    if (
-      sourceDay.dayNumber === targetDay.dayNumber &&
-      oldIndex === newIndex
-    ) {
+    if (sourceDay.dayNumber === targetDay.dayNumber && oldIndex === newIndex) {
       setDraggedItem(null);
       return;
     }
@@ -656,8 +689,8 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
 
       setLocalItinerary((prev) =>
         prev.map((day) =>
-          day.dayNumber === sourceDay.dayNumber ? updatedDay : day
-        )
+          day.dayNumber === sourceDay.dayNumber ? updatedDay : day,
+        ),
       );
 
       // TODO: Send payload to backend here
@@ -680,7 +713,6 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
           console.error('Error reordering items:', error);
           toast.error('Failed to reorder items. Please try again.');
         });
-
     } else {
       // Move to another day
       const movingItem = sourceDay.items.find((item) => item._id === activeId);
@@ -690,9 +722,13 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       }
 
       // Remove from source
-      const newSourceItems = sourceDay.items.filter((item) => item._id !== activeId);
+      const newSourceItems = sourceDay.items.filter(
+        (item) => item._id !== activeId,
+      );
       // Insert into target at overId position
-      const overIndex = targetDay.items.findIndex((item) => item._id === overId);
+      const overIndex = targetDay.items.findIndex(
+        (item) => item._id === overId,
+      );
       const newTargetItems = [
         ...targetDay.items.slice(0, overIndex),
         { ...movingItem, order: overIndex, dayNumber: targetDay.dayNumber },
@@ -703,13 +739,19 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       setLocalItinerary((prev) =>
         prev.map((day) => {
           if (day.dayNumber === sourceDay.dayNumber) {
-            return { ...day, items: newSourceItems.map((item, idx) => ({ ...item, order: idx })) };
+            return {
+              ...day,
+              items: newSourceItems.map((item, idx) => ({
+                ...item,
+                order: idx,
+              })),
+            };
           }
           if (day.dayNumber === targetDay.dayNumber) {
             return { ...day, items: newTargetItems };
           }
           return day;
-        })
+        }),
       );
 
       // API call:
@@ -755,7 +797,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       ? dayData.date
       : new Date().toISOString().split('T')[0];
 
-    if(data.startTime && data.endTime) {
+    if (data.startTime && data.endTime) {
       const [startHour, startMinute] = data.startTime.split(':').map(Number);
       const [endHour, endMinute] = data.endTime.split(':').map(Number);
       const startTotal = startHour * 60 + startMinute;
@@ -768,7 +810,9 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     if (data.startTime) {
       const timeRegex = /^\d{2}:\d{2}$/;
       if (timeRegex.test(data.startTime)) {
-        const startDateTime = new Date(`${dayDate.split('T')[0]}T${data.startTime}:00.000Z`);
+        const startDateTime = new Date(
+          `${dayDate.split('T')[0]}T${data.startTime}:00.000Z`,
+        );
         apiData.startTime = startDateTime.toISOString();
       }
     }
@@ -776,7 +820,9 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     if (data.endTime) {
       const timeRegex = /^\d{2}:\d{2}$/;
       if (timeRegex.test(data.endTime)) {
-        const endDateTime = new Date(`${dayDate.split('T')[0]}T${data.endTime}:00.000Z`);
+        const endDateTime = new Date(
+          `${dayDate.split('T')[0]}T${data.endTime}:00.000Z`,
+        );
         apiData.endTime = endDateTime.toISOString();
       }
     }
@@ -836,12 +882,17 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       await API.delete(`/plans/${tripId}/items/${currentDeleteItem._id}`);
 
       // Update localItinerary to remove the deleted item
-      setLocalItinerary(prev =>
-        prev.map(day =>
-          day.items.some(item => item._id === currentDeleteItem._id)
-            ? { ...day, items: day.items.filter(item => item._id !== currentDeleteItem._id) }
-            : day
-        )
+      setLocalItinerary((prev) =>
+        prev.map((day) =>
+          day.items.some((item) => item._id === currentDeleteItem._id)
+            ? {
+                ...day,
+                items: day.items.filter(
+                  (item) => item._id !== currentDeleteItem._id,
+                ),
+              }
+            : day,
+        ),
       );
 
       const dayNumber = itinerary.find((day) =>
@@ -883,12 +934,12 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       const newItem = response.data.data;
 
       // Update localItinerary to add the new item to the correct day
-      setLocalItinerary(prev =>
-        prev.map(day =>
+      setLocalItinerary((prev) =>
+        prev.map((day) =>
           day.dayNumber === currentDayNumber
             ? { ...day, items: [...day.items, newItem] }
-            : day
-        )
+            : day,
+        ),
       );
 
       if (onItemAdded) {
@@ -922,13 +973,13 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       const updatedItem = response.data.data;
 
       // Update localItinerary to reflect the updated item
-      setLocalItinerary(prev =>
-        prev.map(day => ({
+      setLocalItinerary((prev) =>
+        prev.map((day) => ({
           ...day,
-          items: day.items.map(item =>
-            item._id === currentEditItem._id ? updatedItem : item
+          items: day.items.map((item) =>
+            item._id === currentEditItem._id ? updatedItem : item,
           ),
-        }))
+        })),
       );
 
       const dayNumber = itinerary.find((day) =>
@@ -970,13 +1021,16 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
           onDragEnd={handleDragEnd}
         >
           <Accordion
-            type="multiple"
+            type='multiple'
             value={openSections}
             onValueChange={setOpenSections}
-            className="w-full"
+            className='w-full'
           >
             {localItinerary.map((day) => (
-              <AccordionItem key={day.dayNumber} value={day.dayNumber.toString()}>
+              <AccordionItem
+                key={day.dayNumber}
+                value={day.dayNumber.toString()}
+              >
                 <AccordionTriggerDropTarget
                   dayNumber={day.dayNumber}
                   setOpenSections={setOpenSections}
@@ -1011,7 +1065,11 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                         </SortableItem>
                       ))
                     ) : (
-                      <DropTarget dayNumber={day.dayNumber} setOpenSections={setOpenSections} openSections={openSections} />
+                      <DropTarget
+                        dayNumber={day.dayNumber}
+                        setOpenSections={setOpenSections}
+                        openSections={openSections}
+                      />
                     )}
                   </SortableContext>
                   <Button
@@ -1038,10 +1096,10 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         </DndContext>
       ) : (
         <Accordion
-          type="multiple"
+          type='multiple'
           value={openSections}
           onValueChange={setOpenSections}
-          className="w-full"
+          className='w-full'
         >
           {localItinerary.map((day) => (
             <AccordionItem key={day.dayNumber} value={day.dayNumber.toString()}>
@@ -1116,7 +1174,8 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
           </DialogHeader>
           <div>
             <p className='text-sm text-gray-600'>
-              Are you sure you want to delete "{currentDeleteItem?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{currentDeleteItem?.title}"? This
+              action cannot be undone.
             </p>
           </div>
           <DialogFooter>
