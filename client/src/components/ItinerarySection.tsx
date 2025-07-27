@@ -315,7 +315,7 @@ const ItineraryItemCard: React.FC<{
   dayNumber?: number;
   setOpenSections?: (v: string[]) => void;
   openSections?: string[];
-  dragHandleProps?: any; // <-- add this
+  dragHandleProps?: any;
 }> = ({
   item, editMode = false, onEdit, onDelete, dayNumber, setOpenSections, openSections, dragHandleProps
 }) => {
@@ -633,11 +633,21 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       return;
     }
 
+    // Find indices
+    const oldIndex = sourceDay.items.findIndex((item) => item._id === activeId);
+    const newIndex = targetDay.items.findIndex((item) => item._id === overId);
+
+    // If same day and same index, do nothing
+    if (
+      sourceDay.dayNumber === targetDay.dayNumber &&
+      oldIndex === newIndex
+    ) {
+      setDraggedItem(null);
+      return;
+    }
+
     // If same day, reorder
     if (sourceDay.dayNumber === targetDay.dayNumber) {
-      const oldIndex = sourceDay.items.findIndex((item) => item._id === activeId);
-      const newIndex = targetDay.items.findIndex((item) => item._id === overId);
-
       const newItems = arrayMove(sourceDay.items, oldIndex, newIndex);
       const updatedDay: IDailySchedule = {
         ...sourceDay,
