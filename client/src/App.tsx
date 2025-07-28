@@ -16,6 +16,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import FeedLayout from './components/SidebarLayout/FeedLayout';
+import PostEditor from './components/PostEditor';
 
 function App() {
   return (
@@ -54,7 +55,8 @@ function App() {
                 element={<PlanEditorPage editMode={true} />}
               />
               <Route path='itinerary' element={<ItineraryPage />} />
-              <Route path='test' element={<ItineraryPage />} />
+              <Route path='post-editor' element={<PostEditor />} />
+              <Route path='test' element={<PostEditor />} />
             </Route>
 
             <Route path='*' element={<NotFound />} />

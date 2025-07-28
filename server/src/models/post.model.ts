@@ -1,39 +1,74 @@
 import { Schema, model, Model, Document, Types } from 'mongoose';
 
-/**
- * Interface for a Post document
- */
+// Interface for the Post document
 export interface IPost extends Document {
   title: string;
   content: string;
-  author: Types.ObjectId;
+  coverImageUrl?: string;
+  images?: string[];
   privacy: 'public' | 'private';
-  relatedPlan?: Types.ObjectId;
   likesCount: number;
   commentsCount: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const postSchema: Schema<IPost> = new Schema(
+// Schema definition
+const postSchema = new Schema<IPost>(
   {
-    title: { type: String, required: true, trim: true },
-    content: { type: String, required: true },
-    author: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
+    title: {
+      type: String,
+      required: [true, 'Title is required'],
+      trim: true,
+      minlength: [2, 'Title must be at least 2 characters long'],
+      maxlength: [100, 'Title cannot exceed 100 characters']
+    },
+    content: {
+      type: String,
+      required: [true, 'Content is required'],
+      minlength: [10, 'Content must be at least 10 characters long']
+    },
+    coverImageUrl: {
+      type: String,
+      default: null
+    },
+    images: {
+      type: [String],
+      default: []
     },
     privacy: {
       type: String,
       enum: ['public', 'private'],
-      default: 'public',
+      default: 'public'
     },
-    relatedPlan: { type: Schema.Types.ObjectId, ref: 'TravelPlan' },
-    likesCount: { type: Number, default: 0 },
-    commentsCount: { type: Number, default: 0 },
+    likesCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    commentsCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
   },
-  { timestamps: true, collection: 'posts' },
+  {
+    timestamps: true, // Adds createdAt and updatedAt fields automatically
+    versionKey: false // Don't include __v field
+  }
 );
 
-const Post: Model<IPost> = model<IPost>('Post', postSchema);
+// Indexes for faster queries
+postSchema.index({ author: 1 });
+postSchema.index({ privacy: 1 });
+postSchema.index({ createdAt: -1 }); // For sorting by newest first
+
+// Virtual for formatted created date (can be used in responses)
+postSchema.virtual('createdAtFormatted').get(function() {
+  return this.createdAt.toLocaleDateString();
+});
+
+// Define Post model
+const Post: Model<IPost> = model<IPost>('posts', postSchema);
+
 export default Post;

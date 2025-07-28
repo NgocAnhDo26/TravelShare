@@ -5,7 +5,7 @@ import uploadUseCases from '../middlewares/upload';
 const authRouter: Router = Router();
 authRouter.post(
   '/register',
-  uploadUseCases.singleFileUpload('avatar'),
+  uploadUseCases.singleFileUpload('avatar', 'avatars'),
   authController.register,
 );
 
