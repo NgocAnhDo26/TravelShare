@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 import { X } from 'lucide-react';
 import API from '@/utils/axiosInstance';
 
@@ -24,7 +24,7 @@ interface FormErrors {
 export default function PostEditor() {
   const [formState, setFormState] = useState<FormState>({
     title: '',
-    content: '',
+    content: '<p></p>', // Initialize with empty HTML paragraph
     privacy: 'public',
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -41,7 +41,7 @@ export default function PostEditor() {
   const coverImageRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<HTMLInputElement>(null);
 
-  // Existing validation function remains unchanged
+  // Updated validation function for rich text content
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -49,7 +49,9 @@ export default function PostEditor() {
       newErrors.title = 'Title must be at least 2 characters.';
     }
 
-    if (!formState.content || formState.content.length < 10) {
+    // Check if content is empty (accounting for HTML tags)
+    const textContent = formState.content.replace(/<[^>]*>/g, '').trim();
+    if (!formState.content || textContent.length < 10) {
       newErrors.content = 'Content must be at least 10 characters.';
     }
 
@@ -105,7 +107,7 @@ export default function PostEditor() {
             // Reset all form state
             setFormState({
               title: '',
-              content: '',
+              content: '<p></p>', // Reset to empty HTML paragraph
               privacy: 'public',
             });
             setCoverImagePreview(null);
@@ -244,12 +246,11 @@ export default function PostEditor() {
             Content
           </label>
           <div className='mt-1'>
-            <Textarea
-              id='content'
-              className='min-h-32 focus-visible:ring-black'
+            <RichTextEditor
+              content={formState.content}
+              onChange={(content) => handleInputChange('content', content)}
               placeholder='Tell us about your adventure...'
-              value={formState.content}
-              onChange={(e) => handleInputChange('content', e.target.value)}
+              className='min-h-[200px]'
             />
           </div>
           <p className='text-xs text-gray-500'>

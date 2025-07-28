@@ -20,8 +20,6 @@ const PostService: IPostService = {
   createPost: async (req: Request, res: Response) => {
     // creating a post is add the post data from the request body to the database
     try {
-      console.log('Creating post with data:', req.body);
-      
       const postData = {
         title: req.body.title,
         content: req.body.content,

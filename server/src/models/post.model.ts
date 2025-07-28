@@ -59,7 +59,6 @@ const postSchema = new Schema<IPost>(
 );
 
 // Indexes for faster queries
-postSchema.index({ postId: 1 });
 postSchema.index({ author: 1 });
 postSchema.index({ privacy: 1 });
 postSchema.index({ createdAt: -1 }); // For sorting by newest first
