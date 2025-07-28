@@ -121,6 +121,7 @@ export default function PostEditor() {
           });
       } catch (error) {
         toast.error('Something went wrong. Please try again.');
+        console.error('Error in handleSubmit:', error);
       }
     } else {
       toast.error('Please fix the errors in the form.');
