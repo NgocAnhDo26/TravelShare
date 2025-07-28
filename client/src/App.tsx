@@ -54,6 +54,7 @@ function App() {
               path='/plans/:planId/edit'
               element={<PlanEditorPage editMode={true} />}
             />
+            <Route path='/post-editor' element={<PostEditor />} />
             <Route path='/itinerary' element={<ItineraryPage />} />
             <Route path='/test' element={<PostEditor />} />
           </Route>
