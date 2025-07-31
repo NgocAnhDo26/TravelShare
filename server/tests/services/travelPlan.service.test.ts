@@ -24,30 +24,54 @@ describe('TravelPlanService', () => {
     it('should create a travel plan with a generated schedule', async () => {
       const planData = {
         title: 'Test Trip',
-        destination: { placeId: '1', name: 'Test Dest', address: '123 Test St' },
+        destination: {
+          placeId: '1',
+          name: 'Test Dest',
+          address: '123 Test St',
+        },
         startDate: new Date('2024-01-01'),
         endDate: new Date('2024-01-03'),
       };
       const authorId = new Types.ObjectId().toHexString();
-      const schedule = [{ dayNumber: 1, date: new Date('2024-01-01'), items: [{
-        _id: new Types.ObjectId(),
-        type: 'activity',
-        title: 'Visit Place',
-        cost: '0',
-        order: 1,
-        location: { placeId: '1', name: 'Test Place', address: '123 Test St', coordinates: { lat: 0, lng: 0 } }
-      }] }];
+      const schedule = [
+        {
+          dayNumber: 1,
+          date: new Date('2024-01-01'),
+          items: [
+            {
+              _id: new Types.ObjectId(),
+              type: 'activity',
+              title: 'Visit Place',
+              cost: '0',
+              order: 1,
+              location: {
+                placeId: '1',
+                name: 'Test Place',
+                address: '123 Test St',
+                coordinates: { lat: 0, lng: 0 },
+              },
+            },
+          ],
+        },
+      ];
       const newPlan = { ...planData, author: authorId, schedule };
 
       mockedGenerateSchedule.mockReturnValue(schedule);
       mockedTravelPlan.create.mockResolvedValue(newPlan);
 
-      const result = await TravelPlanService.createTravelPlan(planData, authorId);
+      const result = await TravelPlanService.createTravelPlan(
+        planData,
+        authorId,
+      );
 
-      expect(mockedGenerateSchedule).toHaveBeenCalledWith(planData.startDate, planData.endDate);
+      expect(mockedGenerateSchedule).toHaveBeenCalledWith(
+        planData.startDate,
+        planData.endDate,
+      );
       expect(mockedTravelPlan.create).toHaveBeenCalledWith({
         ...planData,
         author: new Types.ObjectId(authorId),
+        privacy: 'private',
         schedule,
       });
       expect(result).toEqual(newPlan);
@@ -96,12 +120,18 @@ describe('TravelPlanService', () => {
     it('should delete a travel plan if the user is the author', async () => {
       const planId = new Types.ObjectId().toHexString();
       const authorId = new Types.ObjectId().toHexString();
-      mockedTravelPlan.findOne.mockResolvedValue({ _id: planId, author: authorId });
+      mockedTravelPlan.findOne.mockResolvedValue({
+        _id: planId,
+        author: authorId,
+      });
       mockedTravelPlan.findByIdAndDelete.mockResolvedValue(true);
 
       const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
 
-      expect(mockedTravelPlan.findOne).toHaveBeenCalledWith({ _id: planId, author: authorId });
+      expect(mockedTravelPlan.findOne).toHaveBeenCalledWith({
+        _id: planId,
+        author: authorId,
+      });
       expect(mockedTravelPlan.findByIdAndDelete).toHaveBeenCalledWith(planId);
       expect(result).toBe(true);
     });
@@ -113,7 +143,10 @@ describe('TravelPlanService', () => {
 
       const result = await TravelPlanService.deleteTravelPlan(planId, authorId);
 
-      expect(mockedTravelPlan.findOne).toHaveBeenCalledWith({ _id: planId, author: authorId });
+      expect(mockedTravelPlan.findOne).toHaveBeenCalledWith({
+        _id: planId,
+        author: authorId,
+      });
       expect(mockedTravelPlan.findByIdAndDelete).not.toHaveBeenCalled();
       expect(result).toBe(false);
     });
@@ -132,7 +165,11 @@ describe('TravelPlanService', () => {
       };
       mockedTravelPlan.findById.mockResolvedValue(plan);
 
-      const result = await TravelPlanService.updateTravelPlanTitle(planId, authorId, newTitle);
+      const result = await TravelPlanService.updateTravelPlanTitle(
+        planId,
+        authorId,
+        newTitle,
+      );
 
       expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
       expect(plan.save).toHaveBeenCalled();
@@ -153,7 +190,11 @@ describe('TravelPlanService', () => {
       };
       mockedTravelPlan.findById.mockResolvedValue(plan);
 
-      const result = await TravelPlanService.updateTravelPlanPrivacy(planId, authorId, newPrivacy);
+      const result = await TravelPlanService.updateTravelPlanPrivacy(
+        planId,
+        authorId,
+        newPrivacy,
+      );
 
       expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
       expect(plan.save).toHaveBeenCalled();
@@ -175,7 +216,11 @@ describe('TravelPlanService', () => {
         };
         mockedTravelPlan.findById.mockResolvedValue(plan);
 
-        const result = await TravelPlanService.updateTravelPlanCoverImage(planId, authorId, newCoverUrl);
+        const result = await TravelPlanService.updateTravelPlanCoverImage(
+          planId,
+          authorId,
+          newCoverUrl,
+        );
 
         expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
         expect(plan.save).toHaveBeenCalled();
@@ -220,7 +265,10 @@ describe('TravelPlanService', () => {
       );
 
       expect(mockedTravelPlan.findById).toHaveBeenCalledWith(planId);
-      expect(mockedGenerateSchedule).toHaveBeenCalledWith(newStartDate, newEndDate);
+      expect(mockedGenerateSchedule).toHaveBeenCalledWith(
+        newStartDate,
+        newEndDate,
+      );
       expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
         planId,
         {
@@ -228,7 +276,7 @@ describe('TravelPlanService', () => {
           endDate: newEndDate,
           schedule: newSchedule,
         },
-        { new: true }
+        { new: true },
       );
       expect(result.startDate).toBe(newStartDate);
       expect(result.endDate).toBe(newEndDate);
@@ -243,19 +291,32 @@ describe('getFeedForUser', () => {
   const trendingId = new Types.ObjectId().toHexString();
   const followedPlan = {
     _id: new Types.ObjectId(),
-    author: { _id: followingId, username: 'followed', displayName: 'Followed User', avatarUrl: 'f.png' },
+    author: {
+      _id: followingId,
+      username: 'followed',
+      displayName: 'Followed User',
+      avatarUrl: 'f.png',
+    },
     privacy: 'public',
     createdAt: new Date('2024-01-01T10:00:00Z'),
   };
   const trendingPlan = {
     _id: new Types.ObjectId(),
-    author: { _id: trendingId, username: 'trending', displayName: 'Trending User', avatarUrl: 't.png' },
+    author: {
+      _id: trendingId,
+      username: 'trending',
+      displayName: 'Trending User',
+      avatarUrl: 't.png',
+    },
     privacy: 'public',
     trendingScore: 100,
     createdAt: new Date('2024-01-01T09:00:00Z'),
   };
 
-  function mockTravelPlanFindSequence(followedPlans: any[], trendingPlans: any[]) {
+  function mockTravelPlanFindSequence(
+    followedPlans: any[],
+    trendingPlans: any[],
+  ) {
     // Mock the chain for followed plans
     const followedChain = {
       populate: vi.fn().mockReturnThis(),
@@ -283,10 +344,21 @@ describe('getFeedForUser', () => {
 
   it('should interleave followed and trending plans and paginate', async () => {
     // User follows one user
-    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([{ following: followingId }]) }) });
+    mockedFollow.find.mockReturnValue({
+      select: () => ({
+        lean: () => Promise.resolve([{ following: followingId }]),
+      }),
+    });
     mockTravelPlanFindSequence(
-      [followedPlan, { ...followedPlan, _id: new Types.ObjectId(), createdAt: new Date('2024-01-01T08:00:00Z') }],
-      [trendingPlan]
+      [
+        followedPlan,
+        {
+          ...followedPlan,
+          _id: new Types.ObjectId(),
+          createdAt: new Date('2024-01-01T08:00:00Z'),
+        },
+      ],
+      [trendingPlan],
     );
     const result = await TravelPlanService.getFeedForUser(userId, { limit: 2 });
     // Should interleave: 1st followed, 2nd followed, then trending injected (but limit=2, so only first two)
@@ -298,7 +370,9 @@ describe('getFeedForUser', () => {
   });
 
   it('should handle user following no one (only trending)', async () => {
-    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([]) }) });
+    mockedFollow.find.mockReturnValue({
+      select: () => ({ lean: () => Promise.resolve([]) }),
+    });
     mockTravelPlanFindSequence([], [trendingPlan]);
     const result = await TravelPlanService.getFeedForUser(userId, { limit: 1 });
     expect(result.data.length).toBe(0);
@@ -306,11 +380,19 @@ describe('getFeedForUser', () => {
   });
 
   it('should use the after cursor for pagination', async () => {
-    mockedFollow.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([{ following: followingId }]) }) });
+    mockedFollow.find.mockReturnValue({
+      select: () => ({
+        lean: () => Promise.resolve([{ following: followingId }]),
+      }),
+    });
     mockTravelPlanFindSequence([followedPlan], [trendingPlan]);
     const after = new Date('2024-01-01T11:00:00Z').toISOString();
     await TravelPlanService.getFeedForUser(userId, { limit: 1, after });
     // Check that the followed query was called with createdAt < after
-    expect(mockedTravelPlan.find).toHaveBeenCalledWith({ author: { $in: [followingId] }, privacy: 'public', createdAt: { $lt: new Date(after) } });
+    expect(mockedTravelPlan.find).toHaveBeenCalledWith({
+      author: { $in: [followingId] },
+      privacy: 'public',
+      createdAt: { $lt: new Date(after) },
+    });
   });
 });

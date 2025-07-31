@@ -72,10 +72,19 @@ const SocialSection: React.FC<SocialSectionProps> = ({
       setComments((prev) => [response.data, ...prev]);
       setCommentCount((prev) => prev + 1);
       setNewComment('');
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage =
-        error.response?.data?.error ||
-        'Could not post comment. Please try again.';
+        error instanceof Error &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'data' in error.response &&
+        typeof error.response.data === 'object' &&
+        error.response.data !== null &&
+        'error' in error.response.data &&
+        typeof error.response.data.error === 'string'
+          ? error.response.data.error
+          : 'Could not post comment. Please try again.';
       alert(errorMessage);
     } finally {
       setIsPosting(false);
@@ -89,9 +98,19 @@ const SocialSection: React.FC<SocialSectionProps> = ({
 
     try {
       await API.delete(`/comments/${commentId}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage =
-        error.response?.data?.error || 'Failed to delete comment.';
+        error instanceof Error &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'data' in error.response &&
+        typeof error.response.data === 'object' &&
+        error.response.data !== null &&
+        'error' in error.response.data &&
+        typeof error.response.data.error === 'string'
+          ? error.response.data.error
+          : 'Failed to delete comment.';
       alert(errorMessage);
       setComments(originalComments);
       setCommentCount((prev) => prev + 1);

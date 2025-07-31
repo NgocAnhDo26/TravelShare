@@ -33,6 +33,7 @@ import toast from 'react-hot-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
+import type { Trip } from '@/types/trip';
 
 // --- ProfileCard Component (can be a separate file like components/profile/ProfileCard.tsx) ---
 interface ProfileCardProps {
@@ -215,7 +216,7 @@ const TravelLogCard: React.FC<TravelLogCardProps> = ({
 
 // --- TabsSection Component (can be a separate file like components/profile/TabsSection.tsx) ---
 interface TabsSectionProps {
-  tripPlans: any[];
+  tripPlans: Trip[];
   guidesCount: number;
   isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
 }
@@ -227,7 +228,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
   const [activeTab, setActiveTab] = useState('tripPlans');
   const [plans, setPlans] = useState(tripPlans);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [planToDelete, setPlanToDelete] = useState<any>(null);
+  const [planToDelete, setPlanToDelete] = useState<Trip | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -241,8 +242,20 @@ const TabsSection: React.FC<TabsSectionProps> = ({
       await API.delete(`/plans/${planToDelete._id}`);
       setPlans((prev) => prev.filter((p) => p._id !== planToDelete._id));
       toast.success('Plan deleted successfully');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to delete plan');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error &&
+        'response' in err &&
+        typeof err.response === 'object' &&
+        err.response !== null &&
+        'data' in err.response &&
+        typeof err.response.data === 'object' &&
+        err.response.data !== null &&
+        'error' in err.response.data &&
+        typeof err.response.data.error === 'string'
+          ? err.response.data.error
+          : 'Failed to delete plan';
+      toast.error(errorMessage);
     } finally {
       setDeleteDialogOpen(false);
       setPlanToDelete(null);
@@ -420,7 +433,7 @@ interface UserProfileData {
   followingCount: number;
   followers: string[];
   following: string[];
-  tripPlans: string[];
+  tripPlans: Trip[];
   guides: string[];
   travelLog: string[];
   faqs: string[];
@@ -510,11 +523,21 @@ const UserProfilePage: React.FC = () => {
         );
         toast.success('Followed successfully');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error toggling follow:', error);
-      toast.error(
-        error.response?.data?.message || 'Failed to update follow status',
-      );
+      const errorMessage =
+        error instanceof Error &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'data' in error.response &&
+        typeof error.response.data === 'object' &&
+        error.response.data !== null &&
+        'message' in error.response.data &&
+        typeof error.response.data.message === 'string'
+          ? error.response.data.message
+          : 'Failed to update follow status';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

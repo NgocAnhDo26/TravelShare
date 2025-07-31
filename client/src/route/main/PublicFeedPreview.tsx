@@ -7,7 +7,9 @@ interface PublicFeedPreviewProps {
   onRegister: () => void;
 }
 
-const PublicFeedPreview: React.FC<PublicFeedPreviewProps> = ({ onRegister }) => (
+const PublicFeedPreview: React.FC<PublicFeedPreviewProps> = ({
+  onRegister,
+}) => (
   <div className='space-y-4'>
     <div className='text-center mb-6'>
       <h2 className='text-xl font-semibold text-gray-800 mb-2'>
@@ -34,4 +36,4 @@ const PublicFeedPreview: React.FC<PublicFeedPreviewProps> = ({ onRegister }) => 
   </div>
 );
 
-export default PublicFeedPreview; 
+export default PublicFeedPreview;

@@ -1,5 +1,10 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Globe, Users } from 'lucide-react';
 
@@ -8,7 +13,10 @@ interface WelcomeSectionProps {
   onRegister: () => void;
 }
 
-const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onLogin, onRegister }) => (
+const WelcomeSection: React.FC<WelcomeSectionProps> = ({
+  onLogin,
+  onRegister,
+}) => (
   <Card className='mb-8 bg-gradient-to-r from-white to-blue-50/50 border-0 shadow-lg shadow-blue-500/10'>
     <CardHeader>
       <CardTitle className='text-2xl font-bold text-gray-800 text-center'>
@@ -50,4 +58,4 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onLogin, onRegister }) 
   </Card>
 );
 
-export default WelcomeSection; 
+export default WelcomeSection;

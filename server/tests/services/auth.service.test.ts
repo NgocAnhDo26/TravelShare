@@ -18,7 +18,10 @@ describe('Auth Service', () => {
       });
 
       expect(res.statusCode).toBe(201);
-      expect(res.body).toHaveProperty('message', 'User registered successfully.');
+      expect(res.body).toHaveProperty(
+        'message',
+        'User registered successfully.',
+      );
       expect(res.body).toHaveProperty('userId');
       expect(res.body).toHaveProperty('username', 'testuser');
 
@@ -36,7 +39,10 @@ describe('Auth Service', () => {
         .attach('avatar', Buffer.from('fake image data'), 'avatar.jpg');
 
       expect(res.statusCode).toBe(201);
-      expect(res.body).toHaveProperty('message', 'User registered successfully.');
+      expect(res.body).toHaveProperty(
+        'message',
+        'User registered successfully.',
+      );
 
       const userInDb = await User.findOne({ email: 'test-avatar@example.com' });
       expect(userInDb).not.toBeNull();
@@ -206,7 +212,10 @@ describe('Auth Service', () => {
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty('message', 'Password reset successfully.');
+      expect(res.body).toHaveProperty(
+        'message',
+        'Password reset successfully.',
+      );
 
       const updatedUser = await User.findById(user._id).select('+passwordHash');
       const isNewPasswordValid = await bcrypt.compare(
@@ -227,7 +236,10 @@ describe('Auth Service', () => {
           newPassword: 'AnotherNewPassword!',
         });
       expect(invalidRes.statusCode).toBe(400);
-      expect(invalidRes.body).toHaveProperty('error', 'Invalid or expired token.');
+      expect(invalidRes.body).toHaveProperty(
+        'error',
+        'Invalid or expired token.',
+      );
 
       await request(app).post('/api/auth/reset-password').send({
         token: resetToken,

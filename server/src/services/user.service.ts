@@ -138,7 +138,7 @@ const FollowService: IFollowService = {
       .exec();
 
     // Return a flat array of follower user objects
-    return followers.map(follow => {
+    return followers.map((follow) => {
       const followerUser = follow.follower as unknown as IUser;
       return {
         _id: followerUser._id,
@@ -170,7 +170,7 @@ const FollowService: IFollowService = {
       .exec();
 
     // Return a flat array of following user objects
-    return following.map(follow => {
+    return following.map((follow) => {
       const followingUser = follow.following as unknown as IUser;
       return {
         _id: followingUser._id,
@@ -275,7 +275,7 @@ const UserService: IUserService = {
 
     // Fetch user's trip plans (light summary)
     const tripPlans = await TravelPlanService.getTravelPlansByAuthor(userId);
-    const tripPlansSummary = tripPlans.map(plan => ({
+    const tripPlansSummary = tripPlans.map((plan) => ({
       _id: plan._id,
       title: plan.title,
       destination: plan.destination,

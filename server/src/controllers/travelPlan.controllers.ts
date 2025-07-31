@@ -1,7 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { TravelPlanService } from '../services/travelPlan.service';
-import { ITravelPlan } from '../models/travelPlan.model'; // Assuming interfaces are in the model file
+import { LikeService } from '../services/like.service';
+import {
+  ITravelPlan,
+  ITomTomLocationBase,
+  IPOILocation,
+} from '../models/travelPlan.model';
 import { HTTP_STATUS } from '../constants/http';
+import { Types } from 'mongoose'; // Make sure this is imported
 
 /**
  * @interface ITravelPlanController
@@ -10,8 +16,16 @@ import { HTTP_STATUS } from '../constants/http';
 interface ITravelPlanController {
   addPlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
   getPlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
-  updatePlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
-  deletePlanItem(req: Request, res: Response, next: NextFunction): Promise<void>;
+  updatePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
+  deletePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
   createTravelPlan(req: Request, res: Response): Promise<void>;
   getTravelPlanById(req: Request, res: Response): Promise<void>;
   getTravelPlansByAuthor(req: Request, res: Response): Promise<void>;
@@ -38,7 +52,24 @@ interface ITravelPlanController {
     next: NextFunction,
   ): Promise<void>;
 
-   getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>; 
+  getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>;
+}
+
+/**
+ * Attach isLiked to any array of items (plans, posts, etc.) based on likes array.
+ * @param items Array of items (must have _id)
+ * @param likes Array of likes (must have targetId)
+ * @returns Array of items with isLiked property
+ */
+function attachIsLikedToItems(items: any[], likes: any[]): any[] {
+  const likedMap: Record<string, boolean> = likes.reduce((acc: Record<string, boolean>, like: any) => {
+    acc[like.targetId.toString()] = true;
+    return acc;
+  }, {});
+  return items.map((item: any) => ({
+    ...item.toObject?.() || item,
+    isLiked: likedMap[item._id.toString()] || false,
+  }));
 }
 
 /**
@@ -110,6 +141,7 @@ const TravelPlanController: ITravelPlanController = {
   async getTravelPlanById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user as string;
       const travelPlan = await TravelPlanService.getTravelPlanById(id);
 
       if (!travelPlan) {
@@ -119,7 +151,20 @@ const TravelPlanController: ITravelPlanController = {
         return;
       }
 
-      res.status(HTTP_STATUS.OK).json(travelPlan);
+      // Check if liked by current user
+      let isLiked = false;
+      if (userId) {
+        isLiked = await LikeService.isLiked({
+          userId: new Types.ObjectId(userId),
+          targetId: new Types.ObjectId(id),
+          onModel: 'TravelPlan',
+        });
+      }
+
+      res.status(HTTP_STATUS.OK).json({
+        ...travelPlan.toObject?.() || travelPlan,
+        isLiked,
+      });
     } catch (error) {
       console.error('Error in getTravelPlanById controller:', error);
 
@@ -145,10 +190,21 @@ const TravelPlanController: ITravelPlanController = {
   async getTravelPlansByAuthor(req: Request, res: Response): Promise<void> {
     try {
       const { authorId } = req.params;
-      const travelPlans =
-        await TravelPlanService.getTravelPlansByAuthor(authorId);
+      const userId = req.user as string;
+      const travelPlans = await TravelPlanService.getTravelPlansByAuthor(authorId);
 
-      res.status(HTTP_STATUS.OK).json(travelPlans);
+      let likes: any[] = [];
+      if (userId && travelPlans.length > 0) {
+        likes = await LikeService.getUserLikesForTargets({
+          userId: new Types.ObjectId(userId),
+          targetIds: travelPlans.map((plan: any) => plan._id),
+          onModel: 'TravelPlan',
+        });
+      }
+
+      res.status(HTTP_STATUS.OK).json(
+        attachIsLikedToItems(travelPlans, likes)
+      );
     } catch (error) {
       console.error('Error in getTravelPlansByAuthor controller:', error);
 
@@ -296,7 +352,7 @@ const TravelPlanController: ITravelPlanController = {
     try {
       const userId = req.user as string;
       const planId = req.params.id;
-      
+
       // Check if file was uploaded
       if (!req.file) {
         res
@@ -307,7 +363,7 @@ const TravelPlanController: ITravelPlanController = {
 
       // Get the file URL from req.file (location for S3, path for local)
       const coverImageUrl = (req.file as any).location || req.file.path;
-      
+
       if (!coverImageUrl) {
         res
           .status(HTTP_STATUS.BAD_REQUEST)
@@ -361,24 +417,41 @@ const TravelPlanController: ITravelPlanController = {
     }
   },
 
-  async addPlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async addPlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, dayNumber } = req.params;
       const authorId = req.user as string;
-      const newItem = await TravelPlanService.addPlanItem(id, parseInt(dayNumber, 10), req.body, authorId);
-      res.status(HTTP_STATUS.CREATED).json({ message: 'Item added successfully!', data: newItem });
+      const newItem = await TravelPlanService.addPlanItem(
+        id,
+        parseInt(dayNumber, 10),
+        req.body,
+        authorId,
+      );
+      res
+        .status(HTTP_STATUS.CREATED)
+        .json({ message: 'Item added successfully!', data: newItem });
     } catch (error) {
       next(error);
     }
   },
 
-  async getPlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getPlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, itemId } = req.params;
       const authorId = req.user as string;
       const item = await TravelPlanService.getPlanItem(id, itemId, authorId);
       if (!item) {
-        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found in this plan.' });
+        res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json({ error: 'Item not found in this plan.' });
         return;
       }
       res.status(HTTP_STATUS.OK).json(item);
@@ -387,48 +460,90 @@ const TravelPlanController: ITravelPlanController = {
     }
   },
 
-  async updatePlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updatePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, itemId } = req.params;
       const authorId = req.user as string;
-      const updatedItem = await TravelPlanService.updatePlanItem(id, itemId, req.body, authorId);
-       if (!updatedItem) {
-        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found or not authorized.' });
+      const updatedItem = await TravelPlanService.updatePlanItem(
+        id,
+        itemId,
+        req.body,
+        authorId,
+      );
+      if (!updatedItem) {
+        res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json({ error: 'Item not found or not authorized.' });
         return;
       }
-      res.status(HTTP_STATUS.OK).json({ message: 'Item updated successfully!', data: updatedItem });
+      res
+        .status(HTTP_STATUS.OK)
+        .json({ message: 'Item updated successfully!', data: updatedItem });
     } catch (error) {
       next(error);
     }
   },
 
-  async deletePlanItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deletePlanItem(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, itemId } = req.params;
       const authorId = req.user as string;
-      const deleted = await TravelPlanService.deletePlanItem(id, itemId, authorId);
+      const deleted = await TravelPlanService.deletePlanItem(
+        id,
+        itemId,
+        authorId,
+      );
       if (!deleted) {
-        res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Item not found or not authorized.' });
+        res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json({ error: 'Item not found or not authorized.' });
         return;
       }
-      res.status(HTTP_STATUS.OK).json({ message: 'Item deleted successfully!' });
+      res
+        .status(HTTP_STATUS.OK)
+        .json({ message: 'Item deleted successfully!' });
     } catch (error) {
       next(error);
     }
   },
-   async getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getHomeFeed(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-     
       const userId = req.user as string;
-      
+
       const after = req.query.after as string | undefined;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      const feed = await TravelPlanService.getFeedForUser(userId, { limit, after });
+      const feed = await TravelPlanService.getFeedForUser(userId, {
+        limit,
+        after,
+      });
 
-      res.status(HTTP_STATUS.OK).json(feed);
+      let likes: any[] = [];
+      if (userId && feed.data.length > 0) {
+        likes = await LikeService.getUserLikesForTargets({
+          userId: new Types.ObjectId(userId),
+          targetIds: feed.data.map((plan: any) => plan._id),
+          onModel: 'TravelPlan',
+        });
+      }
+
+      res.status(HTTP_STATUS.OK).json({
+        data: attachIsLikedToItems(feed.data, likes),
+        pagination: feed.pagination,
+      });
     } catch (error: any) {
-  
       next(error);
     }
   },
