@@ -28,6 +28,7 @@ interface ITravelPlanController {
   ): Promise<void>;
   createTravelPlan(req: Request, res: Response): Promise<void>;
   getTravelPlanById(req: Request, res: Response): Promise<void>;
+  cloneTravelPlan(req: Request, res: Response, next: NextFunction): Promise<void>;
   getTravelPlansByAuthor(req: Request, res: Response): Promise<void>;
   getPublicTravelPlans(req: Request, res: Response): Promise<void>;
   deleteTravelPlan(req: Request, res: Response): Promise<void>;
@@ -129,6 +130,51 @@ const TravelPlanController: ITravelPlanController = {
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         error: 'An unexpected error occurred while creating the travel plan.',
       });
+    }
+  },
+
+  /**
+   * Clones a travel plan.
+   * POST /api/plans/:id/clone
+   * @param req - Express request object
+   * @param res - Express response object
+   * @param next - Express next middleware function
+   */
+  async cloneTravelPlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const authorId = req.user as string;
+
+      const clonedPlan = await TravelPlanService.cloneTravelPlan(id, authorId);
+
+      res.status(HTTP_STATUS.CREATED).json(clonedPlan);
+    } catch (error: any) {
+      // Handle validation errors from Mongoose
+      if (error.name === 'ValidationError') {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Cloning failed due to a validation error.',
+          error: error.message,
+        });
+        return;
+      }
+
+      // Handle custom errors thrown from the service
+      const knownErrors: Record<string, number> = {
+        'Original travel plan not found.': HTTP_STATUS.NOT_FOUND,
+        'Only public travel plans can be cloned.': HTTP_STATUS.FORBIDDEN,
+      };
+
+      const status = knownErrors[error.message];
+      if (status) {
+        res.status(status).json({ error: error.message });
+      } else {
+        // Pass unexpected errors to the generic error handler
+        next(error);
+      }
     }
   },
 

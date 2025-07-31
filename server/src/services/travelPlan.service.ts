@@ -3,12 +3,10 @@ import TravelPlan, {
   ITravelPlan,
   IPlanItem,
   ITomTomLocationBase,
-  IPOILocation,
 } from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
 import supabase from '../config/supabase.config';
 import Follow from '../models/follow.model';
-import { FollowService } from './user.service';
 
 /**
  * @interface ITravelPlanService
@@ -42,6 +40,7 @@ interface ITravelPlanService {
     planData: CreateTravelPlanRequest,
     authorId: string,
   ): Promise<any>;
+  cloneTravelPlan(planId: string, authorId: string): Promise<ITravelPlan | null>;
   getTravelPlanById(planId: string): Promise<any | null>;
   getTravelPlansByAuthor(authorId: string): Promise<any[]>;
   getPublicTravelPlans(): Promise<any[]>;
@@ -129,6 +128,86 @@ const TravelPlanService: ITravelPlanService = {
       console.error('Error creating travel plan:', error);
       throw error;
     }
+  },
+
+  /**
+   * Clones an existing travel plan for a new author.
+   * @param planId - The ID of the travel plan to clone.
+   * @param authorId - The ID of the user cloning the plan.
+   * @returns The newly created travel plan.
+   * @throws Will throw an error if the plan is not found, not public, or if the user tries to clone their own plan.
+   */
+  async cloneTravelPlan(
+    planId: string,
+    authorId: string,
+  ): Promise<ITravelPlan> {
+    const originalPlan = await TravelPlan.findById(planId).lean();
+
+    if (!originalPlan) {
+      throw new Error('Original travel plan not found.');
+    }
+
+    if (originalPlan.privacy !== 'public') {
+      throw new Error('Only public travel plans can be cloned.');
+    }
+
+    // Manually construct the new object to ensure validation passes and unwanted fields are excluded.
+    const newPlanData = {
+      title: `Copy of ${originalPlan.title}`,
+      destination: originalPlan.destination,
+      author: new Types.ObjectId(authorId),
+      startDate: originalPlan.startDate,
+      endDate: originalPlan.endDate,
+      privacy: 'private' as 'private',
+      originalPlan: originalPlan._id,
+
+      // Reset fields to their default or zero state for the new plan
+      likesCount: 0,
+      commentsCount: 0,
+      remixCount: 0,
+      trendingScore: 0,
+      // coverImageUrl is intentionally omitted to use the schema's default value
+
+      // Deep clone the schedule, creating new objects for each item.
+      // This ensures Mongoose generates new _id's for subdocuments and validates them correctly.
+      schedule: originalPlan.schedule.map(day => ({
+        dayNumber: day.dayNumber,
+        date: day.date,
+        title: day.title,
+        items: day.items.map((item, index) => ({
+          // We don't copy _id from the original item
+          type: item.type,
+          title: item.title,
+          description: item.description,
+          startTime: item.startTime,
+          endTime: item.endTime,
+          cost: item.cost,
+          notes: item.notes,
+          location: item.location,
+          order: item.order ?? index,
+        })),
+      })),
+    };
+
+    const clonedPlan = new TravelPlan(newPlanData);
+
+    try {
+      await clonedPlan.save();
+    } catch (error) {
+      // Log the detailed validation error for better debugging
+      console.error("Error saving cloned plan:", error);
+      throw error; // Re-throw the error to be caught by the controller
+    }
+
+    // Increment the remix count on the original plan after successfully cloning
+    // We need to fetch the original Mongoose document again to update it.
+    const originalPlanDoc = await TravelPlan.findById(planId);
+    if (originalPlanDoc) {
+        originalPlanDoc.remixCount += 1;
+        await originalPlanDoc.save();
+    }
+
+    return clonedPlan;
   },
 
   /**

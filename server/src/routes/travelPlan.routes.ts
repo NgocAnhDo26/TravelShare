@@ -17,6 +17,17 @@ router.post(
 );
 
 /**
+ * POST /api/plans/:id/clone
+ * Clone a travel plan
+ * Requires: Authentication
+ */
+router.post(
+  '/:id/clone',
+  AuthJwtMiddleware.verifyToken,
+  TravelPlanController.cloneTravelPlan,
+);
+
+/**
  * GET /api/plans/public
  * Get public travel plans
  * Requires: Authentication
