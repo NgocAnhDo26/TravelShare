@@ -20,15 +20,19 @@ interface AuthUser {
 interface SocialSectionProps {
   targetId: string;
   onModel: 'TravelPlan' | 'Post';
-  initialLikesCount: number;
+  isLiked: boolean;
+  likesCount: number;
   initialCommentsCount: number;
+  handleToggleLike: (e: React.MouseEvent) => void;
   currentUser?: AuthUser | null;
 }
 
 const SocialSection: React.FC<SocialSectionProps> = ({
   targetId,
   onModel,
-  initialLikesCount,
+  isLiked,
+  likesCount,
+  handleToggleLike,
   initialCommentsCount,
   currentUser,
 }) => {
@@ -122,16 +126,23 @@ const SocialSection: React.FC<SocialSectionProps> = ({
   return (
     <Card className='flex flex-col gap-2 mt-4 border shadow-sm py-3'>
       <div className='flex items-center gap-4 mx-4'>
-        <Button
+      <Button
           variant='ghost'
-          aria-label='Like this trip'
-          className='hover:bg-red-50 hover:text-red-600 focus:bg-red-50 focus:text-red-600'
-          onClick={() => {}}
+          aria-label={isLiked ? 'Unlike this trip' : 'Like this trip'}
+          className={`transition-colors hover:bg-red-50 focus:bg-red-50 ${
+            isLiked ? 'text-red-600 hover:text-red-700' : 'text-gray-600 hover:text-red-600'
+          }`}
+          onClick={handleToggleLike}
         >
-          <Heart /> Like
+          <Heart
+            size={18}
+            className='mr-2'
+            fill={isLiked ? 'currentColor' : 'none'}
+          />
+          <span className='font-medium'>{isLiked ? 'Liked' : 'Like'}</span>
         </Button>
         <Separator orientation='vertical' />
-        <span className='text-sm text-gray-500'>{initialLikesCount} likes</span>
+        <span className='text-sm text-gray-500'>{likesCount} likes</span>
         <span className='text-sm text-gray-500'>•</span>
         <span className='text-sm text-gray-500'>{commentCount} comments</span>
       </div>
