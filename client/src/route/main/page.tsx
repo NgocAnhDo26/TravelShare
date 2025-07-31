@@ -37,7 +37,13 @@ const MainPage: React.FC = () => {
   return (
     <div className='min-h-screen'>
       <div className='max-w-3xl mx-auto py-6 px-4'>
-        <HeaderTabs />
+        <HeaderTabs 
+          tabs={[
+            { label: 'For you', value: 'for-you', to: '/' },
+            { label: 'Following', value: 'following', to: '/following' },
+            { label: 'Search', value: 'search', to: '/search' },
+          ]}
+        />
         {user ? (
           <>
             <CreatePlanSection onCreatePlan={handleCreatePlan} />
