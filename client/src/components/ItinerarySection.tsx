@@ -36,6 +36,7 @@ import {
   Plus,
   X,
   Loader2,
+  GripVertical,
 } from 'lucide-react';
 import type { IDailySchedule, IPlanItem, IPOILocation } from '@/types/trip';
 import API from '@/utils/axiosInstance';
@@ -45,6 +46,17 @@ import type { Destination } from '@/types/destination';
 import type { POI } from '@/types/poi';
 import { TOMTOM_CONFIG } from '@/config/env';
 import { poiToTomTomLocation } from '@/utils/tomtomHelpers';
+import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useSortable } from '@dnd-kit/sortable';
+import type { Dispatch, SetStateAction } from 'react';
 
 interface ItinerarySectionProps {
   itinerary: IDailySchedule[];
@@ -90,7 +102,7 @@ const ItemForm: React.FC<{
   onCancel: () => void;
   isSubmitting: boolean;
   isEditing?: boolean;
-  dayDate: string; // Added to show which day this item belongs to
+  dayDate: string;
   destination?: Destination;
 }> = ({
   formData,
@@ -116,7 +128,6 @@ const ItemForm: React.FC<{
 
   return (
     <form onSubmit={onSubmit} className='space-y-4'>
-      {/* Day Info Display */}
       <div className='bg-gray-50 p-3 rounded-md'>
         <p className='text-sm text-gray-600'>
           <span className='font-medium'>
@@ -125,8 +136,6 @@ const ItemForm: React.FC<{
           {new Date(dayDate).toLocaleDateString()}
         </p>
       </div>
-
-      {/* Title */}
       <div className='grid gap-2'>
         <Label htmlFor='title'>Activity Title *</Label>
         <Input
@@ -138,8 +147,6 @@ const ItemForm: React.FC<{
           required
         />
       </div>
-
-      {/* Description */}
       <div className='grid gap-2'>
         <Label htmlFor='description'>Description</Label>
         <Textarea
@@ -151,8 +158,6 @@ const ItemForm: React.FC<{
           rows={3}
         />
       </div>
-
-      {/* Time */}
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
         <div className='grid gap-2'>
           <Label htmlFor='startTime'>Start Time</Label>
@@ -175,8 +180,6 @@ const ItemForm: React.FC<{
           />
         </div>
       </div>
-
-      {/* Location */}
       <div className='grid gap-2'>
         <Label htmlFor='location'>Location *</Label>
         <TomTomAutocomplete
@@ -219,8 +222,6 @@ const ItemForm: React.FC<{
         />
         */}
       </div>
-
-      {/* Category */}
       <div className='grid gap-2'>
         <Label htmlFor='category'>Category</Label>
         <select
@@ -238,8 +239,6 @@ const ItemForm: React.FC<{
           <option value='other'>Other</option>
         </select>
       </div>
-
-      {/* Budget */}
       <div className='grid gap-2'>
         <Label htmlFor='cost'>Budget</Label>
         <Input
@@ -251,8 +250,6 @@ const ItemForm: React.FC<{
           placeholder='e.g., $50, 1.000.000 VND, $10/person'
         />
       </div>
-
-      {/* Notes */}
       <div className='grid gap-2'>
         <Label htmlFor='notes'>Additional Notes</Label>
         <Textarea
@@ -264,8 +261,6 @@ const ItemForm: React.FC<{
           rows={2}
         />
       </div>
-
-      {/* Action Buttons */}
       <DialogFooter>
         <Button
           type='button'
@@ -291,38 +286,73 @@ const ItemForm: React.FC<{
 
 /**
  * Renders the Dropdown Menu for item actions (Edit, Delete).
+ * Auto-expands the Accordion section when drag is over the menu.
  */
 const ItemActionsMenu: React.FC<{
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ onEdit, onDelete }) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button
-        variant='secondary'
-        size='icon'
-        className='ml-auto size-8 flex-shrink-0'
-      >
-        <Ellipsis />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent className='w-56' align='start'>
-      <DropdownMenuGroup>
-        <DropdownMenuItem onClick={onEdit}>
-          <Pencil className='mr-2 h-4 w-4' />
-          <span>Edit item</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={onDelete}
-          className='text-red-600 focus:bg-red-50 focus:text-red-600'
+  dayNumber?: number;
+  setOpenSections?: (v: string[]) => void;
+  openSections?: string[];
+  sortableId?: string;
+}> = ({
+  onEdit,
+  onDelete,
+  dayNumber,
+  setOpenSections,
+  openSections,
+  sortableId,
+}) => {
+  // Only useSortable if sortableId is provided
+  const { setNodeRef, isOver } = sortableId
+    ? useSortable({ id: sortableId })
+    : { setNodeRef: undefined, isOver: false };
+
+  React.useEffect(() => {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      dayNumber &&
+      !openSections.includes(dayNumber.toString())
+    ) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          ref={setNodeRef}
+          variant='secondary'
+          size='icon'
+          className='ml-auto size-8 flex-shrink-0'
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()} // Also prevent click bubbling
         >
-          <Trash className='mr-2 h-4 w-4 text-red-600' />
-          <span>Delete item</span>
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-    </DropdownMenuContent>
-  </DropdownMenu>
-);
+          <Ellipsis />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className='w-56' align='start'>
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className='mr-2 h-4 w-4' />
+            <span>Edit item</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={onDelete}
+            className='text-red-600 focus:bg-red-50 focus:text-red-600'
+          >
+            <Trash className='mr-2 h-4 w-4 text-red-600' />
+            <span>Delete item</span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 /**
  * Renders a single itinerary item card.
@@ -332,7 +362,20 @@ const ItineraryItemCard: React.FC<{
   editMode?: boolean;
   onEdit: (item: IPlanItem) => void;
   onDelete: (item: IPlanItem) => void;
-}> = ({ item, editMode = false, onEdit, onDelete }) => {
+  dayNumber?: number;
+  setOpenSections?: (v: string[]) => void;
+  openSections?: string[];
+  dragHandleProps?: any;
+}> = ({
+  item,
+  editMode = false,
+  onEdit,
+  onDelete,
+  dayNumber,
+  setOpenSections,
+  openSections,
+  dragHandleProps,
+}) => {
   const badgeColors = {
     activity: 'bg-blue-100 text-blue-800',
     food: 'bg-yellow-100 text-yellow-800',
@@ -369,13 +412,32 @@ const ItineraryItemCard: React.FC<{
     <Card className='mt-4 p-4 rounded-sm text-left gap-2'>
       <CardTitle className='text-lg font-semibold flex items-center justify-between'>
         <div className='flex items-center'>
+          {/* Only show drag handle in edit mode */}
+          {editMode && dragHandleProps && (
+            <span
+              {...dragHandleProps}
+              className='cursor-grab active:cursor-grabbing mr-2'
+              tabIndex={-1}
+              aria-label='Drag to reorder'
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className='w-4 h-4 text-gray-400' />
+            </span>
+          )}
           <Badge className={`${badgeColors[item.type]} mr-2`}>
             {getCategoryLabel(item.type)}
           </Badge>
           {item.title}
         </div>
         {editMode && (
-          <ItemActionsMenu onEdit={handleEdit} onDelete={handleDelete} />
+          <ItemActionsMenu
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            dayNumber={dayNumber}
+            setOpenSections={setOpenSections}
+            openSections={openSections}
+            sortableId={item._id}
+          />
         )}
       </CardTitle>
 
@@ -418,58 +480,96 @@ const ItineraryItemCard: React.FC<{
   );
 };
 
-/**
- * Renders an accordion item for a single day's itinerary.
- */
-const DayItinerary: React.FC<{
-  day: IDailySchedule;
-  editMode?: boolean;
-  onAddItem: (dayNumber: number) => void;
-  onEditItem: (item: IPlanItem) => void;
-  onDeleteItem: (item: IPlanItem) => void;
-}> = ({ day, editMode = false, onAddItem, onEditItem, onDeleteItem }) => {
-  const handleAddItem = () => onAddItem(day.dayNumber);
+const SortableItem: React.FC<{
+  id: string;
+  children: React.ReactElement<any>;
+}> = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : 'auto',
+  };
+
+  // Pass dragHandleProps to children
   return (
-    <AccordionItem value={day.dayNumber.toString()}>
-      <AccordionTrigger className='text-xl'>
-        {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
-      </AccordionTrigger>
-      <AccordionContent>
-        {day.items.length > 0 ? (
-          day.items.map((item) => (
-            <ItineraryItemCard
-              key={item._id}
-              item={item}
-              editMode={editMode}
-              onEdit={onEditItem}
-              onDelete={onDeleteItem}
-            />
-          ))
-        ) : (
-          <div className='p-4 bg-white rounded-lg mt-2 border shadow-sm'>
-            <p className='text-muted-foreground'>
-              No activities planned for this day yet.
-            </p>
-          </div>
-        )}
-
-        {editMode && (
-          <Button
-            variant='secondary'
-            className='mt-4 w-full'
-            onClick={handleAddItem}
-          >
-            <MapPinPlus className='mr-2 h-4 w-4' /> New Item
-          </Button>
-        )}
-      </AccordionContent>
-    </AccordionItem>
+    <div ref={setNodeRef} style={style}>
+      {React.cloneElement(children, {
+        dragHandleProps: { ...attributes, ...listeners },
+      })}
+    </div>
   );
 };
 
+// Drop target for empty days
+const DropTarget: React.FC<{
+  dayNumber: number;
+  setOpenSections?: Dispatch<SetStateAction<string[]>>;
+  openSections?: string[];
+}> = ({ dayNumber, setOpenSections, openSections }) => {
+  const { setNodeRef, isOver } = useSortable({ id: `empty-day-${dayNumber}` });
+
+  React.useEffect(() => {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      !openSections.includes(dayNumber.toString())
+    ) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`p-4 bg-white rounded-lg mt-2 border shadow-sm flex items-center justify-center cursor-pointer transition ${
+        isOver ? 'bg-blue-50 border-blue-400' : ''
+      }`}
+      style={{ minHeight: 60 }}
+    >
+      <p className='text-muted-foreground'>
+        Drop here to move item to this day
+      </p>
+    </div>
+  );
+};
+
+const AccordionTriggerDropTarget: React.FC<{
+  dayNumber: number;
+  setOpenSections?: Dispatch<SetStateAction<string[]>>;
+  openSections?: string[];
+  children: React.ReactNode;
+}> = ({ dayNumber, setOpenSections, openSections, children }) => {
+  const { setNodeRef, isOver } = useSortable({
+    id: `trigger-day-${dayNumber}`,
+  });
+
+  React.useEffect(() => {
+    if (
+      isOver &&
+      setOpenSections &&
+      openSections &&
+      !openSections.includes(dayNumber.toString())
+    ) {
+      setOpenSections([...openSections, dayNumber.toString()]);
+    }
+  }, [isOver, dayNumber, openSections, setOpenSections]);
+
+  return <div ref={setNodeRef}>{children}</div>;
+};
+
 /**
- * Renders the main itinerary section with the accordion.
+ * Renders the main itinerary section with the accordion and drag-and-drop.
  */
 const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   itinerary,
@@ -499,9 +599,220 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Form data state
+  const [draggedItem, setDraggedItem] = useState<IPlanItem | null>(null);
+  const [localItinerary, setLocalItinerary] =
+    useState<IDailySchedule[]>(itinerary);
   const [formData, setFormData] = useState<ItemFormData>(initialFormData);
+
+  // Sensors for dnd-kit
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  // Helper: Find day by item id
+  const findDayByItemId = (id: string) =>
+    localItinerary.find((day) => day.items.some((item) => item._id === id));
+
+  // Helper: Find item by id
+  const findItemById = (id: string) => {
+    for (const day of localItinerary) {
+      const found = day.items.find((item) => item._id === id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  // Drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const item = findItemById(active.id as string);
+    setDraggedItem(item);
+  };
+
+  // Drag end
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) {
+      setDraggedItem(null);
+      return;
+    }
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Check if dropped on empty day
+    if (overId.startsWith('empty-day-')) {
+      const targetDayNumber = Number(overId.replace('empty-day-', ''));
+      const sourceDay = findDayByItemId(activeId);
+      const targetDay = localItinerary.find(
+        (day) => day.dayNumber === targetDayNumber,
+      );
+
+      if (!sourceDay || !targetDay) {
+        setDraggedItem(null);
+        return;
+      }
+
+      // Remove from source
+      const movingItem = sourceDay.items.find((item) => item._id === activeId);
+      if (!movingItem) {
+        setDraggedItem(null);
+        return;
+      }
+      const newSourceItems = sourceDay.items.filter(
+        (item) => item._id !== activeId,
+      );
+
+      // Add to target (empty day)
+      const newTargetItems = [
+        { ...movingItem, order: 0, dayNumber: targetDay.dayNumber },
+      ];
+
+      // Update state
+      setLocalItinerary((prev) =>
+        prev.map((day) => {
+          if (day.dayNumber === sourceDay.dayNumber) {
+            return {
+              ...day,
+              items: newSourceItems.map((item, idx) => ({
+                ...item,
+                order: idx,
+              })),
+            };
+          }
+          if (day.dayNumber === targetDay.dayNumber) {
+            return { ...day, items: newTargetItems };
+          }
+          return day;
+        }),
+      );
+
+      // Send payload to backend here
+      try {
+        await API.post(`/plans/${tripId}/items/move`, {
+          sourceDayNumber: sourceDay.dayNumber,
+          targetDayNumber: targetDay.dayNumber,
+          itemId: movingItem._id,
+          targetIndex: 0, // Always index 0 for empty day
+        });
+        toast.success('Item moved to another day!');
+      } catch (error) {
+        console.error('Error moving item:', error);
+        toast.error('Failed to move item. Please try again.');
+      }
+
+      setDraggedItem(null);
+      return;
+    }
+
+    const sourceDay = findDayByItemId(activeId);
+    const targetDay = findDayByItemId(overId);
+
+    if (!sourceDay || !targetDay) {
+      setDraggedItem(null);
+      return;
+    }
+
+    // Find indices
+    const oldIndex = sourceDay.items.findIndex((item) => item._id === activeId);
+    const newIndex = targetDay.items.findIndex((item) => item._id === overId);
+
+    // If same day and same index, do nothing
+    if (sourceDay.dayNumber === targetDay.dayNumber && oldIndex === newIndex) {
+      setDraggedItem(null);
+      return;
+    }
+
+    // If same day, reorder
+    if (sourceDay.dayNumber === targetDay.dayNumber) {
+      const newItems = arrayMove(sourceDay.items, oldIndex, newIndex);
+      const updatedDay: IDailySchedule = {
+        ...sourceDay,
+        items: newItems.map((item, idx) => ({ ...item, order: idx })),
+      };
+
+      setLocalItinerary((prev) =>
+        prev.map((day) =>
+          day.dayNumber === sourceDay.dayNumber ? updatedDay : day,
+        ),
+      );
+
+      // TODO: Send payload to backend here
+      const reorderedItems = newItems.map((item, idx) => ({
+        _id: item._id,
+        order: idx + 1,
+      }));
+
+      const payload = {
+        dayNumber: sourceDay.dayNumber,
+        items: reorderedItems,
+      };
+      console.log('Reordering payload:', payload);
+      // API call:
+      await API.post(`/plans/${tripId}/items/reorder`, payload)
+        .then(() => {
+          toast.success('Items reordered!');
+        })
+        .catch((error) => {
+          console.error('Error reordering items:', error);
+          toast.error('Failed to reorder items. Please try again.');
+        });
+    } else {
+      // Move to another day
+      const movingItem = sourceDay.items.find((item) => item._id === activeId);
+      if (!movingItem) {
+        setDraggedItem(null);
+        return;
+      }
+
+      // Remove from source
+      const newSourceItems = sourceDay.items.filter(
+        (item) => item._id !== activeId,
+      );
+      // Insert into target at overId position
+      const overIndex = targetDay.items.findIndex(
+        (item) => item._id === overId,
+      );
+      const newTargetItems = [
+        ...targetDay.items.slice(0, overIndex),
+        { ...movingItem, order: overIndex, dayNumber: targetDay.dayNumber },
+        ...targetDay.items.slice(overIndex),
+      ].map((item, idx) => ({ ...item, order: idx }));
+
+      // Update state
+      setLocalItinerary((prev) =>
+        prev.map((day) => {
+          if (day.dayNumber === sourceDay.dayNumber) {
+            return {
+              ...day,
+              items: newSourceItems.map((item, idx) => ({
+                ...item,
+                order: idx,
+              })),
+            };
+          }
+          if (day.dayNumber === targetDay.dayNumber) {
+            return { ...day, items: newTargetItems };
+          }
+          return day;
+        }),
+      );
+
+      // API call:
+      try {
+        await API.post(`/plans/${tripId}/items/move`, {
+          sourceDayNumber: sourceDay.dayNumber,
+          targetDayNumber: targetDay.dayNumber,
+          itemId: movingItem._id,
+          targetIndex: overIndex,
+        });
+        toast.success('Item moved to another day!');
+      } catch (error) {
+        console.error('Error moving item:', error);
+        toast.error('Failed to move item. Please try again.');
+      }
+    }
+
+    setDraggedItem(null);
+  };
 
   // Convert form data to API format
   const convertFormDataToApiFormat = (
@@ -511,7 +822,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       title: data.title,
       description: data.description,
       type: data.category as IPlanItem['type'],
-      cost: data.cost || '', // Keep as string
+      cost: data.cost || '',
       notes: data.notes,
     };
 
@@ -528,45 +839,39 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       };
     }
 
-    // Add times if provided - we'll use the day's date from the itinerary
     const dayData = itinerary.find((day) => day.dayNumber === currentDayNumber);
     const dayDate = dayData
       ? dayData.date
       : new Date().toISOString().split('T')[0];
 
-    // Validate time format before processing
     if (data.startTime && data.endTime) {
-      // Times are in HH:MM format, compare them directly
-      if (data.startTime > data.endTime) {
+      const [startHour, startMinute] = data.startTime.split(':').map(Number);
+      const [endHour, endMinute] = data.endTime.split(':').map(Number);
+      const startTotal = startHour * 60 + startMinute;
+      const endTotal = endHour * 60 + endMinute;
+      if (startTotal > endTotal) {
         throw new Error('Start time cannot be after end time');
       }
     }
 
     if (data.startTime) {
-      // Create date in UTC to avoid timezone conversion
-      // dayDate is already in YYYY-MM-DD format or ISO string
-      const dateOnly = dayDate.split('T')[0]; // Extract date part
-      const startDateTime = new Date(`${dateOnly}T${data.startTime}:00.000Z`);
-
-      // Validate the created date
-      if (isNaN(startDateTime.getTime())) {
-        throw new Error('Invalid start time format');
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (timeRegex.test(data.startTime)) {
+        const startDateTime = new Date(
+          `${dayDate.split('T')[0]}T${data.startTime}:00.000Z`,
+        );
+        apiData.startTime = startDateTime.toISOString();
       }
-
-      apiData.startTime = startDateTime.toISOString();
     }
 
     if (data.endTime) {
-      // Create date in UTC to avoid timezone conversion
-      const dateOnly = dayDate.split('T')[0]; // Extract date part
-      const endDateTime = new Date(`${dateOnly}T${data.endTime}:00.000Z`);
-
-      // Validate the created date
-      if (isNaN(endDateTime.getTime())) {
-        throw new Error('Invalid end time format');
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (timeRegex.test(data.endTime)) {
+        const endDateTime = new Date(
+          `${dayDate.split('T')[0]}T${data.endTime}:00.000Z`,
+        );
+        apiData.endTime = endDateTime.toISOString();
       }
-
-      apiData.endTime = endDateTime.toISOString();
     }
 
     return apiData;
@@ -576,10 +881,10 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   const convertApiFormatToFormData = (item: IPlanItem): ItemFormData => {
     const getTimeFromISO = (isoString?: string): string => {
       if (!isoString) return '';
-      const date = new Date(isoString); // Parse ISO string that has timezone
-      const hours = date.getUTCHours().toString().padStart(2, '0'); // UTC to avoid timezone issues
+      const date = new Date(isoString);
+      const hours = date.getUTCHours().toString().padStart(2, '0');
       const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-      return `${hours}:${minutes}`; // Returns in HH:mm format
+      return `${hours}:${minutes}`;
     };
 
     return {
@@ -624,7 +929,20 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
     try {
       await API.delete(`/plans/${tripId}/items/${currentDeleteItem._id}`);
 
-      // Find the day number for this item
+      // Update localItinerary to remove the deleted item
+      setLocalItinerary((prev) =>
+        prev.map((day) =>
+          day.items.some((item) => item._id === currentDeleteItem._id)
+            ? {
+                ...day,
+                items: day.items.filter(
+                  (item) => item._id !== currentDeleteItem._id,
+                ),
+              }
+            : day,
+        ),
+      );
+
       const dayNumber = itinerary.find((day) =>
         day.items.some((dayItem) => dayItem._id === currentDeleteItem._id),
       )?.dayNumber;
@@ -661,9 +979,19 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         `/plans/${tripId}/days/${currentDayNumber}/items`,
         apiData,
       );
+      const newItem = response.data.data;
+
+      // Update localItinerary to add the new item to the correct day
+      setLocalItinerary((prev) =>
+        prev.map((day) =>
+          day.dayNumber === currentDayNumber
+            ? { ...day, items: [...day.items, newItem] }
+            : day,
+        ),
+      );
 
       if (onItemAdded) {
-        onItemAdded(currentDayNumber, response.data.data);
+        onItemAdded(currentDayNumber, newItem);
       }
 
       setIsAddModalOpen(false);
@@ -690,14 +1018,24 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
         `/plans/${tripId}/items/${currentEditItem._id}`,
         apiData,
       );
+      const updatedItem = response.data.data;
 
-      // Find the day number for this item
+      // Update localItinerary to reflect the updated item
+      setLocalItinerary((prev) =>
+        prev.map((day) => ({
+          ...day,
+          items: day.items.map((item) =>
+            item._id === currentEditItem._id ? updatedItem : item,
+          ),
+        })),
+      );
+
       const dayNumber = itinerary.find((day) =>
         day.items.some((dayItem) => dayItem._id === currentEditItem._id),
       )?.dayNumber;
 
       if (dayNumber && onItemUpdated) {
-        onItemUpdated(dayNumber, currentEditItem._id, response.data.data);
+        onItemUpdated(dayNumber, currentEditItem._id, updatedItem);
       }
 
       setIsEditModalOpen(false);
@@ -723,23 +1061,114 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   return (
     <section className='lg:mx-14 mx-8 mt-6'>
       <h1 className='text-2xl font-bold text-left mb-4'>Itinerary</h1>
-      <Accordion
-        type='multiple'
-        value={openSections}
-        onValueChange={setOpenSections}
-      >
-        {itinerary.map((day) => (
-          <DayItinerary
-            key={day.dayNumber}
-            day={day}
-            editMode={editMode}
-            onAddItem={handleAddItem}
-            onEditItem={handleEditItem}
-            onDeleteItem={handleDeleteItem}
-          />
-        ))}
-      </Accordion>
-
+      {editMode ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <Accordion
+            type='multiple'
+            value={openSections}
+            onValueChange={setOpenSections}
+            className='w-full'
+          >
+            {localItinerary.map((day) => (
+              <AccordionItem
+                key={day.dayNumber}
+                value={day.dayNumber.toString()}
+              >
+                <AccordionTriggerDropTarget
+                  dayNumber={day.dayNumber}
+                  setOpenSections={setOpenSections}
+                  openSections={openSections}
+                >
+                  <AccordionTrigger className='text-xl'>
+                    {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
+                  </AccordionTrigger>
+                </AccordionTriggerDropTarget>
+                <AccordionContent>
+                  <SortableContext
+                    items={
+                      day.items.length > 0
+                        ? day.items.map((item) => item._id)
+                        : [`empty-day-${day.dayNumber}`]
+                    }
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {day.items.length > 0 ? (
+                      day.items.map((item) => (
+                        <SortableItem key={item._id} id={item._id}>
+                          <ItineraryItemCard
+                            item={item}
+                            editMode={editMode}
+                            onEdit={handleEditItem}
+                            onDelete={handleDeleteItem}
+                            dayNumber={day.dayNumber}
+                            setOpenSections={setOpenSections}
+                            openSections={openSections}
+                            // dragHandleProps will be injected by SortableItem
+                          />
+                        </SortableItem>
+                      ))
+                    ) : (
+                      <DropTarget
+                        dayNumber={day.dayNumber}
+                        setOpenSections={setOpenSections}
+                        openSections={openSections}
+                      />
+                    )}
+                  </SortableContext>
+                  <Button
+                    variant='secondary'
+                    className='mt-4 w-full'
+                    onClick={() => handleAddItem(day.dayNumber)}
+                  >
+                    <MapPinPlus className='mr-2 h-4 w-4' /> New Item
+                  </Button>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+          <DragOverlay>
+            {draggedItem ? (
+              <ItineraryItemCard
+                item={draggedItem}
+                editMode={false}
+                onEdit={() => {}}
+                onDelete={() => {}}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        <Accordion
+          type='multiple'
+          value={openSections}
+          onValueChange={setOpenSections}
+          className='w-full'
+        >
+          {localItinerary.map((day) => (
+            <AccordionItem key={day.dayNumber} value={day.dayNumber.toString()}>
+              <AccordionTrigger className='text-xl'>
+                {`Day ${day.dayNumber} (${new Date(day.date).toLocaleDateString()})`}
+              </AccordionTrigger>
+              <AccordionContent>
+                {day.items.map((item) => (
+                  <ItineraryItemCard
+                    key={item._id}
+                    item={item}
+                    editMode={false}
+                    onEdit={handleEditItem}
+                    onDelete={handleDeleteItem}
+                  />
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
       {/* Add Item Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>

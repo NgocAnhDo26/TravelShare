@@ -16,6 +16,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import FeedLayout from './components/SidebarLayout/FeedLayout';
+import DiscoverPage from './route/DiscoverPage/page';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
               path='plans/:planId'
               element={<PlanEditorPage editMode={false} />}
             />
+            <Route path='/explore' element={<DiscoverPage />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
