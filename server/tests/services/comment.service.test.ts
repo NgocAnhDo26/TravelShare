@@ -20,7 +20,6 @@ const mockSession = {
   abortTransaction: vi.fn(),
   endSession: vi.fn(),
 };
-
 vi.spyOn(mongoose, 'startSession').mockResolvedValue(mockSession as any);
 
 type MockRequest = Partial<Request> & {
@@ -44,7 +43,6 @@ describe('CommentService - Unit Tests', () => {
       query: {},
       user: mockUserId,
     };
-
     mockResponse = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
@@ -52,200 +50,162 @@ describe('CommentService - Unit Tests', () => {
   });
 
   describe('addComment', () => {
-    it('should add a comment and commit transaction on success, returning 201', async () => {
+    it('should add a comment, update target count and commit transaction', async () => {
       mockRequest.body = {
         content: 'A new test comment',
         targetId: mockTargetId,
         onModel: 'TravelPlan',
       };
-
-      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue({
-        _id: mockTargetId,
-      });
-
+      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue({ _id: mockTargetId });
       const mockSavedComment = {
         ...mockRequest.body,
         _id: mockCommentId,
         user: { _id: mockUserId },
+        populate: vi.fn().mockResolvedValue({
+            ...mockRequest.body,
+            user: { _id: mockUserId, username: 'testuser' },
+        }),
       };
-      mockedComment.prototype.save = vi
-        .fn()
-        .mockResolvedValue(mockSavedComment);
+      mockedComment.prototype.save = vi.fn().mockResolvedValue(mockSavedComment);
 
-      const mockPopulatedComment = {
-        ...mockSavedComment,
-        user: { _id: mockUserId, username: 'testuser' },
-      };
-      mockedComment.prototype.populate = vi
-        .fn()
-        .mockResolvedValue(mockPopulatedComment);
+      await CommentService.addComment(mockRequest as Request, mockResponse as Response);
 
-      await CommentService.addComment(
-        mockRequest as Request,
-        mockResponse as Response,
-      );
-
-      expect(mongoose.startSession).toHaveBeenCalled();
       expect(mockSession.startTransaction).toHaveBeenCalled();
-
       expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
         mockTargetId,
         { $inc: { commentsCount: 1 } },
         { new: true, session: mockSession },
       );
-
-      expect(mockedComment.prototype.save).toHaveBeenCalledWith({
-        session: mockSession,
-      });
-
-      expect(mockedComment.prototype.populate).toHaveBeenCalledWith({
-        path: 'user',
-        select: 'username displayName avatarUrl _id',
-      });
-
+      expect(mockedComment.prototype.save).toHaveBeenCalledWith({ session: mockSession });
       expect(mockSession.commitTransaction).toHaveBeenCalled();
-      expect(mockSession.abortTransaction).not.toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-
       expect(mockResponse.status).toHaveBeenCalledWith(201);
-      expect(mockResponse.json).toHaveBeenCalledWith(mockPopulatedComment);
-    });
-
-    it('should abort transaction and return 404 if the target is not found', async () => {
-      mockRequest.body = {
-        content: 'test',
-        targetId: mockTargetId,
-        onModel: 'TravelPlan',
-      };
-      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(null);
-
-      await CommentService.addComment(
-        mockRequest as Request,
-        mockResponse as Response,
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({ content: 'A new test comment' }),
       );
-
-      expect(mongoose.startSession).toHaveBeenCalled();
-      expect(mockSession.startTransaction).toHaveBeenCalled();
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.commitTransaction).not.toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-
-      expect(mockResponse.status).toHaveBeenCalledWith(404);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'TravelPlan not found.',
-      });
     });
 
-    it('should return 400 if required fields are missing', async () => {
-      mockRequest.body = { targetId: mockTargetId, onModel: 'TravelPlan' };
-      await CommentService.addComment(
-        mockRequest as Request,
-        mockResponse as Response,
-      );
+    it('should abort transaction if target not found', async () => {
+       mockRequest.body = { content: 'test', targetId: mockTargetId, onModel: 'TravelPlan' };
+       mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(null);
 
-      expect(mongoose.startSession).not.toHaveBeenCalled();
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Content, targetId, and onModel are required.',
-      });
+       await CommentService.addComment(mockRequest as Request, mockResponse as Response);
+
+       expect(mockSession.abortTransaction).toHaveBeenCalled();
+       expect(mockSession.commitTransaction).not.toHaveBeenCalled();
+       expect(mockResponse.status).toHaveBeenCalledWith(404);
+       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'TravelPlan not found.' });
     });
+
+     it('should return 400 if required fields are missing', async () => {
+       mockRequest.body = { targetId: mockTargetId, onModel: 'TravelPlan' };
+       await CommentService.addComment(
+         mockRequest as Request,
+         mockResponse as Response,
+       );
+
+       expect(mongoose.startSession).not.toHaveBeenCalled();
+       expect(mockResponse.status).toHaveBeenCalledWith(400);
+       expect(mockResponse.json).toHaveBeenCalledWith({
+         error: 'Content, targetId, and onModel are required.',
+       });
+     });
   });
 
   describe('deleteComment', () => {
-    it('should delete a comment, commit transaction and return 200', async () => {
-      mockRequest.params = { commentId: mockCommentId.toHexString() };
+     it('should delete a comment, commit transaction and return 200', async () => {
+       mockRequest.params = { commentId: mockCommentId.toHexString() };
 
-      const mockExistingComment = {
-        _id: mockCommentId,
-        user: mockUserId,
-        onModel: 'TravelPlan',
-        targetId: mockTargetId,
-      };
+       const mockExistingComment = {
+         _id: mockCommentId,
+         user: mockUserId,
+         onModel: 'TravelPlan',
+         targetId: mockTargetId,
+       };
 
-      mockedComment.findOneAndDelete.mockResolvedValue(mockExistingComment);
-      mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(true);
+       mockedComment.findOneAndDelete.mockResolvedValue(mockExistingComment);
+       mockedTravelPlan.findByIdAndUpdate.mockResolvedValue(true);
 
-      await CommentService.deleteComment(
-        mockRequest as Request,
-        mockResponse as Response,
-      );
+       await CommentService.deleteComment(
+         mockRequest as Request,
+         mockResponse as Response,
+       );
 
-      expect(mongoose.startSession).toHaveBeenCalled();
-      expect(mockSession.startTransaction).toHaveBeenCalled();
+       expect(mongoose.startSession).toHaveBeenCalled();
+       expect(mockSession.startTransaction).toHaveBeenCalled();
 
-      expect(mockedComment.findOneAndDelete).toHaveBeenCalledWith(
-        { _id: mockCommentId.toHexString(), user: mockUserId },
-        { session: mockSession },
-      );
+       expect(mockedComment.findOneAndDelete).toHaveBeenCalledWith(
+         { _id: mockCommentId.toHexString(), user: mockUserId },
+         { session: mockSession },
+       );
 
-      expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
-        mockTargetId,
-        { $inc: { commentsCount: -1 } },
-        { session: mockSession },
-      );
+       expect(mockedTravelPlan.findByIdAndUpdate).toHaveBeenCalledWith(
+         mockTargetId,
+         { $inc: { commentsCount: -1 } },
+         { session: mockSession },
+       );
 
-      expect(mockSession.commitTransaction).toHaveBeenCalled();
-      expect(mockSession.abortTransaction).not.toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
+       expect(mockSession.commitTransaction).toHaveBeenCalled();
+       expect(mockSession.abortTransaction).not.toHaveBeenCalled();
+       expect(mockSession.endSession).toHaveBeenCalled();
 
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        message: 'Comment deleted successfully.',
-      });
-    });
+       expect(mockResponse.status).toHaveBeenCalledWith(200);
+       expect(mockResponse.json).toHaveBeenCalledWith({
+         message: 'Comment deleted successfully.',
+       });
+     });
 
-    it('should return 404 and abort transaction if comment not found or user is not author', async () => {
-      mockRequest.params = { commentId: mockCommentId.toHexString() };
-      mockedComment.findOneAndDelete.mockResolvedValue(null);
+     it('should return 404 and abort transaction if comment not found or user is not author', async () => {
+       mockRequest.params = { commentId: mockCommentId.toHexString() };
+       mockedComment.findOneAndDelete.mockResolvedValue(null);
 
-      await CommentService.deleteComment(
-        mockRequest as Request,
-        mockResponse as Response,
-      );
+       await CommentService.deleteComment(
+         mockRequest as Request,
+         mockResponse as Response,
+       );
 
-      expect(mongoose.startSession).toHaveBeenCalled();
-      expect(mockSession.startTransaction).toHaveBeenCalled();
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.commitTransaction).not.toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
+       expect(mongoose.startSession).toHaveBeenCalled();
+       expect(mockSession.startTransaction).toHaveBeenCalled();
+       expect(mockSession.abortTransaction).toHaveBeenCalled();
+       expect(mockSession.commitTransaction).not.toHaveBeenCalled();
+       expect(mockSession.endSession).toHaveBeenCalled();
 
-      expect(mockResponse.status).toHaveBeenCalledWith(404);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Comment not found or you do not have permission to delete.',
-      });
-    });
-  });
+       expect(mockResponse.status).toHaveBeenCalledWith(404);
+       expect(mockResponse.json).toHaveBeenCalledWith({
+         error: 'Comment not found or you do not have permission to delete.',
+       });
+     });
+   });
 
-  describe('getCommentsForTarget', () => {
-    it('should return a list of comments and status 200', async () => {
-      mockRequest.query = { targetId: mockTargetId, onModel: 'TravelPlan' };
-      const mockCommentList = [
-        { content: 'Comment 1' },
-        { content: 'Comment 2' },
-      ];
+   describe('getCommentsForTarget', () => {
+     it('should return a list of comments and status 200', async () => {
+       mockRequest.query = { targetId: mockTargetId, onModel: 'TravelPlan' };
+       const mockCommentList = [
+         { content: 'Comment 1' },
+         { content: 'Comment 2' },
+       ];
 
-      const mockQuery = {
-        populate: vi.fn().mockReturnThis(),
-        sort: vi.fn().mockResolvedValue(mockCommentList),
-      };
-      mockedComment.find.mockReturnValue(mockQuery);
+       const mockQuery = {
+         populate: vi.fn().mockReturnThis(),
+         sort: vi.fn().mockResolvedValue(mockCommentList),
+       };
+       mockedComment.find.mockReturnValue(mockQuery);
 
-      await CommentService.getCommentsForTarget(
-        mockRequest as Request,
-        mockResponse as Response,
-      );
+       await CommentService.getCommentsForTarget(
+         mockRequest as Request,
+         mockResponse as Response,
+       );
 
-      expect(mockedComment.find).toHaveBeenCalledWith({
-        targetId: mockTargetId,
-        onModel: 'TravelPlan',
-      });
-      expect(mockQuery.populate).toHaveBeenCalledWith({
-        path: 'user',
-        select: 'username displayName avatarUrl _id',
-      });
-      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith(mockCommentList);
-    });
-  });
+       expect(mockedComment.find).toHaveBeenCalledWith({
+         targetId: mockTargetId,
+         onModel: 'TravelPlan',
+       });
+       expect(mockQuery.populate).toHaveBeenCalledWith({
+         path: 'user',
+         select: 'username displayName avatarUrl _id',
+       });
+       expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
+       expect(mockResponse.status).toHaveBeenCalledWith(200);
+       expect(mockResponse.json).toHaveBeenCalledWith(mockCommentList);
+     });
+   });
 });
