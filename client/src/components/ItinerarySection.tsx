@@ -38,9 +38,14 @@ import {
   Loader2,
   GripVertical,
 } from 'lucide-react';
-import type { IDailySchedule, IPlanItem } from '@/types/trip';
+import type { IDailySchedule, IPlanItem, IPOILocation } from '@/types/trip';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
+import TomTomAutocomplete from './TomTomAutocomplete';
+import type { Destination } from '@/types/destination';
+import type { POI } from '@/types/poi';
+import { TOMTOM_CONFIG } from '@/config/env';
+import { poiToTomTomLocation } from '@/utils/tomtomHelpers';
 import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
@@ -60,6 +65,7 @@ interface ItinerarySectionProps {
   onItemAdded?: (dayNumber: number, item: IPlanItem) => void;
   onItemUpdated?: (dayNumber: number, itemId: string, item: IPlanItem) => void;
   onItemDeleted?: (dayNumber: number, itemId: string) => void;
+  itineraryDestination?: Destination;
 }
 
 interface ItemFormData {
@@ -68,6 +74,7 @@ interface ItemFormData {
   startTime: string;
   endTime: string;
   location: string;
+  locationData: IPOILocation | null; // Store complete POI location data
   category: string;
   cost: string;
   notes: string;
@@ -79,6 +86,7 @@ const initialFormData: ItemFormData = {
   startTime: '',
   endTime: '',
   location: '',
+  locationData: null,
   category: 'activity',
   cost: '',
   notes: '',
@@ -95,6 +103,7 @@ const ItemForm: React.FC<{
   isSubmitting: boolean;
   isEditing?: boolean;
   dayDate: string;
+  destination?: Destination;
 }> = ({
   formData,
   onFormDataChange,
@@ -103,6 +112,7 @@ const ItemForm: React.FC<{
   isSubmitting,
   isEditing = false,
   dayDate,
+  destination,
 }) => {
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -172,6 +182,36 @@ const ItemForm: React.FC<{
       </div>
       <div className='grid gap-2'>
         <Label htmlFor='location'>Location *</Label>
+        <TomTomAutocomplete
+          apiKey={TOMTOM_CONFIG.API_KEY}
+          apiType='poi'
+          placeholder='Search for a place or address'
+          destination={destination}
+          onSelect={(result) => {
+            // result: POI
+            if ('poi' in result) {
+              const locationText =
+                result.poi.name || result.address.freeformAddress || '';
+              const poiLocationData = poiToTomTomLocation(result as POI);
+              onFormDataChange({
+                ...formData,
+                location: locationText,
+                locationData: poiLocationData,
+              });
+            } else {
+              // Destination result
+              const locationText = result.address.freeformAddress || '';
+              onFormDataChange({
+                ...formData,
+                location: locationText,
+                locationData: null, // Destinations don't have POI data
+              });
+            }
+          }}
+          className='w-full'
+        />
+        {/* Nếu muốn cho phép nhập tay, có thể giữ lại Input bên dưới */}
+        {/*
         <Input
           id='location'
           name='location'
@@ -180,6 +220,7 @@ const ItemForm: React.FC<{
           placeholder='Enter location or address'
           required
         />
+        */}
       </div>
       <div className='grid gap-2'>
         <Label htmlFor='category'>Category</Label>
@@ -537,6 +578,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   onItemAdded,
   onItemUpdated,
   onItemDeleted,
+  itineraryDestination,
 }) => {
   // By default, open the first day or any day that has items.
   const defaultOpenItems = itinerary
@@ -784,7 +826,12 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       notes: data.notes,
     };
 
-    if (data.location) {
+    // Add location if provided - use complete POI data if available
+    if (data.locationData) {
+      // Use the complete POI location data
+      apiData.location = data.locationData;
+    } else if (data.location) {
+      // Fallback to simple location if only text is provided
       apiData.location = {
         placeId: '',
         name: data.location,
@@ -846,6 +893,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
       startTime: getTimeFromISO(item.startTime),
       endTime: getTimeFromISO(item.endTime),
       location: item.location?.address || '',
+      locationData: item.location || null,
       category: item.type,
       cost: item.cost || '',
       notes: item.notes || '',
@@ -1138,6 +1186,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
               itinerary.find((day) => day.dayNumber === currentDayNumber)
                 ?.date || new Date().toISOString()
             }
+            destination={itineraryDestination}
           />
         </DialogContent>
       </Dialog>
@@ -1162,6 +1211,7 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                   )?.date || new Date().toISOString()
                 : new Date().toISOString()
             }
+            destination={itineraryDestination}
           />
         </DialogContent>
       </Dialog>

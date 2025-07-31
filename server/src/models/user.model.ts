@@ -51,7 +51,7 @@ const userSchema: Schema<IUser> = new Schema(
     /** Encrypted password (using bcrypt), excluded from default find() queries */
     passwordHash: {
       type: String,
-      required: true,
+      required: false,
       select: false,
     },
     /** Display name of the user, can be duplicate */

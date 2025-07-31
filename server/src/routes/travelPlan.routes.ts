@@ -21,10 +21,7 @@ router.post(
  * Get public travel plans
  * Requires: Authentication
  */
-router.get(
-  '/public',
-  TravelPlanController.getPublicTravelPlans,
-);
+router.get('/public', TravelPlanController.getPublicTravelPlans);
 
 /**
  * GET /api/plans/feed
@@ -33,7 +30,7 @@ router.get(
  */
 router.get(
   '/feed',
-  AuthJwtMiddleware.verifyToken, 
+  AuthJwtMiddleware.verifyToken,
   TravelPlanController.getHomeFeed,
 );
 
@@ -127,10 +124,10 @@ router.put(
  * @access  Private (Requires Authorization - Author only)
  */
 router.post(
-    '/:id/days/:dayNumber/items', 
-    AuthJwtMiddleware.verifyToken,
-    AuthJwtMiddleware.isAuthor,
-    TravelPlanController.addPlanItem
+  '/:id/days/:dayNumber/items',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.addPlanItem,
 );
 
 /**
@@ -151,10 +148,10 @@ router.post(
  * @access  Private (Author or Public Plan)
  */
 router.get(
-    '/:id/items/:itemId',
-    AuthJwtMiddleware.verifyToken,
-    AuthJwtMiddleware.isAuthorOrPublic,
-    TravelPlanController.getPlanItem
+  '/:id/items/:itemId',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthorOrPublic,
+  TravelPlanController.getPlanItem,
 );
 
 /**
@@ -163,10 +160,10 @@ router.get(
  * @access  Private (Requires Authorization - Author only)
  */
 router.put(
-    '/:id/items/:itemId',
-    AuthJwtMiddleware.verifyToken,
-    AuthJwtMiddleware.isAuthor,
-    TravelPlanController.updatePlanItem
+  '/:id/items/:itemId',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.updatePlanItem,
 );
 
 /**
@@ -175,10 +172,10 @@ router.put(
  * @access  Private (Requires Authorization - Author only)
  */
 router.delete(
-    '/:id/items/:itemId',
-    AuthJwtMiddleware.verifyToken,
-    AuthJwtMiddleware.isAuthor,
-    TravelPlanController.deletePlanItem
+  '/:id/items/:itemId',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.deletePlanItem,
 );
 
 /**

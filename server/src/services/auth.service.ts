@@ -7,14 +7,17 @@ import Token from '../models/token.model';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import fs from 'fs';
+import axios from 'axios';
 import path from 'path';
+
 const saltRounds = 10;
 dotenv.config();
-
-let emailTransporter: nodemailer.Transporter | null = null; // singleton
+const emailTransporter: nodemailer.Transporter | null = null; // singleton
 interface IAuthenticationService {
   register(req: Request, res: Response): Promise<void>;
   login(req: Request, res: Response): Promise<void>;
+  googleLogin(req: Request, res: Response): Promise<void>;
+  googleRegister(req: Request, res: Response): Promise<void>;
   forgotPassword(req: Request, res: Response): Promise<void>;
   resetPassword(req: Request, res: Response): Promise<void>;
   verifyToken(req: Request, res: Response): Promise<void>;
@@ -45,66 +48,17 @@ interface resetPasswordData {
   token: string;
   newPassword: string;
 }
-// Use ethereal first because I cannot find a free SMTP server that allows sending emails without verification
-// ethereal is a fake SMTP server that allows you to test sending emails without actually sending them
 
 export async function createMailingService() {
-  // need export for testing purposes
-  if (emailTransporter) {
-    return emailTransporter;
-  }
-  try {
-    if (
-      !process.env.SMTP_HOST ||
-      !process.env.SMTP_USER ||
-      !process.env.SMTP_PASS
-    ) {
-      const etherealCredentials = await nodemailer.createTestAccount();
-      const transporter = nodemailer.createTransport({
-        host: etherealCredentials.smtp.host,
-        port: etherealCredentials.smtp.port,
-        secure: etherealCredentials.smtp.secure,
-        auth: {
-          user: etherealCredentials.user,
-          pass: etherealCredentials.pass,
-        },
-        // Performance optimizations
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
-        connectionTimeout: 30000, // 30 seconds
-        greetingTimeout: 30000,
-        socketTimeout: 60000, // 60 seconds
-      });
-      emailTransporter = transporter;
-      console.log('Using Ethereal SMTP server for testing emails.');
-    } else {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: false,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        // Performance optimizations
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
-        connectionTimeout: 30000, // 30 seconds
-        greetingTimeout: 30000,
-        socketTimeout: 60000, // 60 seconds
-      });
-      emailTransporter = transporter;
-      console.log('Using configured SMTP server for sending emails.');
-    }
-    await emailTransporter.verify();
-    console.log('Mailing service is ready to send emails.');
-    return emailTransporter;
-  } catch (error) {
-    console.error('Error creating mailing service:', error);
-    throw new Error('Failed to create mailing service');
-  }
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  });
 }
 
 const emailQueue: EmailJob[] = [];
@@ -248,8 +202,10 @@ const AuthService: IAuthenticationService = {
       const accessToken = createToken(user._id as string, 'access');
       const refreshToken = createToken(user._id as string, 'refresh');
 
-      const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-      
+      const isLocalDev =
+        process.env.NODE_ENV === 'development' &&
+        !process.env.CORS_ORIGIN?.includes('https');
+
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: !isLocalDev,
@@ -272,6 +228,148 @@ const AuthService: IAuthenticationService = {
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ error: 'Internal server error.' });
+    }
+  },
+
+  googleLogin: async (req: Request, res: Response) => {
+    const { token } = req.body;
+
+    if (!token) {
+      res.status(400).json({ error: 'Google Access Token is required.' });
+      return;
+    }
+
+    try {
+      const googleResponse = await axios.get(
+        `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const { email } = googleResponse.data;
+      if (!email) {
+        res
+          .status(401)
+          .json({ error: 'Invalid Google token or email not found.' });
+        return;
+      }
+
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        res
+          .status(404)
+          .json({ error: 'User not found. Please register first.' });
+        return;
+      }
+
+      const accessToken = createToken(user._id as string, 'access');
+      const refreshToken = createToken(user._id as string, 'refresh');
+      const isLocalDev =
+        process.env.NODE_ENV === 'development' &&
+        !process.env.CORS_ORIGIN?.includes('https');
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: !isLocalDev,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        sameSite: isLocalDev ? 'lax' : 'none',
+      });
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: !isLocalDev,
+        maxAge: 3 * 60 * 60 * 1000,
+        sameSite: isLocalDev ? 'lax' : 'none',
+      });
+
+      res.status(200).json({
+        message: 'Google login successful.',
+        userId: user._id,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (error) {
+      console.error('Google login error:', error);
+      res
+        .status(500)
+        .json({ error: 'Internal server error or invalid token.' });
+    }
+  },
+
+  googleRegister: async (req: Request, res: Response) => {
+    const { token } = req.body;
+
+    if (!token) {
+      res.status(400).json({ error: 'Google Access Token is required.' });
+      return;
+    }
+
+    try {
+      const googleResponse = await axios.get(
+        `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const { email, name, picture } = googleResponse.data;
+      if (!email) {
+        res
+          .status(401)
+          .json({ error: 'Invalid Google token or email not found.' });
+        return;
+      }
+
+      const lowerCaseEmail = email.toLowerCase();
+      let user = await User.findOne({ email: lowerCaseEmail });
+      if (user) {
+        res.status(409).json({ error: 'User already exists. Please login.' });
+        return;
+      }
+
+      user = new User({
+        email: lowerCaseEmail,
+        displayName: name || lowerCaseEmail.split('@')[0],
+        username: lowerCaseEmail,
+        avatarUrl: picture,
+        registrationDate: new Date(),
+      });
+      await user.save();
+
+      const accessToken = createToken(user._id as string, 'access');
+      const refreshToken = createToken(user._id as string, 'refresh');
+      const isLocalDev =
+        process.env.NODE_ENV === 'development' &&
+        !process.env.CORS_ORIGIN?.includes('https');
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: !isLocalDev,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        sameSite: isLocalDev ? 'lax' : 'none',
+      });
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: !isLocalDev,
+        maxAge: 3 * 60 * 60 * 1000,
+        sameSite: isLocalDev ? 'lax' : 'none',
+      });
+
+      res.status(201).json({
+        message: 'Google registration successful.',
+        userId: user._id,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (error) {
+      console.error('Google register error:', error);
+      res
+        .status(500)
+        .json({ error: 'Internal server error or invalid token.' });
     }
   },
 
@@ -313,8 +411,10 @@ const AuthService: IAuthenticationService = {
           return;
         }
         const newAccessToken = createToken(userId, 'access');
-        const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-        
+        const isLocalDev =
+          process.env.NODE_ENV === 'development' &&
+          !process.env.CORS_ORIGIN?.includes('https');
+
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
           secure: !isLocalDev,
@@ -437,8 +537,10 @@ const AuthService: IAuthenticationService = {
   // logout only need to delete the refresh token and access token cookies
   logout: async (req: Request, res: Response) => {
     try {
-      const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.CORS_ORIGIN?.includes('https');
-      
+      const isLocalDev =
+        process.env.NODE_ENV === 'development' &&
+        !process.env.CORS_ORIGIN?.includes('https');
+
       res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: !isLocalDev,
@@ -454,7 +556,7 @@ const AuthService: IAuthenticationService = {
       console.error('Logout error:', error);
       res.status(500).json({ error: 'Internal server error.' });
     }
-  }
+  },
 };
 
 export default AuthService;
