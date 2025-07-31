@@ -36,7 +36,7 @@ export async function updateTrendingScores() {
       // Update the plan only if the score has changed meaningfully
       // to avoid unnecessary database writes.
       // Add to bulk operations only if the score has changed meaningfully
-      if (Math.abs((plan.trendingScore || 0) - score) > 0.0001) {
+      if (Math.abs((plan.trendingScore || 0) - score) > 0.001) {
         bulkOperations.push({
           updateOne: {
             filter: { _id: plan._id },
