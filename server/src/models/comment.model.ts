@@ -8,22 +8,32 @@ export interface IComment extends Document {
   user: Types.ObjectId;
   /** Content of the comment */
   content: string;
+  imageUrl?: string;
   /** ID of the commented content (TravelPlan or Post) */
   targetId: Types.ObjectId;
   /** Type of the commented content model */
   onModel: 'TravelPlan' | 'Post';
+  parentId?: Types.ObjectId;
+  likesCount: number;
+  replyCount: number;
+  createdAt: Date;     
+  updatedAt: Date;
 }
 
 const commentSchema: Schema<IComment> = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    content: { type: String, required: true, trim: true },
+    content: { type: String,  trim: true },
+    imageUrl: { type: String, trim: true, default: null },
     targetId: { type: Schema.Types.ObjectId, required: true },
     onModel: {
       type: String,
       required: true,
       enum: ['TravelPlan', 'Post'],
     },
+    parentId: { type: Schema.Types.ObjectId, ref: 'Comment', default: null },
+    replyCount: { type: Number, default: 0 },
+    likesCount: { type: Number, default: 0 },
   },
   { timestamps: true, collection: 'comments' },
 );

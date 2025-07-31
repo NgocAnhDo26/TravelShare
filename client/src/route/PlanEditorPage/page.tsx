@@ -212,6 +212,11 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
     actualEditMode,
   });
 
+  const currentUserForSocialSection = user ? {
+    ...user,
+    _id: user.userId,
+  } : null;
+
   // Show loading state – skeleton placeholders
   if (isLoading) {
     return (
@@ -273,7 +278,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           onModel='TravelPlan'
           initialLikesCount={planData.likesCount}
           initialCommentsCount={planData.commentsCount}
-          currentUser={user}
+          currentUser={currentUserForSocialSection}
         />
       )}
     </div>
