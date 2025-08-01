@@ -1,11 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import PostController from '../controllers/post.controllers';
 import uploadUseCases from '../middlewares/upload';
+import AuthJwtMiddleware from '../middlewares/authJwt';
 
 const postRouter: Router = Router();
 
 // Create a more robust upload middleware
 const handleUploads = [
+  // First verify the user is authenticated
+  AuthJwtMiddleware.verifyToken,
+
   // Handle the files using a single multer instance
   (req: Request, res: Response, next: NextFunction) => {
     // Use a single multer call that can handle both fields

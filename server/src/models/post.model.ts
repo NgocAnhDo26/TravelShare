@@ -2,6 +2,7 @@ import { Schema, model, Model, Document, Types } from 'mongoose';
 
 // Interface for the Post document
 export interface IPost extends Document {
+  authorID: string,
   title: string;
   content: string;
   coverImageUrl?: string;
@@ -16,6 +17,12 @@ export interface IPost extends Document {
 // Schema definition
 const postSchema = new Schema<IPost>(
   {
+    authorID: {
+      type: String,
+      required: [true, 'Author ID is required'],
+      trim: true,
+      ref: 'users', // Assuming you have a User model
+    },
     title: {
       type: String,
       required: [true, 'Title is required'],
@@ -59,6 +66,7 @@ const postSchema = new Schema<IPost>(
 );
 
 // Indexes for faster queries
+postSchema.index({ authorID: 1, createdAt: -1 }); // For author-specific queries sorted by newest first
 postSchema.index({ author: 1 });
 postSchema.index({ privacy: 1 });
 postSchema.index({ createdAt: -1 }); // For sorting by newest first

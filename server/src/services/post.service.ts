@@ -21,6 +21,7 @@ const PostService: IPostService = {
     // creating a post is add the post data from the request body to the database
     try {
       const postData = {
+        authorID: req.user,
         title: req.body.title,
         content: req.body.content,
         privacy: req.body.privacy || 'public',
