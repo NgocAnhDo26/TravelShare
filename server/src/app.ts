@@ -12,6 +12,7 @@ import commentRouter from './routes/comment.routes';
 import morgan from 'morgan';
 import locationRouter from './routes/location.routes';
 import { createLikeRoutes } from './routes/like.routes';
+import discoveryRouter from './routes/discovery.routes';
 dotenv.config();
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/plans', createLikeRoutes('TravelPlan'));
 app.use('/api/comments', commentRouter);
 app.use('/api/location', locationRouter);
 app.use('/api/posts', postRouter);
+app.use('/api/discovery', discoveryRouter);
 
 // Global error handler (should be after routes)
 app.use(errorHandler);

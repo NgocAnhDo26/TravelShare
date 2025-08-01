@@ -131,6 +131,18 @@ router.post(
 );
 
 /**
+ * @route   POST /api/plans/:id/items/reorder
+ * @desc    Reorder items within a specific day in a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.post(
+  '/:id/items/reorder',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.reorderItemsInDay
+);
+
+/**
  * @route   GET /api/plans/:planId/items/:itemId
  * @desc    Get a specific item from a travel plan
  * @access  Private (Author or Public Plan)
@@ -164,6 +176,18 @@ router.delete(
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
   TravelPlanController.deletePlanItem,
+);
+
+/**
+ * @route   POST /api/plans/:id/items/move
+ * @desc    Move an item from one day to another within a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.post(
+  '/:id/items/move',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.moveItemToAnotherDay
 );
 
 export default router;
