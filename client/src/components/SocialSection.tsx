@@ -8,6 +8,7 @@ import { Heart, User as UserIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import CommentItem from '@/components/CommentItem';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useLikeToggle } from '@/hooks/useLikeToggle';
 
 interface AuthUser {
   _id?: string;
@@ -22,6 +23,7 @@ interface SocialSectionProps {
   onModel: 'TravelPlan' | 'Post';
   initialLikesCount: number;
   initialCommentsCount: number;
+  initialIsLiked?: boolean;
   currentUser?: AuthUser | null;
 }
 
@@ -30,12 +32,25 @@ const SocialSection: React.FC<SocialSectionProps> = ({
   onModel,
   initialLikesCount,
   initialCommentsCount,
+  initialIsLiked = false,
   currentUser,
 }) => {
   const [comments, setComments] = useState<IComment[]>([]);
   const [commentCount, setCommentCount] = useState(initialCommentsCount);
   const [newComment, setNewComment] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+
+  // Determine the API path based on the model
+  const apiPath = onModel === 'TravelPlan' ? '/plans' : '/posts';
+
+  // Use the like toggle hook for like functionality
+  const { isLiked, likesCount, handleToggleLike } = useLikeToggle({
+    targetId,
+    initialIsLiked,
+    initialLikesCount,
+    onModel,
+    apiPath,
+  });
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -132,10 +147,10 @@ const SocialSection: React.FC<SocialSectionProps> = ({
           }`}
           onClick={handleToggleLike}
         >
-          <Heart /> Like
+          <Heart className={isLiked ? 'fill-current' : ''} /> Like
         </Button>
         <Separator orientation='vertical' />
-        <span className='text-sm text-gray-500'>{initialLikesCount} likes</span>
+        <span className='text-sm text-gray-500'>{likesCount} likes</span>
         <span className='text-sm text-gray-500'>•</span>
         <span className='text-sm text-gray-500'>{commentCount} comments</span>
       </div>

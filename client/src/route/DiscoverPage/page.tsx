@@ -267,8 +267,8 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       case 'people':
         return filterUserContent(discoveryData.people);
       case 'all':
-      default: // For "All" tab, show trending plans by default, or all data if there's a search query
-      {
+      default: {
+        // For "All" tab, show trending plans by default, or all data if there's a search query
         const allData = searchQuery.trim()
           ? [
               ...discoveryData.plans,
@@ -319,171 +319,173 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
   ];
 
   return (
-    <div className='max-w-3xl w-full p-4 self-center'>
-      {/* Full width search bar like Twitter */}
-      <div className='mb-6 w-full'>
-        <SearchInput
-          placeholder='Search for travel plans, posts, or people...'
-          fullWidth={true}
-        />
-      </div>
+    <div className='flex flex-col'>
+      <main className='flex-1 p-6 max-w-7xl mx-auto w-full'>
+        {/* Full width search bar like Twitter */}
+        <div className='mb-6 w-full'>
+          <SearchInput
+            placeholder='Search for travel plans, posts, or people...'
+            fullWidth={true}
+          />
+        </div>
 
-      {/* Filter Tabs */}
-      <HeaderTabs
-        tabs={filterOptions.map((option) => ({
-          label: option.label,
-          value: option.value,
-          onClick: () => {
-            setSelectedFilter(option.value);
+        {/* Filter Tabs */}
+        <HeaderTabs
+          tabs={filterOptions.map((option) => ({
+            label: option.label,
+            value: option.value,
+            onClick: () => {
+              setSelectedFilter(option.value);
+              // Trigger search for the new tab if there's a search query
+              if (searchQuery.trim()) {
+                setTimeout(() => handleSearch(), 0);
+              }
+            },
+          }))}
+          activeTab={selectedFilter}
+          onTabChange={(value) => {
+            setSelectedFilter(value as FilterType);
             // Trigger search for the new tab if there's a search query
             if (searchQuery.trim()) {
               setTimeout(() => handleSearch(), 0);
             }
-          },
-        }))}
-        activeTab={selectedFilter}
-        onTabChange={(value) => {
-          setSelectedFilter(value as FilterType);
-          // Trigger search for the new tab if there's a search query
-          if (searchQuery.trim()) {
-            setTimeout(() => handleSearch(), 0);
-          }
-        }}
-        className='mb-6'
-      />
+          }}
+          className='mb-6'
+        />
 
-      {/* Content */}
-      <div className='flex flex-col gap-8'>
-        {isLoading && (
-          <div className='text-center py-12'>
-            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
-            <p className='text-muted-foreground'>
-              {selectedFilter === 'plans'
-                ? 'Loading plans...'
-                : 'Loading content...'}
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div className='text-center py-12'>
-            <div className='text-destructive mb-4'>
-              <svg
-                className='h-12 w-12 mx-auto mb-2'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z'
-                />
-              </svg>
-            </div>
-            <p className='text-destructive font-medium mb-2'>
-              Something went wrong
-            </p>
-            <p className='text-muted-foreground text-sm'>{error}</p>
-            <Button
-              variant='outline'
-              className='mt-4'
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {!isLoading &&
-          !error &&
-          currentData &&
-          currentData.length > 0 &&
-          currentData.map((item: any) => {
-            // Render different components based on content type
-            if (
-              selectedFilter === 'plans' ||
-              (selectedFilter === 'all' && 'destination' in item)
-            ) {
-              return <FeedPlan key={item._id} plan={item} />;
-            } else if (
-              selectedFilter === 'posts' ||
-              (selectedFilter === 'all' && 'content' in item)
-            ) {
-              return <PostItem key={item._id} post={item} />;
-            } else if (
-              selectedFilter === 'people' ||
-              (selectedFilter === 'all' && 'followerCount' in item)
-            ) {
-              return <PersonItem key={item._id} person={item} />;
-            }
-            return null;
-          })}
-
-        {!isLoading && !error && currentData && currentData.length === 0 && (
-          <div className='text-center py-12'>
-            <div className='text-muted-foreground mb-4'>
-              <svg
-                className='h-12 w-12 mx-auto mb-2'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
-                />
-              </svg>
-            </div>
-            <p className='text-muted-foreground font-medium mb-2'>
-              {searchQuery
-                ? selectedFilter === 'plans'
-                  ? 'No plans found'
-                  : 'No results found'
-                : selectedFilter === 'plans'
-                  ? 'No plans available'
-                  : 'No content available'}
-            </p>
-            <p className='text-muted-foreground text-sm'>
-              {searchQuery
-                ? selectedFilter === 'plans'
-                  ? `No plans match "${searchQuery}"`
-                  : `No ${selectedFilter} match "${searchQuery}"`
-                : selectedFilter === 'plans'
-                  ? 'Check back later for new travel plans'
-                  : `Check back later for new ${selectedFilter}`}
-            </p>
-          </div>
-        )}
-
-        {/* Infinite scroll sentinel and load more button */}
-        {selectedFilter === 'all' &&
-          !isLoading &&
-          !error &&
-          currentData.length > 0 && (
-            <div className='mt-8'>
-              {hasMore && <div ref={sentinelRef} className='h-4' />}
-              {isLoadingMore && (
-                <div className='text-center py-4'>
-                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto'></div>
-                  <p className='text-muted-foreground text-sm mt-2'>
-                    Loading more...
-                  </p>
-                </div>
-              )}
-              {!hasMore && currentData.length > 0 && (
-                <div className='text-center py-4'>
-                  <p className='text-muted-foreground text-sm'>
-                    No more content to load
-                  </p>
-                </div>
-              )}
+        {/* Content */}
+        <div className='flex flex-col gap-8'>
+          {isLoading && (
+            <div className='text-center py-12'>
+              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
+              <p className='text-muted-foreground'>
+                {selectedFilter === 'plans'
+                  ? 'Loading plans...'
+                  : 'Loading content...'}
+              </p>
             </div>
           )}
-      </div>
+
+          {error && (
+            <div className='text-center py-12'>
+              <div className='text-destructive mb-4'>
+                <svg
+                  className='h-12 w-12 mx-auto mb-2'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z'
+                  />
+                </svg>
+              </div>
+              <p className='text-destructive font-medium mb-2'>
+                Something went wrong
+              </p>
+              <p className='text-muted-foreground text-sm'>{error}</p>
+              <Button
+                variant='outline'
+                className='mt-4'
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
+
+          {!isLoading &&
+            !error &&
+            currentData &&
+            currentData.length > 0 &&
+            currentData.map((item: any) => {
+              // Render different components based on content type
+              if (
+                selectedFilter === 'plans' ||
+                (selectedFilter === 'all' && 'destination' in item)
+              ) {
+                return <FeedPlan key={item._id} plan={item} />;
+              } else if (
+                selectedFilter === 'posts' ||
+                (selectedFilter === 'all' && 'content' in item)
+              ) {
+                return <PostItem key={item._id} post={item} />;
+              } else if (
+                selectedFilter === 'people' ||
+                (selectedFilter === 'all' && 'followerCount' in item)
+              ) {
+                return <PersonItem key={item._id} person={item} />;
+              }
+              return null;
+            })}
+
+          {!isLoading && !error && currentData && currentData.length === 0 && (
+            <div className='text-center py-12'>
+              <div className='text-muted-foreground mb-4'>
+                <svg
+                  className='h-12 w-12 mx-auto mb-2'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
+                  />
+                </svg>
+              </div>
+              <p className='text-muted-foreground font-medium mb-2'>
+                {searchQuery
+                  ? selectedFilter === 'plans'
+                    ? 'No plans found'
+                    : 'No results found'
+                  : selectedFilter === 'plans'
+                    ? 'No plans available'
+                    : 'No content available'}
+              </p>
+              <p className='text-muted-foreground text-sm'>
+                {searchQuery
+                  ? selectedFilter === 'plans'
+                    ? `No plans match "${searchQuery}"`
+                    : `No ${selectedFilter} match "${searchQuery}"`
+                  : selectedFilter === 'plans'
+                    ? 'Check back later for new travel plans'
+                    : `Check back later for new ${selectedFilter}`}
+              </p>
+            </div>
+          )}
+
+          {/* Infinite scroll sentinel and load more button */}
+          {selectedFilter === 'all' &&
+            !isLoading &&
+            !error &&
+            currentData.length > 0 && (
+              <div className='mt-8'>
+                {hasMore && <div ref={sentinelRef} className='h-4' />}
+                {isLoadingMore && (
+                  <div className='text-center py-4'>
+                    <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto'></div>
+                    <p className='text-muted-foreground text-sm mt-2'>
+                      Loading more...
+                    </p>
+                  </div>
+                )}
+                {!hasMore && currentData.length > 0 && (
+                  <div className='text-center py-4'>
+                    <p className='text-muted-foreground text-sm'>
+                      No more content to load
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+        </div>
+      </main>
     </div>
   );
 };

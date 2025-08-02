@@ -36,8 +36,8 @@ const MainPage: React.FC = () => {
   }
 
   return (
-    <div className='min-h-screen'>
-      <div className='max-w-3xl mx-auto py-6 px-4'>
+    <div className='flex flex-col'>
+      <main className='flex-1 p-6 max-w-7xl mx-auto w-full'>
         {/* Full width search bar like Twitter */}
         <div className='mb-6'>
           <SearchInput
@@ -64,7 +64,7 @@ const MainPage: React.FC = () => {
             <PublicFeedPreview onRegister={handleRegister} />
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 };

@@ -215,7 +215,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Show loading state – skeleton placeholders
   if (isLoading) {
     return (
-      <div className='flex flex-col h-full lg:mx-60 mx-24 my-10'>
+      <div className='flex flex-col h-full max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
         <Card className='w-full overflow-hidden pt-0'>
           {/* Cover image skeleton */}
           <Skeleton className='w-full h-72' />
@@ -240,7 +240,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Show error state if no plan data
   if (!planData) {
     return (
-      <div className='flex flex-col h-full justify-center lg:mx-60 mx-24 my-10'>
+      <div className='flex flex-col h-full justify-center max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
         <div className='flex items-center justify-center'>
           <div className='text-lg text-red-600'>Plan not found</div>
         </div>
@@ -248,14 +248,8 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
     );
   }
 
-  const displayTripData = {
-    ...planData,
-    isLiked,
-    likesCount,
-  };
-
   return (
-    <div className='flex flex-col justify-center lg:mx-60 mx-24 my-10'>
+    <div className='flex flex-col justify-center max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
       <Card className='w-full overflow-hidden pt-0'>
         <TripHeader
           trip={planData}
@@ -279,6 +273,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           onModel='TravelPlan'
           initialLikesCount={planData.likesCount}
           initialCommentsCount={planData.commentsCount}
+          initialIsLiked={planData.isLiked}
           currentUser={user}
         />
       )}
