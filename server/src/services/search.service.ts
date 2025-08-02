@@ -17,6 +17,7 @@ export interface SearchOptions {
   page: number;
   limit: number;
   type?: 'all' | 'plans' | 'posts' | 'users';
+  userId?: string; // Optional user ID for follow status
 }
 
 /**
@@ -27,7 +28,7 @@ class SearchService {
    * Search across all content types (plans, posts, users)
    */
   async searchAll(options: SearchOptions): Promise<SearchResults> {
-    const { query, page, limit, type = 'all' } = options;
+    const { query, page, limit, type = 'all', userId } = options;
     const skip = (page - 1) * limit;
 
     // Build search regex for partial matching
@@ -55,7 +56,7 @@ class SearchService {
     }
 
     if (type === 'all' || type === 'users') {
-      const userResults = await this.searchUsers(query, skip, limit);
+      const userResults = await this.searchUsers(query, skip, limit, userId);
       users = userResults.users;
       totalUsers = userResults.total;
     }
@@ -129,7 +130,12 @@ class SearchService {
   /**
    * Search users by username, displayName, and bio
    */
-  async searchUsers(query: string, skip: number, limit: number) {
+  async searchUsers(
+    query: string,
+    skip: number,
+    limit: number,
+    userId?: string,
+  ) {
     const searchRegex = new RegExp(query, 'i');
 
     const searchQuery = {
@@ -142,13 +148,33 @@ class SearchService {
 
     const [users, total] = await Promise.all([
       User.find(searchQuery)
-        .select('username displayName avatarUrl bio followerCount followingCount')
+        .select(
+          'username displayName avatarUrl bio followerCount followingCount',
+        )
         .sort({ followerCount: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
       User.countDocuments(searchQuery),
     ]);
+
+    // If userId is provided, add follow status for each user
+    if (userId) {
+      const Follow = (await import('../models/follow.model')).default;
+      const usersWithFollowStatus = await Promise.all(
+        users.map(async (user) => {
+          const isFollowing = await Follow.exists({
+            follower: userId,
+            following: user._id,
+          });
+          return {
+            ...user,
+            isFollowing: !!isFollowing,
+          };
+        }),
+      );
+      return { users: usersWithFollowStatus, total };
+    }
 
     return { users, total };
   }

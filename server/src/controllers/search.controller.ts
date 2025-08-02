@@ -215,7 +215,12 @@ class SearchController {
       const limitNum = parseInt(limit as string, 10);
       const skip = (pageNum - 1) * limitNum;
 
-      const results = await searchService.searchUsers(query.trim(), skip, limitNum);
+      const results = await searchService.searchUsers(
+        query.trim(),
+        skip,
+        limitNum,
+        (req as any).user,
+      );
       const totalPages = Math.ceil(results.total / limitNum);
 
       res.status(HTTP_STATUS.OK).json({

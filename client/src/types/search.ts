@@ -8,6 +8,7 @@ export interface SearchUser {
   bio?: string;
   followerCount: number;
   followingCount: number;
+  isFollowing?: boolean;
 }
 
 export interface SearchTravelPlan {
