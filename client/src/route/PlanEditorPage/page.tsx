@@ -248,6 +248,12 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
     );
   }
 
+  const displayTripData = {
+    ...planData,
+    isLiked,
+    likesCount,
+  };
+
   return (
     <div className='flex flex-col justify-center lg:mx-60 mx-24 my-10'>
       <Card className='w-full overflow-hidden pt-0'>

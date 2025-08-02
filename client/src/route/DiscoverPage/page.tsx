@@ -24,7 +24,6 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
@@ -204,23 +203,25 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       return;
     }
 
-    setIsSearching(true);
     setError(null);
 
     try {
       switch (selectedFilter) {
-        case 'plans':
+        case 'plans': {
           const plans = await fetchPlans(searchQuery);
           setDiscoveryData((prev) => ({ ...prev, plans }));
           break;
-        case 'posts':
+        }
+        case 'posts': {
           const posts = await fetchPosts(searchQuery);
           setDiscoveryData((prev) => ({ ...prev, posts }));
           break;
-        case 'people':
+        }
+        case 'people': {
           const people = await fetchPeople(searchQuery);
           setDiscoveryData((prev) => ({ ...prev, people }));
           break;
+        }
         case 'all':
         default:
           await fetchAllData(searchQuery);
@@ -229,12 +230,11 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
     } catch (err) {
       console.error('Error searching:', err);
       setError('Search failed. Please try again.');
-    } finally {
-      setIsSearching(false);
     }
   }, [
     searchQuery,
     selectedFilter,
+    fetchTrendingPlans,
     fetchPlans,
     fetchPosts,
     fetchPeople,
@@ -267,8 +267,8 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       case 'people':
         return filterUserContent(discoveryData.people);
       case 'all':
-      default:
-        // For "All" tab, show trending plans by default, or all data if there's a search query
+      default: // For "All" tab, show trending plans by default, or all data if there's a search query
+      {
         const allData = searchQuery.trim()
           ? [
               ...discoveryData.plans,
@@ -277,6 +277,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
             ]
           : discoveryData.plans;
         return filterUserContent(allData);
+      }
     }
   };
 

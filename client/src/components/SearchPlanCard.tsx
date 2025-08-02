@@ -48,35 +48,37 @@ const SearchPlanCard: React.FC<SearchPlanCardProps> = ({ plan, onClick }) => {
 
       <CardContent>
         <div className='flex items-center justify-between mb-3'>
-          <div className='flex items-center space-x-2'>
-            {plan.author ? (
-              <>
-                <Avatar className='h-6 w-6'>
-                  <AvatarImage
-                    src={plan.author.avatarUrl}
-                    alt={plan.author.displayName || plan.author.username}
-                  />
-                  <AvatarFallback>
-                    {(plan.author.displayName || plan.author.username)
-                      .charAt(0)
-                      .toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className='text-sm text-muted-foreground'>
-                  {plan.author.displayName || plan.author.username}
-                </span>
-              </>
-            ) : (
-              <div className='flex items-center space-x-2'>
-                <Avatar className='h-6 w-6'>
-                  <AvatarFallback>?</AvatarFallback>
-                </Avatar>
-                <span className='text-sm text-muted-foreground italic'>
-                  Unknown author
-                </span>
-              </div>
-            )}
-          </div>
+          {plan.author ? (
+            <Link
+              to={`/profile/${plan.author._id}`}
+              onClick={(e) => e.stopPropagation()}
+              className='flex items-center space-x-2 hover:underline cursor-pointer'
+            >
+              <Avatar className='h-6 w-6'>
+                <AvatarImage
+                  src={plan.author.avatarUrl}
+                  alt={plan.author.displayName || plan.author.username}
+                />
+                <AvatarFallback>
+                  {(plan.author.displayName || plan.author.username)
+                    .charAt(0)
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className='text-sm text-muted-foreground'>
+                {plan.author.displayName || plan.author.username}
+              </span>
+            </Link>
+          ) : (
+            <div className='flex items-center space-x-2'>
+              <Avatar className='h-6 w-6'>
+                <AvatarFallback>?</AvatarFallback>
+              </Avatar>
+              <span className='text-sm text-muted-foreground italic'>
+                Unknown author
+              </span>
+            </div>
+          )}
 
           <div className='flex items-center space-x-3 text-sm text-muted-foreground'>
             <div className='flex items-center'>

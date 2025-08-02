@@ -124,9 +124,13 @@ const SocialSection: React.FC<SocialSectionProps> = ({
       <div className='flex items-center gap-4 mx-4'>
         <Button
           variant='ghost'
-          aria-label='Like this trip'
-          className='hover:bg-red-50 hover:text-red-600 focus:bg-red-50 focus:text-red-600'
-          onClick={() => {}}
+          aria-label={isLiked ? 'Unlike this trip' : 'Like this trip'}
+          className={`transition-colors hover:bg-red-50 focus:bg-red-50 ${
+            isLiked
+              ? 'text-red-600 hover:text-red-700'
+              : 'text-gray-600 hover:text-red-600'
+          }`}
+          onClick={handleToggleLike}
         >
           <Heart /> Like
         </Button>

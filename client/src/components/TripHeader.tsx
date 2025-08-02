@@ -648,8 +648,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                         filter: isLiked
                           ? 'drop-shadow(0 0 4px #f87171)'
                           : undefined,
-                        transition:
-                          'transform 0.05s, color 0.05s, fill 0.05s, filter 0.05s',
+                        transition: 'color 0.05s, fill 0.05s, filter 0.05s',
                       }}
                     />
                     <span className='font-medium'>{likesCount}</span>
