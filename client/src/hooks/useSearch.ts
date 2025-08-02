@@ -36,6 +36,25 @@ export const useSearch = () => {
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Individual pagination states for "all" tab
+  const [individualPages, setIndividualPages] = useState({
+    plans: 1,
+    posts: 1,
+    users: 1,
+  });
+
+  const [individualHasMore, setIndividualHasMore] = useState({
+    plans: true,
+    posts: true,
+    users: true,
+  });
+
+  const [individualLoading, setIndividualLoading] = useState({
+    plans: false,
+    posts: false,
+    users: false,
+  });
+
   // Add ref to prevent duplicate calls
   const isCallInProgress = useRef(false);
   const lastCallKey = useRef('');
@@ -115,22 +134,156 @@ export const useSearch = () => {
     }
   }, [query]);
 
+  // Function to load all content types separately for "all" tab
+  const loadAllContentTypes = useCallback(async () => {
+    if (!query.trim()) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Load all content types in parallel
+      const [plansResponse, postsResponse, usersResponse] = await Promise.all([
+        API.get<SearchResponse>(
+          `/search?q=${encodeURIComponent(query)}&page=1&limit=12&type=plans`,
+        ),
+        API.get<SearchResponse>(
+          `/search?q=${encodeURIComponent(query)}&page=1&limit=12&type=posts`,
+        ),
+        API.get<SearchResponse>(
+          `/search?q=${encodeURIComponent(query)}&page=1&limit=12&type=users`,
+        ),
+      ]);
+
+      if (
+        plansResponse.data.success &&
+        postsResponse.data.success &&
+        usersResponse.data.success
+      ) {
+        setResults({
+          plans: plansResponse.data.data.plans,
+          posts: postsResponse.data.data.posts,
+          users: usersResponse.data.data.users,
+        });
+
+        setTotalCounts({
+          plans: plansResponse.data.data.totalPlans,
+          posts: postsResponse.data.data.totalPosts,
+          users: usersResponse.data.data.totalUsers,
+        });
+
+        setIndividualHasMore({
+          plans: plansResponse.data.data.pagination.hasNextPage,
+          posts: postsResponse.data.data.pagination.hasNextPage,
+          users: usersResponse.data.data.pagination.hasNextPage,
+        });
+      }
+    } catch (err) {
+      console.error('Error loading all content types:', err);
+      setError('An error occurred while searching');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [query]);
+
   useEffect(() => {
     setResults({ plans: [], posts: [], users: [] });
     setCurrentPage(1);
     setHasMore(true);
-    fetchSearchResults(1, false);
-  }, [query, type, fetchSearchResults]);
+    // Reset individual pagination states
+    setIndividualPages({ plans: 1, posts: 1, users: 1 });
+    setIndividualHasMore({ plans: true, posts: true, users: true });
+    setIndividualLoading({ plans: false, posts: false, users: false });
+
+    if (type === 'all') {
+      // For "all" tab, load each content type separately
+      loadAllContentTypes();
+    } else {
+      fetchSearchResults(1, false);
+    }
+  }, [query, type, fetchSearchResults, loadAllContentTypes]);
 
   const loadMore = useCallback(() => {
+    console.log(
+      'loadMore called. isLoadingMore:',
+      isLoadingMore,
+      'hasMore:',
+      hasMore,
+      'currentPage:',
+      currentPage,
+    );
     if (!isLoadingMore && hasMore) {
       fetchSearchResults(currentPage + 1, true);
     }
   }, [isLoadingMore, hasMore, currentPage, fetchSearchResults]);
 
+  // Function to load more for a specific content type in "all" tab
+  const loadMoreForType = useCallback(
+    async (contentType: 'plans' | 'posts' | 'users') => {
+      if (
+        !query.trim() ||
+        type !== 'all' ||
+        individualLoading[contentType] ||
+        !individualHasMore[contentType]
+      ) {
+        return;
+      }
+
+      const nextPage = individualPages[contentType] + 1;
+
+      setIndividualLoading((prev) => ({ ...prev, [contentType]: true }));
+
+      try {
+        const response = await API.get<SearchResponse>(
+          `/search?q=${encodeURIComponent(query)}&page=${nextPage}&limit=12&type=${contentType}`,
+        );
+
+        if (response.data.success) {
+          const data = response.data.data;
+          const pagination = response.data.data.pagination;
+
+          setResults((prev) => ({
+            ...prev,
+            [contentType]: [...prev[contentType], ...data[contentType]],
+          }));
+
+          setIndividualPages((prev) => ({ ...prev, [contentType]: nextPage }));
+          setIndividualHasMore((prev) => ({
+            ...prev,
+            [contentType]: pagination.hasNextPage,
+          }));
+        }
+      } catch (err) {
+        console.error(`Error loading more ${contentType}:`, err);
+      } finally {
+        setIndividualLoading((prev) => ({ ...prev, [contentType]: false }));
+      }
+    },
+    [query, type, individualPages, individualHasMore, individualLoading],
+  );
+
   const handleTabChange = (newType: string) => {
     setSearchParams({ q: query, type: newType as SearchType });
   };
+
+  // Function to update user follow status
+  const updateUserFollowStatus = useCallback(
+    (userId: string, isFollowing: boolean, followerCountChange: number) => {
+      setResults((prev) => ({
+        ...prev,
+        users: prev.users.map((user) =>
+          user._id === userId
+            ? {
+                ...user,
+                isFollowing,
+                followerCount: user.followerCount + followerCountChange,
+              }
+            : user,
+        ),
+      }));
+    },
+    [],
+  );
 
   return {
     query,
@@ -143,5 +296,12 @@ export const useSearch = () => {
     hasMore,
     loadMore,
     handleTabChange,
+    // Individual pagination for "all" tab
+    individualHasMore,
+    individualLoading,
+    loadMoreForType,
+    updateUserFollowStatus,
+    // Add debugging info
+    currentPage,
   };
 };

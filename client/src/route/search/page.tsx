@@ -11,9 +11,12 @@ import SearchPostCard from '@/components/SearchPostCard';
 import SearchUserCard from '@/components/SearchUserCard';
 import { useSearch } from '@/hooks/useSearch';
 import { toast } from 'react-hot-toast';
+import API from '@/utils/axiosInstance';
+import { useAuth } from '@/context/AuthContext';
 
 const SearchPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     query,
     type,
@@ -25,26 +28,129 @@ const SearchPage: React.FC = () => {
     hasMore,
     loadMore,
     handleTabChange,
+    individualHasMore,
+    individualLoading,
+    loadMoreForType,
+    updateUserFollowStatus,
   } = useSearch();
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Refs for individual content type infinite scroll
+  const plansLoadMoreRef = useRef<HTMLDivElement>(null);
+  const postsLoadMoreRef = useRef<HTMLDivElement>(null);
+  const usersLoadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          console.log('Intersection observer triggered for individual tab');
           loadMore();
         }
       },
       { threshold: 0.1 },
     );
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
+    const currentRef = loadMoreRef.current;
+    if (currentRef && type !== 'all') {
+      observer.observe(currentRef);
     }
 
-    return () => observer.disconnect();
-  }, [loadMore, hasMore, isLoadingMore]);
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMore, isLoadingMore, type, loadMore, results]);
+
+  // Individual intersection observers for each content type in "all" tab
+  useEffect(() => {
+    const plansContainer =
+      plansLoadMoreRef.current?.closest('.overflow-y-auto');
+    const plansObserver = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          individualHasMore.plans &&
+          !individualLoading.plans &&
+          type === 'all'
+        ) {
+          console.log('Plans intersection observer triggered');
+          loadMoreForType('plans');
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '50px',
+        root: (plansContainer as Element) || null,
+      },
+    );
+
+    if (plansLoadMoreRef.current) {
+      plansObserver.observe(plansLoadMoreRef.current);
+    }
+
+    return () => plansObserver.disconnect();
+  }, [loadMoreForType, individualHasMore.plans, individualLoading.plans, type]);
+
+  useEffect(() => {
+    const postsContainer =
+      postsLoadMoreRef.current?.closest('.overflow-y-auto');
+    const postsObserver = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          individualHasMore.posts &&
+          !individualLoading.posts &&
+          type === 'all'
+        ) {
+          console.log('Posts intersection observer triggered');
+          loadMoreForType('posts');
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '50px',
+        root: (postsContainer as Element) || null,
+      },
+    );
+
+    if (postsLoadMoreRef.current) {
+      postsObserver.observe(postsLoadMoreRef.current);
+    }
+
+    return () => postsObserver.disconnect();
+  }, [loadMoreForType, individualHasMore.posts, individualLoading.posts, type]);
+
+  useEffect(() => {
+    const usersContainer =
+      usersLoadMoreRef.current?.closest('.overflow-y-auto');
+    const usersObserver = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          individualHasMore.users &&
+          !individualLoading.users &&
+          type === 'all'
+        ) {
+          console.log('Users intersection observer triggered');
+          loadMoreForType('users');
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '50px',
+        root: (usersContainer as Element) || null,
+      },
+    );
+
+    if (usersLoadMoreRef.current) {
+      usersObserver.observe(usersLoadMoreRef.current);
+    }
+
+    return () => usersObserver.disconnect();
+  }, [loadMoreForType, individualHasMore.users, individualLoading.users, type]);
 
   const handlePlanClick = (planId: string) => {
     navigate(`/plans/${planId}`);
@@ -54,8 +160,32 @@ const SearchPage: React.FC = () => {
     navigate(`/posts/${postId}`);
   };
 
-  const handleUserFollow = () => {
-    toast.success('Follow functionality to be implemented');
+  const handleUserFollow = async (
+    userId: string,
+    isCurrentlyFollowing: boolean,
+  ) => {
+    if (!user) {
+      toast.error('Please login to follow users');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      if (isCurrentlyFollowing) {
+        // Unfollow user
+        await API.delete(`/users/${userId}/unfollow`);
+        toast.success('User unfollowed successfully');
+        updateUserFollowStatus(userId, false, -1);
+      } else {
+        // Follow user
+        await API.post(`/users/${userId}/follow`);
+        toast.success('User followed successfully');
+        updateUserFollowStatus(userId, true, 1);
+      }
+    } catch (error) {
+      console.error('Error following/unfollowing user:', error);
+      toast.error('Failed to update follow status');
+    }
   };
 
   const handleUserViewProfile = (userId: string) => {
@@ -149,55 +279,138 @@ const SearchPage: React.FC = () => {
         {!isLoading && !error && (
           <>
             <TabsContent value='all' className='mt-8'>
-              <div className='space-y-8'>
+              <div className='flex flex-col lg:flex-row gap-8 h-[600px]'>
+                {/* Travel Plans Section */}
                 {results.plans.length > 0 && (
-                  <div>
-                    <h2 className='text-xl font-semibold mb-4'>Travel Plans</h2>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                      {results.plans.map((plan) => (
-                        <SearchPlanCard
-                          key={plan._id}
-                          plan={plan}
-                          onClick={() => handlePlanClick(plan._id)}
-                        />
-                      ))}
+                  <div className='flex flex-col h-full lg:flex-1'>
+                    <h2 className='text-xl font-semibold mb-4 flex-shrink-0'>
+                      Travel Plans ({totalCounts.plans})
+                    </h2>
+                    <div className='flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300'>
+                      <div className='grid grid-cols-1 gap-4'>
+                        {results.plans.map((plan) => (
+                          <SearchPlanCard
+                            key={plan._id}
+                            plan={plan}
+                            onClick={() => handlePlanClick(plan._id)}
+                          />
+                        ))}
+                      </div>
+                      {individualHasMore.plans && (
+                        <div
+                          ref={plansLoadMoreRef}
+                          className='flex justify-center py-4'
+                        >
+                          {individualLoading.plans && (
+                            <div className='flex items-center space-x-2'>
+                              <Loader2 className='h-4 w-4 animate-spin' />
+                              <span className='text-sm'>
+                                Loading more plans...
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
+
+                {/* Posts Section */}
                 {results.posts.length > 0 && (
-                  <div>
-                    <h2 className='text-xl font-semibold mb-4'>Posts</h2>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      {results.posts.map((post) => (
-                        <SearchPostCard
-                          key={post._id}
-                          post={post}
-                          onClick={() => handlePostClick(post._id)}
-                        />
-                      ))}
+                  <div className='flex flex-col h-full lg:flex-1'>
+                    <h2 className='text-xl font-semibold mb-4 flex-shrink-0'>
+                      Posts ({totalCounts.posts})
+                    </h2>
+                    <div className='flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300'>
+                      <div className='grid grid-cols-1 gap-4'>
+                        {results.posts.map((post) => (
+                          <SearchPostCard
+                            key={post._id}
+                            post={post}
+                            onClick={() => handlePostClick(post._id)}
+                          />
+                        ))}
+                      </div>
+                      {individualHasMore.posts && (
+                        <div
+                          ref={postsLoadMoreRef}
+                          className='flex justify-center py-4'
+                        >
+                          {individualLoading.posts && (
+                            <div className='flex items-center space-x-2'>
+                              <Loader2 className='h-4 w-4 animate-spin' />
+                              <span className='text-sm'>
+                                Loading more posts...
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
+
+                {/* Users Section */}
                 {results.users.length > 0 && (
-                  <div>
-                    <h2 className='text-xl font-semibold mb-4'>Users</h2>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                      {results.users.map((user) => (
-                        <SearchUserCard
-                          key={user._id}
-                          user={user}
-                          onFollow={handleUserFollow}
-                          onViewProfile={() => handleUserViewProfile(user._id)}
-                        />
-                      ))}
+                  <div className='flex flex-col h-full lg:flex-1'>
+                    <h2 className='text-xl font-semibold mb-4 flex-shrink-0'>
+                      Users ({totalCounts.users})
+                    </h2>
+                    <div className='flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300'>
+                      <div className='grid grid-cols-1 gap-4'>
+                        {results.users.map((searchUser) => (
+                          <SearchUserCard
+                            key={searchUser._id}
+                            user={searchUser}
+                            onFollow={handleUserFollow}
+                            onViewProfile={() =>
+                              handleUserViewProfile(searchUser._id)
+                            }
+                            currentUserId={user?.userId}
+                            isAuthenticated={!!user}
+                          />
+                        ))}
+                      </div>
+                      {individualHasMore.users && (
+                        <div
+                          ref={usersLoadMoreRef}
+                          className='flex justify-center py-4'
+                        >
+                          {individualLoading.users && (
+                            <div className='flex items-center space-x-2'>
+                              <Loader2 className='h-4 w-4 animate-spin' />
+                              <span className='text-sm'>
+                                Loading more users...
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Show message if no results in any category */}
+              {results.plans.length === 0 &&
+                results.posts.length === 0 &&
+                results.users.length === 0 &&
+                !isLoading && (
+                  <div className='text-center mt-12'>
+                    <Search className='h-16 w-16 text-muted-foreground mx-auto mb-4' />
+                    <h2 className='text-xl font-semibold mb-2'>
+                      No results found
+                    </h2>
+                    <p className='text-muted-foreground'>
+                      Try searching with different keywords or check your
+                      spelling.
+                    </p>
+                  </div>
+                )}
             </TabsContent>
 
             <TabsContent value='plans' className='mt-8'>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 {results.plans.map((plan) => (
                   <SearchPlanCard
                     key={plan._id}
@@ -221,19 +434,21 @@ const SearchPage: React.FC = () => {
             </TabsContent>
 
             <TabsContent value='users' className='mt-8'>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {results.users.map((user) => (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {results.users.map((searchUser) => (
                   <SearchUserCard
-                    key={user._id}
-                    user={user}
+                    key={searchUser._id}
+                    user={searchUser}
                     onFollow={handleUserFollow}
-                    onViewProfile={() => handleUserViewProfile(user._id)}
+                    onViewProfile={() => handleUserViewProfile(searchUser._id)}
+                    currentUserId={user?.userId}
+                    isAuthenticated={!!user}
                   />
                 ))}
               </div>
             </TabsContent>
 
-            {hasMore && (
+            {hasMore && type !== 'all' && (
               <div ref={loadMoreRef} className='flex justify-center py-4'>
                 {isLoadingMore && (
                   <div className='flex items-center space-x-2'>
@@ -244,7 +459,7 @@ const SearchPage: React.FC = () => {
               </div>
             )}
 
-            {getTotalCount() === 0 && !isLoading && (
+            {getTotalCount() === 0 && !isLoading && type !== 'all' && (
               <div className='text-center mt-12'>
                 <Search className='h-16 w-16 text-muted-foreground mx-auto mb-4' />
                 <h2 className='text-xl font-semibold mb-2'>No results found</h2>
