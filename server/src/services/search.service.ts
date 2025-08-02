@@ -109,10 +109,7 @@ class SearchService {
 
     const searchQuery = {
       privacy: 'public',
-      $or: [
-        { title: searchRegex },
-        { content: searchRegex },
-      ],
+      $or: [{ title: searchRegex }, { content: searchRegex }],
     };
 
     const [posts, total] = await Promise.all([

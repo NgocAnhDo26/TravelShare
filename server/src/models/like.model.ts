@@ -21,7 +21,12 @@ export interface ILike extends Document {
  */
 const likeSchema: Schema<ILike> = new Schema(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
     targetId: { type: Schema.Types.ObjectId, required: true, index: true },
     onModel: {
       type: String,

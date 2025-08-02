@@ -27,9 +27,9 @@ describe('GET /api/discovery/discover', () => {
         _id: '507f1f77bcf86cd799439012',
         username: 'user1',
         displayName: 'User One',
-        avatarUrl: 'https://example.com/avatar1.jpg'
+        avatarUrl: 'https://example.com/avatar1.jpg',
       },
-      createdAt: '2024-01-01T10:00:00.000Z'
+      createdAt: '2024-01-01T10:00:00.000Z',
     },
     {
       _id: '507f1f77bcf86cd799439013',
@@ -40,9 +40,9 @@ describe('GET /api/discovery/discover', () => {
         _id: '507f1f77bcf86cd799439014',
         username: 'user2',
         displayName: 'User Two',
-        avatarUrl: 'https://example.com/avatar2.jpg'
+        avatarUrl: 'https://example.com/avatar2.jpg',
       },
-      createdAt: '2024-01-01T11:00:00.000Z'
+      createdAt: '2024-01-01T11:00:00.000Z',
     },
     {
       _id: '507f1f77bcf86cd799439015',
@@ -53,10 +53,10 @@ describe('GET /api/discovery/discover', () => {
         _id: '507f1f77bcf86cd799439016',
         username: 'user3',
         displayName: 'User Three',
-        avatarUrl: 'https://example.com/avatar3.jpg'
+        avatarUrl: 'https://example.com/avatar3.jpg',
       },
-      createdAt: '2024-01-01T12:00:00.000Z'
-    }
+      createdAt: '2024-01-01T12:00:00.000Z',
+    },
   ];
 
   it('should return trending plans with default pagination', async () => {
@@ -65,7 +65,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -77,8 +77,8 @@ describe('GET /api/discovery/discover', () => {
       data: mockPlans.slice(0, 2),
       pagination: {
         next_cursor: null,
-        has_next_page: false
-      }
+        has_next_page: false,
+      },
     });
 
     expect(mockTravelPlan.find).toHaveBeenCalledWith({ privacy: 'public' });
@@ -91,7 +91,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 1))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 1)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -110,7 +110,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([mockPlans[2]])
+      exec: vi.fn().mockResolvedValue([mockPlans[2]]),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -122,8 +122,8 @@ describe('GET /api/discovery/discover', () => {
       privacy: 'public',
       $or: [
         { trendingScore: { $lt: 95.2 } },
-        { trendingScore: 95.2, _id: { $lt: '507f1f77bcf86cd799439011' } }
-      ]
+        { trendingScore: 95.2, _id: { $lt: '507f1f77bcf86cd799439011' } },
+      ],
     });
 
     expect(response.body.data).toEqual([mockPlans[2]]);
@@ -135,7 +135,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([mockPlans[2]])
+      exec: vi.fn().mockResolvedValue([mockPlans[2]]),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -144,7 +144,9 @@ describe('GET /api/discovery/discover', () => {
       .expect(200);
 
     expect(response.body.data).toEqual([mockPlans[2]]);
-    expect(response.body.pagination.next_cursor).toBe('0|507f1f77bcf86cd799439015');
+    expect(response.body.pagination.next_cursor).toBe(
+      '0|507f1f77bcf86cd799439015',
+    );
   });
 
   it('should handle empty results', async () => {
@@ -153,7 +155,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([])
+      exec: vi.fn().mockResolvedValue([]),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -172,7 +174,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -185,8 +187,8 @@ describe('GET /api/discovery/discover', () => {
       privacy: 'public',
       $or: [
         { trendingScore: { $lt: NaN } },
-        { trendingScore: NaN, _id: { $lt: undefined } }
-      ]
+        { trendingScore: NaN, _id: { $lt: undefined } },
+      ],
     });
     expect(response.body.data).toEqual(mockPlans.slice(0, 2));
   });
@@ -197,7 +199,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -216,7 +218,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockRejectedValue(new Error('Database connection failed'))
+      exec: vi.fn().mockRejectedValue(new Error('Database connection failed')),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -234,7 +236,7 @@ describe('GET /api/discovery/discover', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([])
+      exec: vi.fn().mockResolvedValue([]),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -246,10 +248,10 @@ describe('GET /api/discovery/discover', () => {
       privacy: 'public',
       $or: [
         { trendingScore: { $lt: 0 } },
-        { trendingScore: 0, _id: { $lt: '507f1f77bcf86cd799439015' } }
-      ]
+        { trendingScore: 0, _id: { $lt: '507f1f77bcf86cd799439015' } },
+      ],
     });
 
     expect(response.body.data).toEqual([]);
   });
-}); 
+});

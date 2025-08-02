@@ -13,7 +13,7 @@ async function handleTravelPlanIndexes() {
     const existingIndexes = await TravelPlan.collection.getIndexes();
 
     // Check if we already have a text search index (the existing one is called 'travel_plan_search_index')
-    const hasTextIndex = Object.keys(existingIndexes).some(indexName => {
+    const hasTextIndex = Object.keys(existingIndexes).some((indexName) => {
       // Check for existing text search index names or examine index structure
       if (indexName.includes('search') || indexName.includes('text')) {
         return true;
@@ -22,18 +22,27 @@ async function handleTravelPlanIndexes() {
       // Also check the index structure for text indexes
       const indexInfo = existingIndexes[indexName] as any;
       if (Array.isArray(indexInfo)) {
-        return indexInfo.some((field: any) =>
-          typeof field === 'object' && field !== null && field._fts === 'text'
+        return indexInfo.some(
+          (field: any) =>
+            typeof field === 'object' &&
+            field !== null &&
+            field._fts === 'text',
         );
       }
-      if (typeof indexInfo === 'object' && indexInfo !== null && '_fts' in indexInfo) {
+      if (
+        typeof indexInfo === 'object' &&
+        indexInfo !== null &&
+        '_fts' in indexInfo
+      ) {
         return indexInfo._fts === 'text';
       }
       return false;
     });
 
     if (hasTextIndex) {
-      logger.info('TravelPlan collection already has a text index, using existing one for search');
+      logger.info(
+        'TravelPlan collection already has a text index, using existing one for search',
+      );
       return;
     }
 
@@ -59,7 +68,7 @@ async function handleTravelPlanIndexes() {
         },
         default_language: 'english',
         language_override: 'language',
-      }
+      },
     );
 
     logger.info('Created TravelPlan text index successfully');
@@ -78,8 +87,12 @@ async function createPostIndexes() {
     const existingIndexes = await Post.collection.getIndexes();
 
     // Check for existing text search indexes
-    const hasTextIndex = Object.keys(existingIndexes).some(indexName => {
-      return indexName.includes('search') || indexName.includes('text') || indexName === 'post_search_text_index';
+    const hasTextIndex = Object.keys(existingIndexes).some((indexName) => {
+      return (
+        indexName.includes('search') ||
+        indexName.includes('text') ||
+        indexName === 'post_search_text_index'
+      );
     });
 
     if (hasTextIndex) {
@@ -100,7 +113,7 @@ async function createPostIndexes() {
         },
         default_language: 'english',
         language_override: 'language',
-      }
+      },
     );
 
     logger.info('Created Post text index successfully');
@@ -119,8 +132,12 @@ async function createUserIndexes() {
     const existingIndexes = await User.collection.getIndexes();
 
     // Check for existing text search indexes
-    const hasTextIndex = Object.keys(existingIndexes).some(indexName => {
-      return indexName.includes('search') || indexName.includes('text') || indexName === 'user_search_text_index';
+    const hasTextIndex = Object.keys(existingIndexes).some((indexName) => {
+      return (
+        indexName.includes('search') ||
+        indexName.includes('text') ||
+        indexName === 'user_search_text_index'
+      );
     });
 
     if (hasTextIndex) {
@@ -143,7 +160,7 @@ async function createUserIndexes() {
         },
         default_language: 'english',
         language_override: 'language',
-      }
+      },
     );
 
     logger.info('Created User text index successfully');
@@ -167,14 +184,14 @@ async function createAdditionalIndexes() {
     if (!('privacy_1_trendingScore_-1' in travelPlanIndexes)) {
       await TravelPlan.collection.createIndex(
         { privacy: 1, trendingScore: -1 },
-        { name: 'privacy_1_trendingScore_-1' }
+        { name: 'privacy_1_trendingScore_-1' },
       );
     }
 
     if (!('privacy_1_createdAt_-1' in travelPlanIndexes)) {
       await TravelPlan.collection.createIndex(
         { privacy: 1, createdAt: -1 },
-        { name: 'privacy_1_createdAt_-1' }
+        { name: 'privacy_1_createdAt_-1' },
       );
     }
 
@@ -182,7 +199,7 @@ async function createAdditionalIndexes() {
     if (!('privacy_1_createdAt_-1' in postIndexes)) {
       await Post.collection.createIndex(
         { privacy: 1, createdAt: -1 },
-        { name: 'post_privacy_1_createdAt_-1' }
+        { name: 'post_privacy_1_createdAt_-1' },
       );
     }
 
@@ -190,7 +207,7 @@ async function createAdditionalIndexes() {
     if (!('followerCount_-1' in userIndexes)) {
       await User.collection.createIndex(
         { followerCount: -1 },
-        { name: 'followerCount_-1' }
+        { name: 'followerCount_-1' },
       );
     }
 
@@ -235,9 +252,9 @@ export async function dropSearchIndexes() {
   try {
     logger.info('Dropping search indexes...');
 
-    await TravelPlan.collection.dropIndex('search_text_index').catch(() => { });
-    await Post.collection.dropIndex('post_search_text_index').catch(() => { });
-    await User.collection.dropIndex('user_search_text_index').catch(() => { });
+    await TravelPlan.collection.dropIndex('search_text_index').catch(() => {});
+    await Post.collection.dropIndex('post_search_text_index').catch(() => {});
+    await User.collection.dropIndex('user_search_text_index').catch(() => {});
 
     logger.info('Search indexes dropped successfully');
   } catch (error) {
@@ -283,16 +300,21 @@ export async function safeInitializeSearchIndexes() {
       logger.info('Search indexes initialized successfully');
     } catch (error: any) {
       if (error.code === 85 || error.codeName === 'IndexOptionsConflict') {
-        logger.info('Search indexes already exist with different configurations. Using existing indexes.');
+        logger.info(
+          'Search indexes already exist with different configurations. Using existing indexes.',
+        );
       } else {
         logger.warn('Failed to initialize search indexes:', error.message);
       }
-      logger.info('Search functionality will use existing indexes if available');
+      logger.info(
+        'Search functionality will use existing indexes if available',
+      );
     }
-
   } catch (error) {
     logger.error('Error in safe index initialization:', error);
     // Don't throw error to prevent server startup failure
-    logger.warn('Search functionality may be limited due to index initialization failure');
+    logger.warn(
+      'Search functionality may be limited due to index initialization failure',
+    );
   }
 }
