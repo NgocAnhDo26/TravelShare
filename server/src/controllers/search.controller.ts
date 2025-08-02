@@ -54,12 +54,29 @@ class SearchController {
         page: pageNum,
         limit: limitNum,
         type: type as 'all' | 'plans' | 'posts' | 'users',
+        userId: (req as any).user, // Optional user ID for follow status
       };
 
       const results = await searchService.searchAll(searchOptions);
 
-      // Calculate pagination info
-      const totalResults = results.totalPlans + results.totalPosts + results.totalUsers;
+      // Calculate pagination info based on content type
+      let totalResults: number;
+      switch (type) {
+        case 'plans':
+          totalResults = results.totalPlans;
+          break;
+        case 'posts':
+          totalResults = results.totalPosts;
+          break;
+        case 'users':
+          totalResults = results.totalUsers;
+          break;
+        default: // 'all'
+          totalResults =
+            results.totalPlans + results.totalPosts + results.totalUsers;
+          break;
+      }
+
       const totalPages = Math.ceil(totalResults / limitNum);
 
       res.status(HTTP_STATUS.OK).json({
@@ -105,7 +122,10 @@ class SearchController {
         });
       }
 
-      const suggestions = await searchService.getSearchSuggestions(query.trim(), limitNum);
+      const suggestions = await searchService.getSearchSuggestions(
+        query.trim(),
+        limitNum,
+      );
 
       res.status(HTTP_STATUS.OK).json({
         success: true,
@@ -135,7 +155,11 @@ class SearchController {
       const limitNum = parseInt(limit as string, 10);
       const skip = (pageNum - 1) * limitNum;
 
-      const results = await searchService.searchPlans(query.trim(), skip, limitNum);
+      const results = await searchService.searchPlans(
+        query.trim(),
+        skip,
+        limitNum,
+      );
       const totalPages = Math.ceil(results.total / limitNum);
 
       res.status(HTTP_STATUS.OK).json({
@@ -175,7 +199,11 @@ class SearchController {
       const limitNum = parseInt(limit as string, 10);
       const skip = (pageNum - 1) * limitNum;
 
-      const results = await searchService.searchPosts(query.trim(), skip, limitNum);
+      const results = await searchService.searchPosts(
+        query.trim(),
+        skip,
+        limitNum,
+      );
       const totalPages = Math.ceil(results.total / limitNum);
 
       res.status(HTTP_STATUS.OK).json({
