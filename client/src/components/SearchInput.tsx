@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Popover,
   PopoverContent,
@@ -94,14 +95,27 @@ export const SearchInput: React.FC<SearchInputProps> = ({
                     onClick={() => handleSuggestionClick(suggestion)}
                     className='p-3 hover:bg-gray-100 rounded-md cursor-pointer transition-colors'
                   >
-                    <div className='flex items-start justify-between'>
-                      <div className='flex flex-col flex-1 min-w-0'>
-                        <span className='font-medium text-sm text-gray-900 truncate'>
-                          {suggestion.title}
-                        </span>
-                        <span className='text-xs text-gray-500 truncate'>
-                          {suggestion.subtitle}
-                        </span>
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center gap-3 flex-1 min-w-0'>
+                        {suggestion.type === 'user' && (
+                          <Avatar className='h-8 w-8 flex-shrink-0'>
+                            <AvatarImage
+                              src={suggestion.avatarUrl}
+                              alt={suggestion.title}
+                            />
+                            <AvatarFallback className='text-xs'>
+                              {suggestion.title.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className='flex flex-col flex-1 min-w-0'>
+                          <span className='font-medium text-sm text-gray-900 truncate'>
+                            {suggestion.title}
+                          </span>
+                          <span className='text-xs text-gray-500 truncate'>
+                            {suggestion.subtitle}
+                          </span>
+                        </div>
                       </div>
                       <div className='ml-2 flex-shrink-0'>
                         <span

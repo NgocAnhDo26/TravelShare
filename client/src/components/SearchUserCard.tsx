@@ -3,23 +3,27 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Users, UserPlus } from 'lucide-react';
+import { Users, UserPlus, UserMinus } from 'lucide-react';
 import type { SearchUser } from '@/types/search';
 
 interface SearchUserCardProps {
   user: SearchUser;
-  onFollow?: (userId: string) => void;
+  onFollow?: (userId: string, isCurrentlyFollowing: boolean) => void;
   onViewProfile?: (userId: string) => void;
+  currentUserId?: string; // Add current user ID to hide follow button for self
+  isAuthenticated?: boolean; // Add authentication status
 }
 
 const SearchUserCard: React.FC<SearchUserCardProps> = ({
   user,
   onFollow,
   onViewProfile,
+  currentUserId,
+  isAuthenticated,
 }) => {
   const handleFollowClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onFollow?.(user._id);
+    onFollow?.(user._id, user.isFollowing || false);
   };
 
   const handleViewProfile = () => {
@@ -45,10 +49,12 @@ const SearchUserCard: React.FC<SearchUserCardProps> = ({
             </Avatar>
 
             <div className='flex-1 min-w-0'>
-              <h3 className='font-semibold text-sm truncate'>
+              <h3 className='font-semibold text-sm truncate text-left'>
                 {user.displayName || user.username}
               </h3>
-              <p className='text-sm text-muted-foreground'>@{user.username}</p>
+              <p className='text-sm text-muted-foreground text-left'>
+                @{user.username}
+              </p>
             </div>
           </div>
 
@@ -80,15 +86,27 @@ const SearchUserCard: React.FC<SearchUserCardProps> = ({
             </div>
           </div>
 
-          <Button
-            size='sm'
-            variant='outline'
-            onClick={handleFollowClick}
-            className='ml-2'
-          >
-            <UserPlus className='h-4 w-4 mr-1' />
-            Follow
-          </Button>
+          {/* Only show follow button if user is authenticated and it's not their own profile */}
+          {isAuthenticated && currentUserId !== user._id && (
+            <Button
+              size='sm'
+              variant={user.isFollowing ? 'default' : 'outline'}
+              onClick={handleFollowClick}
+              className='ml-2'
+            >
+              {user.isFollowing ? (
+                <>
+                  <UserMinus className='h-4 w-4 mr-1' />
+                  Unfollow
+                </>
+              ) : (
+                <>
+                  <UserPlus className='h-4 w-4 mr-1' />
+                  Follow
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

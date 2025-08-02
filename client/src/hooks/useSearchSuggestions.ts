@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '@/utils/axiosInstance';
-import type { SearchSuggestionsResponse, SearchSuggestion } from '@/types/search';
+import type {
+  SearchSuggestionsResponse,
+  SearchSuggestion,
+} from '@/types/search';
 
 export const useSearchSuggestions = () => {
   const navigate = useNavigate();
@@ -37,7 +40,7 @@ export const useSearchSuggestions = () => {
     try {
       setIsLoading(true);
       const response = await API.get<SearchSuggestionsResponse>(
-        `/search/suggestions?q=${encodeURIComponent(query)}&limit=5`
+        `/search/suggestions?q=${encodeURIComponent(query)}&limit=5`,
       );
 
       if (response.data.success) {
