@@ -1,4 +1,4 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,7 +21,7 @@ const SearchPlanCard: React.FC<SearchPlanCardProps> = ({ plan, onClick }) => {
 
   return (
     <Card
-      className='cursor-pointer hover:shadow-md transition-shadow'
+      className='cursor-pointer hover:shadow-md transition-shadow pt-0'
       onClick={onClick}
     >
       <div className='relative'>
@@ -39,7 +39,9 @@ const SearchPlanCard: React.FC<SearchPlanCardProps> = ({ plan, onClick }) => {
       </div>
 
       <CardHeader className='pb-2'>
-        <CardTitle className='text-lg line-clamp-2'>{plan.title}</CardTitle>
+        <CardTitle className='text-lg line-clamp-2 text-left'>
+          {plan.title}
+        </CardTitle>
         <div className='flex items-center text-sm text-muted-foreground'>
           <MapPin className='h-4 w-4 mr-1' />
           {plan.destination.name}
