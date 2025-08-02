@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
+import type { ReactNode } from 'react';
 
 interface Tab {
-  label: string;
+  label: string | ReactNode;
   value: string;
   to?: string; // For navigation tabs
   onClick?: () => void; // For click-based tabs
@@ -14,14 +15,16 @@ interface HeaderTabsProps {
   className?: string;
 }
 
-export default function HeaderTabs({ 
-  tabs, 
-  activeTab, 
-  onTabChange, 
-  className = 'mb-8' 
+export default function HeaderTabs({
+  tabs,
+  activeTab,
+  onTabChange,
+  className = 'mb-8',
 }: HeaderTabsProps) {
   return (
-    <div className={`flex items-center gap-8 border-b border-slate-200 ${className}`}>
+    <div
+      className={`flex items-center gap-8 border-b border-slate-200 ${className}`}
+    >
       {tabs.map((tab) => {
         // If tab has a 'to' prop, it's a navigation tab
         if (tab.to) {
@@ -42,7 +45,7 @@ export default function HeaderTabs({
             </NavLink>
           );
         }
-        
+
         // Otherwise, it's a click-based tab
         const isActive = activeTab === tab.value;
         return (
