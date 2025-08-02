@@ -159,43 +159,45 @@ class SearchService {
   async getSearchSuggestions(query: string, limit: number = 5) {
     const searchRegex = new RegExp(query, 'i');
 
-    const [planSuggestions, userSuggestions, postSuggestions] = await Promise.all([
-      TravelPlan.find({
-        privacy: 'public',
-        $or: [{ title: searchRegex }, { 'destination.name': searchRegex }],
-      })
-        .select('title destination.name')
-        .limit(limit)
-        .lean(),
-      User.find({
-        $or: [{ username: searchRegex }, { displayName: searchRegex }],
-      })
-        .select('username displayName')
-        .limit(limit)
-        .lean(),
-      Post.find({
-        privacy: 'public',
-        $or: [{ title: searchRegex }, { content: searchRegex }],
-      })
-        .select('title content')
-        .limit(limit)
-        .lean(),
-    ]);
+    const [planSuggestions, userSuggestions, postSuggestions] =
+      await Promise.all([
+        TravelPlan.find({
+          privacy: 'public',
+          $or: [{ title: searchRegex }, { 'destination.name': searchRegex }],
+        })
+          .select('title destination.name')
+          .limit(limit)
+          .lean(),
+        User.find({
+          $or: [{ username: searchRegex }, { displayName: searchRegex }],
+        })
+          .select('username displayName avatarUrl')
+          .limit(limit)
+          .lean(),
+        Post.find({
+          privacy: 'public',
+          $or: [{ title: searchRegex }, { content: searchRegex }],
+        })
+          .select('title content')
+          .limit(limit)
+          .lean(),
+      ]);
 
     return {
-      plans: planSuggestions.map(plan => ({
+      plans: planSuggestions.map((plan) => ({
         id: plan._id.toString(),
         type: 'plan',
         title: plan.title,
         subtitle: plan.destination.name,
       })),
-      users: userSuggestions.map(user => ({
+      users: userSuggestions.map((user) => ({
         id: user._id.toString(),
         type: 'user',
         title: user.displayName || user.username,
         subtitle: `@${user.username}`,
+        avatarUrl: user.avatarUrl,
       })),
-      posts: postSuggestions.map(post => ({
+      posts: postSuggestions.map((post) => ({
         id: post._id.toString(),
         type: 'post',
         title: post.title,

@@ -90,6 +90,7 @@ export interface SearchSuggestion {
   id: string; // Added ID for direct navigation
   title: string;
   subtitle: string;
+  avatarUrl?: string; // For user suggestions
 }
 
 export interface SearchSuggestionsResponse {
