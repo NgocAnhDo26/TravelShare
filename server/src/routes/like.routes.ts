@@ -39,18 +39,15 @@ export function createLikeRoutes(onModel: 'TravelPlan' | 'Post') {
       } catch (err) {
         next(err);
       }
-    }
+    },
   );
 
   // Get users who liked
-  router.get(
-    '/:id/likes',
-    (req, res, next) => {
-      (req.params as any).onModel = onModel;
-      (req.params as any).targetId = req.params.id;
-      return getUsersWhoLiked(req, res, next);
-    }
-  );
+  router.get('/:id/likes', (req, res, next) => {
+    (req.params as any).onModel = onModel;
+    (req.params as any).targetId = req.params.id;
+    return getUsersWhoLiked(req, res, next);
+  });
 
   return router;
 }

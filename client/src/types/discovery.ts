@@ -42,4 +42,4 @@ export interface SearchParams {
   filter: FilterType;
   page?: number;
   limit?: number;
-} 
+}

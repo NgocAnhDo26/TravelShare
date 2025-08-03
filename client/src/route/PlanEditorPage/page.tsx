@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import { getActualEditMode } from '@/utils/planPermissions';
 import type { Destination } from '@/types/destination';
+import { useLikeToggle } from '@/hooks/useLikeToggle';
 
 function toDestination(raw: unknown): Destination | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
@@ -124,6 +125,15 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
     }
   }, [planId, user, editMode, navigate]);
 
+  // It's initialized with data from the plan and provides the live state
+  const { isLiked, likesCount} = useLikeToggle({
+    targetId: planData?._id ?? '',
+    initialIsLiked: planData?.isLiked ?? false,
+    initialLikesCount: planData?.likesCount ?? 0,
+    apiPath: '/plans',
+    onModel: 'TravelPlan',
+  });
+
   const handleTripUpdate = (updatedTrip: Trip) => {
     setPlanData(updatedTrip);
   };
@@ -220,7 +230,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Show loading state – skeleton placeholders
   if (isLoading) {
     return (
-      <div className='flex flex-col h-full lg:mx-60 mx-24 my-10'>
+      <div className='flex flex-col h-full max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
         <Card className='w-full overflow-hidden pt-0'>
           {/* Cover image skeleton */}
           <Skeleton className='w-full h-72' />
@@ -245,7 +255,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Show error state if no plan data
   if (!planData) {
     return (
-      <div className='flex flex-col h-full justify-center lg:mx-60 mx-24 my-10'>
+      <div className='flex flex-col h-full justify-center max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
         <div className='flex items-center justify-center'>
           <div className='text-lg text-red-600'>Plan not found</div>
         </div>
@@ -253,11 +263,17 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
     );
   }
 
+  const displayTripData = {
+    ...planData,
+    isLiked,
+    likesCount,
+}
+
   return (
-    <div className='flex flex-col justify-center lg:mx-60 mx-24 my-10'>
+    <div className='flex flex-col justify-center max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
       <Card className='w-full overflow-hidden pt-0'>
         <TripHeader
-          trip={planData}
+          trip={displayTripData}
           editMode={actualEditMode}
           onTripUpdate={handleTripUpdate}
         />
@@ -278,6 +294,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           onModel='TravelPlan'
           initialLikesCount={planData.likesCount}
           initialCommentsCount={planData.commentsCount}
+          initialIsLiked={planData.isLiked}
           currentUser={currentUserForSocialSection}
         />
       )}

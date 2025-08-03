@@ -52,9 +52,17 @@ interface ITravelPlanController {
     next: NextFunction,
   ): Promise<void>;
 
-   getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>;
-   reorderItemsInDay(req: Request, res: Response, next: NextFunction): Promise<void>; 
-   moveItemToAnotherDay(req: Request, res: Response, next: NextFunction): Promise<void>;
+  getHomeFeed(req: Request, res: Response, next: NextFunction): Promise<void>;
+  reorderItemsInDay(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
+  moveItemToAnotherDay(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
 }
 
 /**
@@ -64,12 +72,15 @@ interface ITravelPlanController {
  * @returns Array of items with isLiked property
  */
 function attachIsLikedToItems(items: any[], likes: any[]): any[] {
-  const likedMap: Record<string, boolean> = likes.reduce((acc: Record<string, boolean>, like: any) => {
-    acc[like.targetId.toString()] = true;
-    return acc;
-  }, {});
+  const likedMap: Record<string, boolean> = likes.reduce(
+    (acc: Record<string, boolean>, like: any) => {
+      acc[like.targetId.toString()] = true;
+      return acc;
+    },
+    {},
+  );
   return items.map((item: any) => ({
-    ...item.toObject?.() || item,
+    ...(item.toObject?.() || item),
     isLiked: likedMap[item._id.toString()] || false,
   }));
 }
@@ -164,7 +175,7 @@ const TravelPlanController: ITravelPlanController = {
       }
 
       res.status(HTTP_STATUS.OK).json({
-        ...travelPlan.toObject?.() || travelPlan,
+        ...(travelPlan.toObject?.() || travelPlan),
         isLiked,
       });
     } catch (error) {
@@ -193,7 +204,8 @@ const TravelPlanController: ITravelPlanController = {
     try {
       const { authorId } = req.params;
       const userId = req.user as string;
-      const travelPlans = await TravelPlanService.getTravelPlansByAuthor(authorId);
+      const travelPlans =
+        await TravelPlanService.getTravelPlansByAuthor(authorId);
 
       let likes: any[] = [];
       if (userId && travelPlans.length > 0) {
@@ -204,9 +216,7 @@ const TravelPlanController: ITravelPlanController = {
         });
       }
 
-      res.status(HTTP_STATUS.OK).json(
-        attachIsLikedToItems(travelPlans, likes)
-      );
+      res.status(HTTP_STATUS.OK).json(attachIsLikedToItems(travelPlans, likes));
     } catch (error) {
       console.error('Error in getTravelPlansByAuthor controller:', error);
 
@@ -546,7 +556,6 @@ const TravelPlanController: ITravelPlanController = {
         pagination: feed.pagination,
       });
     } catch (error: any) {
-  
       next(error);
     }
   },
@@ -556,7 +565,11 @@ const TravelPlanController: ITravelPlanController = {
    * POST /api/plans/:id/items/reorder
    * Body: { dayNumber: number, items: [{ _id: string, order: number }] }
    */
-  async reorderItemsInDay(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async reorderItemsInDay(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const planId = req.params.id;
       const authorId = req.user as string;
@@ -567,7 +580,12 @@ const TravelPlanController: ITravelPlanController = {
         return;
       }
 
-      await TravelPlanService.reorderItemsInDay(planId, dayNumber, items, authorId);
+      await TravelPlanService.reorderItemsInDay(
+        planId,
+        dayNumber,
+        items,
+        authorId,
+      );
 
       res.status(200).json({ message: 'Items reordered successfully.' });
     } catch (error) {
@@ -576,40 +594,48 @@ const TravelPlanController: ITravelPlanController = {
   },
 
   /**
- * Move an item from one day to another within a travel plan.
- * POST /api/plans/:id/items/move
- * Body: { sourceDayNumber, targetDayNumber, itemId, targetIndex }
- */
-async moveItemToAnotherDay(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const planId = req.params.id;
-    const authorId = req.user as string;
-    const { sourceDayNumber, targetDayNumber, itemId, targetIndex } = req.body;
+   * Move an item from one day to another within a travel plan.
+   * POST /api/plans/:id/items/move
+   * Body: { sourceDayNumber, targetDayNumber, itemId, targetIndex }
+   */
+  async moveItemToAnotherDay(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const planId = req.params.id;
+      const authorId = req.user as string;
+      const { sourceDayNumber, targetDayNumber, itemId, targetIndex } =
+        req.body;
 
-    if (
-      typeof sourceDayNumber !== 'number' ||
-      typeof targetDayNumber !== 'number' ||
-      typeof itemId !== 'string' ||
-      typeof targetIndex !== 'number'
-    ) {
-      res.status(400).json({ error: 'sourceDayNumber, targetDayNumber, itemId, and targetIndex are required.' });
-      return;
+      if (
+        typeof sourceDayNumber !== 'number' ||
+        typeof targetDayNumber !== 'number' ||
+        typeof itemId !== 'string' ||
+        typeof targetIndex !== 'number'
+      ) {
+        res.status(400).json({
+          error:
+            'sourceDayNumber, targetDayNumber, itemId, and targetIndex are required.',
+        });
+        return;
+      }
+
+      await TravelPlanService.moveItemToAnotherDay(
+        planId,
+        sourceDayNumber,
+        targetDayNumber,
+        itemId,
+        targetIndex,
+        authorId,
+      );
+
+      res.status(200).json({ message: 'Item moved successfully.' });
+    } catch (error) {
+      next(error);
     }
-
-    await TravelPlanService.moveItemToAnotherDay(
-      planId,
-      sourceDayNumber,
-      targetDayNumber,
-      itemId,
-      targetIndex,
-      authorId
-    );
-
-    res.status(200).json({ message: 'Item moved successfully.' });
-  } catch (error) {
-    next(error);
-  }
-},
+  },
 };
 
 export { TravelPlanController };
