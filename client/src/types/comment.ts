@@ -1,3 +1,7 @@
+interface IMention {
+    _id: string;
+    username: string;
+}
 export interface IComment {
   _id: string;
   user: {
@@ -14,4 +18,5 @@ export interface IComment {
   likesCount: number;
   replies: IComment[];
   replyCount: number;
+  mentions?: IMention[];
 }

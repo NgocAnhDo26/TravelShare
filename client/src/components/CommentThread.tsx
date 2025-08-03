@@ -1,15 +1,14 @@
 import React, { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import API from '@/utils/axiosInstance';
-import type { IComment } from '@/types/comment';
-import CommentItem from './CommentItem';
+import CommentItem, { type IComment } from './CommentItem';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Loader2, ImagePlus, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import type { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
 import './Comment.css';
+import { Textarea } from './ui/textarea';
 
 interface AuthUser {
     _id: string; userId?: string; username: string; displayName?: string; avatarUrl?: string;
@@ -30,10 +29,8 @@ const ReplyInput: React.FC<ReplyInputProps> = ({ user, onSubmit, initialContent 
 
     useEffect(() => {
         setReplyContent(initialContent || '');
-        removeImage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialContent]);
-    
+
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
@@ -51,19 +48,15 @@ const ReplyInput: React.FC<ReplyInputProps> = ({ user, onSubmit, initialContent 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if ((!replyContent.trim() && !imageFile) || isSubmitting) return;
-        
+
         setIsSubmitting(true);
-        try { 
-            await onSubmit(replyContent, imageFile); 
+        try {
+            await onSubmit(replyContent, imageFile);
             setReplyContent('');
             removeImage();
-        } finally { 
-            setIsSubmitting(false); 
+        } finally {
+            setIsSubmitting(false);
         }
-    };
-    
-    const getInitialReplyContent = () => {
-      return initialContent || '';
     };
 
     return (
@@ -75,16 +68,17 @@ const ReplyInput: React.FC<ReplyInputProps> = ({ user, onSubmit, initialContent 
                 </Avatar>
                 <div className='flex-1 flex flex-col'>
                     <div className='relative w-full'>
-                        <Input 
-                            autoFocus 
-                            value={replyContent} 
+                        <Textarea
+                            autoFocus
+                            value={replyContent}
                             onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="Viết trả lời..."
-                            className="h-9" 
-                            disabled={isSubmitting} 
+                            placeholder="Write a reply..."
+                            className="min-h-[36px] max-h-[120px] resize-none pr-10 break-all"
+                            rows={1}
+                            disabled={isSubmitting}
                         />
                         <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
-                        <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
+                        <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1 h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
                             <ImagePlus className="h-5 w-5" />
                         </Button>
                     </div>
@@ -98,30 +92,32 @@ const ReplyInput: React.FC<ReplyInputProps> = ({ user, onSubmit, initialContent 
                     </button>
                 </div>
             )}
-             {(replyContent.trim() || imageFile) && (
-                 <div className='flex items-center gap-2 ml-12'>
-                    <Button type="button" size="sm" disabled={isSubmitting} onClick={handleSubmit}>
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reply'}
-                    </Button>
-                    <Button type="button" size="sm" variant="ghost" disabled={isSubmitting} onClick={() => { setReplyContent(getInitialReplyContent()); removeImage(); }}>
-                        Cancel
-                    </Button>
-                </div>
-            )}
+            <div className='flex items-center gap-2 ml-12'>
+                <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || (!replyContent.trim() && !imageFile)}
+                >
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reply'}
+                </Button>
+            </div>
         </div>
     );
 };
+
 
 interface ThreadProps {
     comment: IComment;
     currentUser?: AuthUser | null;
     likedCommentIds: Set<string>;
+    hiddenCommentIds: Set<string>;
     onLike: (commentId: string) => void;
     onDelete: (commentId: string, parentId: string | null) => Promise<boolean>;
-    onEdit: (commentId: string, newContent: string) => Promise<void>; 
+    onEdit: (commentId: string, newContent: string) => Promise<void>;
     onHide: (commentId: string) => void;
     onAddComment: (formData: FormData) => Promise<AxiosResponse<IComment>>;
-    onReplyAdded: () => void;
+    onReplyAdded: (parentId: string) => void;
 }
 
 const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
@@ -130,12 +126,23 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
     const [replies, setReplies] = useState<IComment[]>([]);
     const [areRepliesVisible, setAreRepliesVisible] = useState(false);
     const [isLoadingReplies, setIsLoadingReplies] = useState(false);
-    const [replyTarget, setReplyTarget] = useState<{comment: IComment, parentId: string | null} | null>(null);
+    
+    const [replyTarget, setReplyTarget] = useState<{
+        comment: IComment,
+        parentId: string | null,
+        shouldTag: boolean;
+    } | null>(null);
+
     const [shouldFocusReply, setShouldFocusReply] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-    const [imageLoadTrigger, setImageLoadTrigger] = useState(0); 
+    const [imageLoadTrigger, setImageLoadTrigger] = useState(0);
     const isReplying = !!replyTarget;
-    
+
+    const [windowSize, setWindowSize] = useState({
+        width: window.innerWidth,
+        height: window.innerHeight,
+    });
+
     const replyInputRef = useRef<HTMLDivElement>(null);
     const lineRef = useRef<HTMLDivElement>(null);
     const repliesContainerRef = useRef<HTMLDivElement>(null);
@@ -146,14 +153,26 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
     }, []);
 
     useEffect(() => { setLocalComment(comment); }, [comment]);
-    
+
     useEffect(() => {
         if (replyTarget && shouldFocusReply && replyInputRef.current) {
             replyInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            replyInputRef.current.querySelector('input')?.focus();
+            replyInputRef.current.querySelector('textarea')?.focus();
             setShouldFocusReply(false);
         }
     }, [replyTarget, shouldFocusReply]);
+    
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowSize({
+                width: window.innerWidth,
+                height: window.innerHeight,
+            });
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
 
     useLayoutEffect(() => {
         const line = lineRef.current;
@@ -165,16 +184,16 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
             line.style.height = '0px';
             return;
         }
-        
+
         const lastElement = allElements[allElements.length - 1];
         const lineParent = line.offsetParent as HTMLElement;
         const lineContainerRect = lineParent.getBoundingClientRect();
-        
+
         let requiredHeight = 0;
 
         if (lastElement.classList.contains('reply-input-container')) {
             const targetRect = lastElement.getBoundingClientRect();
-            const hookOffsetY = 0.875 * 16;
+            const hookOffsetY = 18; 
             const targetTopY = (targetRect.top - lineContainerRect.top) + hookOffsetY;
             requiredHeight = targetTopY - line.offsetTop;
         } else {
@@ -182,18 +201,17 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
             const targetCenterY = (targetRect.top - lineContainerRect.top) + (targetRect.height / 2);
             requiredHeight = targetCenterY - line.offsetTop;
         }
-        
-        line.style.height = `${Math.max(0, requiredHeight)}px`;
 
-    }, [replies, areRepliesVisible, isReplying, editingCommentId, imageLoadTrigger]);
+        line.style.height = `${Math.max(0, requiredHeight)}px`;
+    }, [replies, areRepliesVisible, isReplying, editingCommentId, imageLoadTrigger, rest.hiddenCommentIds, windowSize]);
 
     const fetchReplies = useCallback(async () => {
         if (localComment.replyCount === 0) return;
         setIsLoadingReplies(true);
         try {
-            const response = await API.get<IComment[]>(`/comments/${localComment._id}/replies`, { params: { sort: 'asc' } });
+            const response = await API.get<IComment[]>(`/comments/${localComment._id}/replies`);
             setReplies(response.data);
-        } catch (error) { console.error("Failed to fetch replies:", error); } 
+        } catch (error) { console.error("Failed to fetch replies:", error); }
         finally { setIsLoadingReplies(false); }
     }, [localComment._id, localComment.replyCount]);
 
@@ -203,13 +221,18 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
         }
     }, [areRepliesVisible, fetchReplies, replies.length, localComment.replyCount]);
     
-    const handleSetReply = (targetComment: IComment, parentOfTarget: string | null, focus: boolean = false) => {
-        setReplyTarget({ comment: targetComment, parentId: parentOfTarget });
-        if (focus) {
+    const handleSetReply = (targetComment: IComment, parentOfTarget: string | null, isDirectReplyAction: boolean = false) => {
+        setReplyTarget({
+            comment: targetComment,
+            parentId: parentOfTarget,
+            shouldTag: isDirectReplyAction
+        });
+        if (isDirectReplyAction) {
             setShouldFocusReply(true);
         }
     };
-    
+
+
     const handleAddReply = async (content: string, imageFile: File | null) => {
         if (!replyTarget) return;
 
@@ -222,25 +245,26 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
             const response = await rest.onAddComment(formData);
             setReplies(currentReplies => [...currentReplies, response.data]);
             setLocalComment(prev => ({ ...prev, replyCount: prev.replyCount + 1 }));
-            rest.onReplyAdded();
+            rest.onReplyAdded(localComment._id);
             if (!areRepliesVisible) setAreRepliesVisible(true);
+            
             handleSetReply(localComment, null, false);
-        } catch (error) { 
+        } catch (error) {
             toast.error("Failed to add reply.");
         }
     };
-    
+
     const handleDeleteReply = async (replyId: string) => {
         const success = await onDelete(replyId, localComment._id);
         if (success) {
             setReplies(prev => prev.filter(r => r._id !== replyId));
         }
     };
-    
+
     const handleEditReply = async (replyId: string, newContent: string) => {
         const originalReplies = [...replies];
-        
-        setReplies(prevReplies => prevReplies.map(r => 
+
+        setReplies(prevReplies => prevReplies.map(r =>
             r._id === replyId ? { ...r, content: newContent } : r
         ));
         setEditingCommentId(null);
@@ -249,24 +273,26 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
             await onEdit(replyId, newContent);
         } catch (error) {
             setReplies(originalReplies);
-            throw error; 
+            throw error;
         }
     };
     
     const getInitialReplyContent = () => {
-        if (replyTarget && replyTarget.comment._id !== localComment._id && replyTarget.comment.user._id !== currentUserId) {
-            const targetName = replyTarget.comment.user.displayName || replyTarget.comment.user.username;
-            return `@${targetName.replace(/\s/g, '')} `;
+        if (replyTarget && replyTarget.shouldTag && replyTarget.comment.user._id !== currentUserId) {
+            const targetUsername = replyTarget.comment.user.username;
+            return `@${targetUsername} `;
         }
         return '';
     };
 
+    const visibleReplies = replies.filter(r => !rest.hiddenCommentIds.has(r._id));
+
     return (
         <div className="comment-thread-container">
-            {(areRepliesVisible || isReplying || replies.length > 0) && <div ref={lineRef} className="thread-line-main" />}
-            
-            <CommentItem 
-                comment={localComment} 
+            {(areRepliesVisible || isReplying || visibleReplies.length > 0) && <div ref={lineRef} className="thread-line-main" />}
+
+            <CommentItem
+                comment={localComment}
                 isAuthor={localComment.user._id === currentUserId}
                 isLiked={rest.likedCommentIds.has(localComment._id)}
                 isEditing={editingCommentId === localComment._id}
@@ -294,15 +320,15 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
                         {isLoadingReplies ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : `View ${localComment.replyCount} ${localComment.replyCount > 1 ? 'replies' : 'reply'}`}
                     </Button>
                 )}
-                
+
                 <div ref={repliesContainerRef} className='space-y-2'>
                     {areRepliesVisible && (
                         <div className="space-y-2 pt-2">
-                            {replies.map(reply => (
+                            {visibleReplies.map(reply => (
                                 <div key={reply._id} className="reply-item-container">
                                     <div className="reply-item-connector"></div>
-                                    <CommentItem 
-                                        comment={reply} 
+                                    <CommentItem
+                                        comment={reply}
                                         isAuthor={reply.user._id === currentUserId}
                                         isLiked={rest.likedCommentIds.has(reply._id)}
                                         isEditing={editingCommentId === reply._id}
@@ -322,8 +348,8 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
                     {isReplying && (
                         <div ref={replyInputRef} className="pt-2 reply-input-container">
                             <div className="reply-input-connector"></div>
-                            <ReplyInput 
-                                user={currentUser} 
+                            <ReplyInput
+                                user={currentUser}
                                 onSubmit={handleAddReply}
                                 initialContent={getInitialReplyContent()}
                             />

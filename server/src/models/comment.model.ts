@@ -16,6 +16,7 @@ export interface IComment extends Document {
   parentId?: Types.ObjectId;
   likesCount: number;
   replyCount: number;
+  mentions: Types.ObjectId[];
   createdAt: Date;     
   updatedAt: Date;
 }
@@ -33,7 +34,8 @@ const commentSchema: Schema<IComment> = new Schema(
     },
     parentId: { type: Schema.Types.ObjectId, ref: 'Comment', default: null },
     replyCount: { type: Number, default: 0 },
-    likesCount: { type: Number, default: 0 },
+    likesCount: { type: Number, default: 0 },
+    mentions: [{ type: Schema.Types.ObjectId, ref: 'User', default: [] }],
   },
   { timestamps: true, collection: 'comments' },
 );

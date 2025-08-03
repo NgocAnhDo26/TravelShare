@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import API from '@/utils/axiosInstance';
 import type { IComment } from '@/types/comment';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Heart, User as UserIcon, ImagePlus, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -11,6 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import CommentSkeleton from './CommentSkeleton';
 import type { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
+import { Textarea } from '@/components/ui/textarea';
 
 interface AuthUser {
     _id: string;
@@ -47,8 +47,9 @@ const SocialSection: React.FC<SocialSectionProps> = ({
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
+
     const currentUserId = currentUser?._id || currentUser?.userId;
     const targetApiPrefix = onModel === 'TravelPlan' ? '/plans' : '/posts';
 
@@ -93,7 +94,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
 
     useEffect(() => {
         fetchComments(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [targetId, onModel]);
 
     const handleLoadMore = useCallback(() => {
@@ -104,12 +104,28 @@ const SocialSection: React.FC<SocialSectionProps> = ({
 
     useEffect(() => {
         const observer = new IntersectionObserver(
-            (entries) => { if (entries[0].isIntersecting) handleLoadMore(); },
-            { threshold: 1.0 }
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    handleLoadMore();
+                }
+            },
+            {
+                root: scrollContainerRef.current,
+                threshold: 1.0,
+                rootMargin: '0px 0px 100px 0px'
+            }
         );
-        const currentRef = loadMoreRef.current;
-        if (currentRef) observer.observe(currentRef);
-        return () => { if (currentRef) observer.unobserve(currentRef); };
+
+        const currentLoadMoreRef = loadMoreRef.current;
+        if (currentLoadMoreRef) {
+            observer.observe(currentLoadMoreRef);
+        }
+
+        return () => {
+            if (currentLoadMoreRef) {
+                observer.unobserve(currentLoadMoreRef);
+            }
+        };
     }, [handleLoadMore]);
 
     const handleAddComment = (formData: FormData): Promise<AxiosResponse<IComment>> => {
@@ -117,7 +133,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             headers: { 'Content-Type': 'multipart/form-data' },
         });
     };
-    
     const handleFormSubmit = async () => {
         if (!newComment.trim() && !imageFile) return;
         setIsPosting(true);
@@ -141,7 +156,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             setIsPosting(false);
         }
     };
-    
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
@@ -149,13 +163,11 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             setImagePreview(URL.createObjectURL(file));
         }
     };
-
     const removeImage = () => {
         setImageFile(null);
         setImagePreview(null);
         if(fileInputRef.current) fileInputRef.current.value = "";
     };
-    
     const handleDeleteComment = async (commentId: string, parentId: string | null): Promise<boolean> => {
         const confirmed = await new Promise<boolean>(resolve => toast(t => (
             <div className="flex flex-col items-center gap-4 p-2">
@@ -179,6 +191,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
                 setComments(prevComments => prevComments.map(c => 
                     c._id === parentId ? { ...c, replyCount: Math.max(0, c.replyCount - 1) } : c
                 ));
+                setCommentsCount(prev => prev - 1);
             } else {
                 const commentToDelete = comments.find(c => c._id === commentId);
                 const numSubReplies = commentToDelete?.replyCount || 0;
@@ -192,7 +205,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             return false;
         }
     };
-
     const handleEditComment = async (commentId: string, content: string): Promise<void> => {
         const originalComments = [...comments];
         setComments(prevComments => prevComments.map(c => c._id === commentId ? { ...c, content } : c));
@@ -205,7 +217,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             throw error;
         }
     };
-
     const handleLikeComment = async (commentId: string) => {
         if (!currentUser) {
             toast.error('Please log in to like comments.');
@@ -214,7 +225,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
     
         const isCurrentlyLiked = likedCommentIds.has(commentId);
     
-        // Cập nhật giao diện một cách lạc quan
         const newLikedIds = new Set(likedCommentIds);
         if (isCurrentlyLiked) {
             newLikedIds.delete(commentId);
@@ -226,7 +236,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
         try {
             const { data: updatedComment } = await API.post<IComment>(`/comments/${commentId}/like`);
             
-            // Cập nhật lại state với dữ liệu chính xác từ server
             setComments(prevComments => {
                 const updateRecursive = (commentList: IComment[]): IComment[] => {
                     return commentList.map(c => {
@@ -244,75 +253,90 @@ const SocialSection: React.FC<SocialSectionProps> = ({
 
         } catch (error) {
             toast.error('Action failed. Please try again.');
-            // Rollback lại trạng thái liked nếu có lỗi
             setLikedCommentIds(likedCommentIds);
         }
     };
-    
     const handleHideComment = (commentId: string) => {
         setHiddenCommentIds(prev => new Set(prev).add(commentId));
     };
-    
     const filterHiddenComments = (c: IComment[]) => c.filter(c => !hiddenCommentIds.has(c._id));
 
     return (
-        <Card className='flex flex-col gap-2 mt-4 border shadow-sm py-3'>
-            <div className='flex items-center gap-4 mx-4'>
-                <Button variant='ghost' aria-label='Like this' className='hover:bg-red-50 hover:text-red-600 focus:bg-red-50 focus:text-red-600'>
-                    <Heart className="mr-2 h-4 w-4" /> Like
-                </Button>
-                <Separator orientation='vertical' className="h-6" />
-                <span className='text-sm text-gray-500'>{initialLikesCount} likes</span>
-                <span className='text-sm text-gray-500'>•</span>
-                <span className='text-sm text-gray-500'>{commentsCount} comments</span>
+        <Card className='flex flex-col mt-4 py-0 border shadow-sm h-[80vh]'>
+            <div className='flex-shrink-0 px-4 py-3 border-b'>
+                <div className='flex items-center gap-4'>
+                    <Button variant='ghost' aria-label='Like this' className='hover:bg-red-50 hover:text-red-600 focus:bg-red-50 focus:text-red-600'>
+                        <Heart className="mr-2 h-4 w-4" /> Like
+                    </Button>
+                    <Separator orientation='vertical' className="h-6" />
+                    <span className='text-sm text-gray-500'>{initialLikesCount} likes</span>
+                    <span className='text-sm text-gray-500'>•</span>
+                    <span className='text-sm text-gray-500'>{commentsCount} comments</span>
+                </div>
             </div>
-            <Separator />
-            <div className='space-y-6 px-4 sm:px-6 py-4'>
+            
+            <div ref={scrollContainerRef} className='flex-1 space-y-6 px-4 sm:px-6 py-4 overflow-y-auto'>
                 {filterHiddenComments(comments).map((comment) => (
                     <CommentThread
                         key={comment._id}
                         comment={comment}
                         currentUser={currentUser}
                         likedCommentIds={likedCommentIds}
+                        hiddenCommentIds={hiddenCommentIds}
                         onDelete={handleDeleteComment}
                         onEdit={handleEditComment}
                         onAddComment={handleAddComment}
                         onLike={handleLikeComment}
                         onHide={handleHideComment}
-                        onReplyAdded={() => setCommentsCount(prev => prev + 1)}
+                        onReplyAdded={(parentId) => {
+                            setCommentsCount(prev => prev + 1);
+                            setComments(prevComments => prevComments.map(c =>
+                                c._id === parentId ? { ...c, replyCount: c.replyCount + 1 } : c
+                            ));
+                        }}
                     />
                 ))}
                 {isLoading && comments.length === 0 && <><CommentSkeleton /><CommentSkeleton /></>}
                 <div ref={loadMoreRef} style={{ height: '1px' }} />
             </div>
-            <Separator />
-            <form className='flex flex-col gap-2 px-4 sm:px-6 my-2' onSubmit={(e) => { e.preventDefault(); handleFormSubmit(); }}>
-                <div className="flex items-center gap-2 w-full">
-                    <Avatar>
-                        {currentUser ? (
-                            <><AvatarImage src={currentUser.avatarUrl || ''} alt={currentUser.username} /><AvatarFallback>{currentUser.displayName?.charAt(0).toUpperCase() || currentUser.username.charAt(0).toUpperCase()}</AvatarFallback></>
-                        ) : (<AvatarFallback><UserIcon className='h-5 w-5 text-gray-500' /></AvatarFallback>)}
-                    </Avatar>
-                    <div className='relative flex-1'>
-                        <Input placeholder='Add a comment...' value={newComment} onChange={(e) => setNewComment(e.target.value)} disabled={isPosting || !currentUser} />
-                        <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
-                        <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={isPosting || !currentUser}>
-                            <ImagePlus className="h-5 w-5" />
+
+            <div className='flex-shrink-0 px-4 sm:px-6 py-3 border-t'>
+                <form className='flex flex-col gap-2' onSubmit={(e) => { e.preventDefault(); handleFormSubmit(); }}>
+                    <div className="flex items-start gap-2 w-full">
+                        <Avatar>
+                            {currentUser ? (
+                                <><AvatarImage src={currentUser.avatarUrl || ''} alt={currentUser.username} /><AvatarFallback>{currentUser.displayName?.charAt(0).toUpperCase() || currentUser.username.charAt(0).toUpperCase()}</AvatarFallback></>
+                            ) : (<AvatarFallback><UserIcon className='h-5 w-5 text-gray-500' /></AvatarFallback>)}
+                        </Avatar>
+                        <div className='relative flex-1'>
+                            <Textarea
+                                placeholder='Add a comment...'
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                disabled={isPosting || !currentUser}
+                                className="min-h-[40px] max-h-[150px] resize-none pr-10 break-all"
+                                rows={1}
+                            />
+                            <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
+                            <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-2 h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={isPosting || !currentUser}>
+                                <ImagePlus className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        <Button type='submit' disabled={isPosting || (!newComment.trim() && !imageFile) || !currentUser}>
+                            {isPosting ? 'Posting...' : 'Post'}
                         </Button>
                     </div>
-                    <Button type='submit' disabled={isPosting || (!newComment.trim() && !imageFile) || !currentUser}>
-                        {isPosting ? 'Posting...' : 'Post'}
-                    </Button>
-                </div>
-                {imagePreview && (
-                    <div className="relative w-fit self-start ml-12 mt-2">
-                        <img src={imagePreview} alt="Preview" className="max-h-40 rounded-lg" />
-                        <button type="button" onClick={removeImage} className="absolute top-1 right-1 bg-gray-900/50 text-white rounded-full p-1">
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
-                )}
-            </form>
+                    {imagePreview && (
+                        <div className="relative w-fit self-start ml-12 mt-2">
+                            <img src={imagePreview} alt="Preview" className="max-h-40 rounded-lg" />
+                            <button type="button" onClick={removeImage} className="absolute top-1 right-1 bg-gray-900/50 text-white rounded-full p-1">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                    )}
+                </form>
+            </div>
+    
         </Card>
     );
 };
