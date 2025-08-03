@@ -10,6 +10,7 @@ interface IAuthJwtMiddleware {
   verifyToken(req: Request, res: Response, next: NextFunction): void;
   isAuthor(req: Request, res: Response, next: NextFunction): void;
   isAuthorOrPublic(req: Request, res: Response, next: NextFunction): void;
+  optionalAuth(req: Request, res: Response, next: NextFunction): void;
 }
 
 const AuthJwtMiddleware: IAuthJwtMiddleware = {
@@ -121,6 +122,27 @@ const AuthJwtMiddleware: IAuthJwtMiddleware = {
       );
       return res.status(500).json({ error: 'Internal server error.' });
     }
+  },
+
+  // Optional authentication - sets user info if token is present but doesn't require it
+  optionalAuth: (req: Request, res: Response, next: NextFunction) => {
+    const accessToken = req.cookies['accessToken'];
+    const secret: Secret = process.env.JWT_SECRET || '';
+
+    if (!accessToken) {
+      // No token provided, continue without setting user
+      return next();
+    }
+
+    try {
+      const decoded = jwt.verify(accessToken, secret) as JwtPayload;
+      req.user = decoded.userId;
+    } catch (error) {
+      // Invalid or expired token, continue without setting user
+      console.warn('Optional auth - invalid token:', error);
+    }
+
+    next();
   },
 };
 

@@ -11,7 +11,6 @@ import TomTomAutocomplete from '@/components/TomTomAutocomplete';
 import { TOMTOM_CONFIG } from '@/config/env';
 import type { Destination } from '@/types/destination';
 import { destinationToTomTomLocation } from '@/utils/tomtomHelpers';
-import { LocationPermissionDialog } from '@/components/LocationPermissionDialog';
 import { LocationService } from '@/utils/locationService';
 
 function TripPlanningContent() {
@@ -34,63 +33,19 @@ function TripPlanningContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Location permission state
-  const [showLocationDialog, setShowLocationDialog] = useState(false);
-
-  // Check GPS permission status when component loads
+  // Initialize location automatically when component loads
   useEffect(() => {
-    const checkLocationPermission = async () => {
-      const permissionInfo = LocationService.getPermissionInfo();
-
-      // If permission status is not granted, show dialog
-      if (permissionInfo.status !== 'granted') {
-        setShowLocationDialog(true);
-      } else {
-        // Location is already stored in LocationService, no need to do anything
+    const initializeLocation = async () => {
+      try {
+        await LocationService.initializeLocationForSession();
+        console.log('Location initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize location:', error);
       }
     };
 
-    checkLocationPermission();
+    initializeLocation();
   }, []);
-
-  const handleLocationPermissionComplete = () => {
-    // Location is already stored by LocationService
-    setShowLocationDialog(false);
-
-    // If user was trying to submit the form, continue with submission
-    if (destination && dateRange?.from && dateRange?.to) {
-      // Small delay to ensure state is updated
-      setTimeout(() => {
-        const form = document.querySelector('form');
-        if (form) {
-          form.requestSubmit();
-        }
-      }, 100);
-    }
-  };
-
-  const handleLocationPermissionSkip = async () => {
-    // Get IP-based location as fallback
-    try {
-      const ipLocation = await LocationService.getIPLocation();
-      LocationService.storeLocation(ipLocation);
-      // Location is now stored in LocationService
-    } catch (error) {
-      console.error('Failed to get IP location:', error);
-    }
-    setShowLocationDialog(false);
-
-    // If user was trying to submit the form, continue with submission
-    if (destination && dateRange?.from && dateRange?.to) {
-      // Small delay to ensure state is updated
-      setTimeout(() => {
-        const form = document.querySelector('form');
-        if (form) {
-          form.requestSubmit();
-        }
-      }, 100);
-    }
-  };
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -114,16 +69,6 @@ function TripPlanningContent() {
     setIsLoading(true);
 
     try {
-      // Check GPS permission status before creating plan
-      const permissionInfo = LocationService.getPermissionInfo();
-
-      // If permission is not granted, show location dialog again
-      if (permissionInfo.status !== 'granted') {
-        setShowLocationDialog(true);
-        setIsLoading(false);
-        return;
-      }
-
       // Validation
       if (!destination) {
         throw new Error('Destination is required');
@@ -296,7 +241,7 @@ function TripPlanningContent() {
                 setDestination(tomtomLocation);
               }
             }}
-            className='w-full h-14'
+            className='w-full h-14 font-semibold'
           />
         </div>
         <div className='w-full'>
@@ -501,13 +446,6 @@ function TripPlanningContent() {
           {isLoading ? 'Creating plan...' : 'Start planning'}
         </Button>
       </form>
-
-      {/* Location Permission Dialog */}
-      <LocationPermissionDialog
-        isOpen={showLocationDialog}
-        onComplete={handleLocationPermissionComplete}
-        onSkip={handleLocationPermissionSkip}
-      />
     </div>
   );
 }

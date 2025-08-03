@@ -100,11 +100,9 @@ const CommentService: ICommentService = {
 
       if (!comment) {
         await session.abortTransaction();
-        res
-          .status(404)
-          .json({
-            error: 'Comment not found or you do not have permission to delete.',
-          });
+        res.status(404).json({
+          error: 'Comment not found or you do not have permission to delete.',
+        });
         return;
       }
 

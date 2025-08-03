@@ -149,11 +149,11 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
               />
               <span className='font-medium'>{likesCount}</span>
             </button>
-            <button className='flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-colors duration-200 group'>
+            <button className='flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-colors duration-200 group cursor-pointer'>
               <MessageCircle className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
               <span className='text-sm font-medium'>{plan.commentsCount}</span>
             </button>
-            <button className='flex items-center gap-2 text-slate-600 hover:text-green-500 transition-colors duration-200 group'>
+            <button className='flex items-center gap-2 text-slate-600 hover:text-green-500 transition-colors duration-200 group cursor-pointer'>
               <Share2 className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
               <span className='text-sm font-medium'>Share</span>
             </button>
@@ -161,7 +161,7 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className='text-slate-600 hover:text-yellow-500 transition-colors duration-200'>
+                <button className='text-slate-600 hover:text-yellow-500 transition-colors duration-200 cursor-pointer'>
                   <Bookmark className='w-5 h-5 hover:scale-110 transition-transform duration-200' />
                 </button>
               </TooltipTrigger>

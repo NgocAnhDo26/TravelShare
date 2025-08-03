@@ -18,12 +18,20 @@ const Feed: React.FC<FeedProps> = ({ feedType = 'user' }) => {
   const observer = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  // Add ref to prevent duplicate calls
+  const isCallInProgress = useRef(false);
+
   const fetchFeed = useCallback(
     async (currentCursor: string | null) => {
       // Prevent fetching if already loading or no more data
       if (isLoading || !hasMore) return;
 
+      // Prevent duplicate calls
+      if (isCallInProgress.current) return;
+
+      isCallInProgress.current = true;
       setIsLoading(true);
+
       try {
         let response;
         if (feedType === 'user') {
@@ -55,6 +63,7 @@ const Feed: React.FC<FeedProps> = ({ feedType = 'user' }) => {
         setHasMore(false); // Stop trying on error
       } finally {
         setIsLoading(false);
+        isCallInProgress.current = false;
       }
     },
     [isLoading, hasMore, feedType],
@@ -68,7 +77,7 @@ const Feed: React.FC<FeedProps> = ({ feedType = 'user' }) => {
     // The fetch will be triggered by the hasMore change in the observer setup
   }, [feedType]);
 
-  // Infinite scroll observer setup
+  // Setup observer only once per feedType change
   useEffect(() => {
     if (feedType !== 'user') return;
 
@@ -91,15 +100,17 @@ const Feed: React.FC<FeedProps> = ({ feedType = 'user' }) => {
       observer.current.observe(sentinelRef.current);
     }
 
-    // Initial fetch for user feed
-    if (plans.length === 0 && hasMore) {
-      fetchFeed(null);
-    }
-
     return () => {
       if (observer.current) observer.current.disconnect();
     };
-  }, [fetchFeed, feedType, isLoading, hasMore, cursor, plans.length]);
+  }, [feedType, cursor, fetchFeed, hasMore, isLoading]);
+
+  // Initial fetch only when component mounts or feedType changes
+  useEffect(() => {
+    if (plans.length === 0 && hasMore && !isLoading) {
+      fetchFeed(null);
+    }
+  }, [feedType, fetchFeed, hasMore, isLoading, plans.length]); // Include all dependencies
 
   const renderSkeletons = () =>
     Array.from({ length: 2 }).map((_, index) => (

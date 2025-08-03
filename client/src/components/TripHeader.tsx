@@ -579,7 +579,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                     {authorError ? '?' : 'U'}
                   </div>
                 )}
-                <button className='w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors border-2 border-white'>
+                <button className='w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors border-2 border-white cursor-pointer'>
                   <UserPlusIcon className='w-5 h-5' />
                 </button>
               </>
@@ -604,8 +604,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                         filter: isLiked
                           ? 'drop-shadow(0 0 4px #f87171)'
                           : undefined,
-                        transition:
-                          'color 0.05s, fill 0.05s, filter 0.05s',
+                        transition: 'color 0.05s, fill 0.05s, filter 0.05s',
                       }}
                     />
                     <span className='font-medium'>{likesCount}</span>

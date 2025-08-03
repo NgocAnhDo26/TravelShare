@@ -8,6 +8,7 @@ import { Heart, User as UserIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import CommentItem from '@/components/CommentItem';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useLikeToggle } from '@/hooks/useLikeToggle';
 
 interface AuthUser {
   _id?: string;
@@ -20,26 +21,36 @@ interface AuthUser {
 interface SocialSectionProps {
   targetId: string;
   onModel: 'TravelPlan' | 'Post';
-  isLiked: boolean;
-  likesCount: number;
+  initialLikesCount: number;
   initialCommentsCount: number;
-  handleToggleLike: (e: React.MouseEvent) => void;
+  initialIsLiked?: boolean;
   currentUser?: AuthUser | null;
 }
 
 const SocialSection: React.FC<SocialSectionProps> = ({
   targetId,
   onModel,
-  isLiked,
-  likesCount,
-  handleToggleLike,
+  initialLikesCount,
   initialCommentsCount,
+  initialIsLiked = false,
   currentUser,
 }) => {
   const [comments, setComments] = useState<IComment[]>([]);
   const [commentCount, setCommentCount] = useState(initialCommentsCount);
   const [newComment, setNewComment] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+
+  // Determine the API path based on the model
+  const apiPath = onModel === 'TravelPlan' ? '/plans' : '/posts';
+
+  // Use the like toggle hook for like functionality
+  const { isLiked, likesCount, handleToggleLike } = useLikeToggle({
+    targetId,
+    initialIsLiked,
+    initialLikesCount,
+    onModel,
+    apiPath,
+  });
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -126,11 +137,13 @@ const SocialSection: React.FC<SocialSectionProps> = ({
   return (
     <Card className='flex flex-col gap-2 mt-4 border shadow-sm py-3'>
       <div className='flex items-center gap-4 mx-4'>
-      <Button
+        <Button
           variant='ghost'
           aria-label={isLiked ? 'Unlike this trip' : 'Like this trip'}
           className={`transition-colors hover:bg-red-50 focus:bg-red-50 ${
-            isLiked ? 'text-red-600 hover:text-red-700' : 'text-gray-600 hover:text-red-600'
+            isLiked
+              ? 'text-red-600 hover:text-red-700'
+              : 'text-gray-600 hover:text-red-600'
           }`}
           onClick={handleToggleLike}
         >

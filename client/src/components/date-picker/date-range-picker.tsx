@@ -43,7 +43,7 @@ export default function DateRangePicker({
           >
             <span
               className={cn(
-                'absolute left-4 top-1.5 text-sm text-black-600 transition-all pointer-events-none',
+                'absolute left-4 top-1.5 text-sm text-black-600 font-semibold transition-all pointer-events-none',
               )}
             >
               Dates (optional)

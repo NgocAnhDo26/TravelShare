@@ -26,9 +26,9 @@ describe('DiscoveryService.getTrendings', () => {
         _id: new Types.ObjectId('507f1f77bcf86cd799439012'),
         username: 'user1',
         displayName: 'User One',
-        avatarUrl: 'https://example.com/avatar1.jpg'
+        avatarUrl: 'https://example.com/avatar1.jpg',
       },
-      createdAt: new Date('2024-01-01T10:00:00Z')
+      createdAt: new Date('2024-01-01T10:00:00Z'),
     },
     {
       _id: new Types.ObjectId('507f1f77bcf86cd799439013'),
@@ -39,9 +39,9 @@ describe('DiscoveryService.getTrendings', () => {
         _id: new Types.ObjectId('507f1f77bcf86cd799439014'),
         username: 'user2',
         displayName: 'User Two',
-        avatarUrl: 'https://example.com/avatar2.jpg'
+        avatarUrl: 'https://example.com/avatar2.jpg',
       },
-      createdAt: new Date('2024-01-01T11:00:00Z')
+      createdAt: new Date('2024-01-01T11:00:00Z'),
     },
     {
       _id: new Types.ObjectId('507f1f77bcf86cd799439015'),
@@ -52,9 +52,9 @@ describe('DiscoveryService.getTrendings', () => {
         _id: new Types.ObjectId('507f1f77bcf86cd799439016'),
         username: 'user3',
         displayName: 'User Three',
-        avatarUrl: 'https://example.com/avatar3.jpg'
+        avatarUrl: 'https://example.com/avatar3.jpg',
       },
-      createdAt: new Date('2024-01-01T12:00:00Z')
+      createdAt: new Date('2024-01-01T12:00:00Z'),
     },
     {
       _id: new Types.ObjectId('507f1f77bcf86cd799439017'),
@@ -65,10 +65,10 @@ describe('DiscoveryService.getTrendings', () => {
         _id: new Types.ObjectId('507f1f77bcf86cd799439018'),
         username: 'user4',
         displayName: 'User Four',
-        avatarUrl: 'https://example.com/avatar4.jpg'
+        avatarUrl: 'https://example.com/avatar4.jpg',
       },
-      createdAt: new Date('2024-01-01T13:00:00Z')
-    }
+      createdAt: new Date('2024-01-01T13:00:00Z'),
+    },
   ];
 
   it('should return trending plans with default options', async () => {
@@ -78,7 +78,7 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -86,7 +86,10 @@ describe('DiscoveryService.getTrendings', () => {
 
     // Verify the query
     expect(mockTravelPlan.find).toHaveBeenCalledWith({ privacy: 'public' });
-    expect(mockFind.populate).toHaveBeenCalledWith('author', 'username displayName avatarUrl');
+    expect(mockFind.populate).toHaveBeenCalledWith(
+      'author',
+      'username displayName avatarUrl',
+    );
     expect(mockFind.sort).toHaveBeenCalledWith({ trendingScore: -1, _id: -1 });
     expect(mockFind.limit).toHaveBeenCalledWith(20);
     expect(mockFind.lean).toHaveBeenCalled();
@@ -97,8 +100,8 @@ describe('DiscoveryService.getTrendings', () => {
       data: mockPlans.slice(0, 2),
       pagination: {
         next_cursor: null,
-        has_next_page: false
-      }
+        has_next_page: false,
+      },
     });
   });
 
@@ -108,7 +111,7 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 1))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 1)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -126,7 +129,7 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(2, 4))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(2, 4)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -137,8 +140,8 @@ describe('DiscoveryService.getTrendings', () => {
       privacy: 'public',
       $or: [
         { trendingScore: { $lt: 95.2 } },
-        { trendingScore: 95.2, _id: { $lt: '507f1f77bcf86cd799439011' } }
-      ]
+        { trendingScore: 95.2, _id: { $lt: '507f1f77bcf86cd799439011' } },
+      ],
     });
 
     expect(result.data).toEqual(mockPlans.slice(2, 4));
@@ -150,7 +153,7 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(2, 4))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(2, 4)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -166,7 +169,7 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -182,19 +185,21 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2))
+      exec: vi.fn().mockResolvedValue(mockPlans.slice(0, 2)),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
-    const result = await DiscoveryService.getTrendings({ after: 'invalid-cursor' });
+    const result = await DiscoveryService.getTrendings({
+      after: 'invalid-cursor',
+    });
 
     // Should create a query with invalid cursor values but still execute
     expect(mockTravelPlan.find).toHaveBeenCalledWith({
       privacy: 'public',
       $or: [
         { trendingScore: { $lt: NaN } },
-        { trendingScore: NaN, _id: { $lt: undefined } }
-      ]
+        { trendingScore: NaN, _id: { $lt: undefined } },
+      ],
     });
     expect(result.data).toEqual(mockPlans.slice(0, 2));
   });
@@ -205,7 +210,7 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([])
+      exec: vi.fn().mockResolvedValue([]),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -223,7 +228,7 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([mockPlans[3]])
+      exec: vi.fn().mockResolvedValue([mockPlans[3]]),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
@@ -233,8 +238,8 @@ describe('DiscoveryService.getTrendings', () => {
       privacy: 'public',
       $or: [
         { trendingScore: { $lt: 0 } },
-        { trendingScore: 0, _id: { $lt: '507f1f77bcf86cd799439015' } }
-      ]
+        { trendingScore: 0, _id: { $lt: '507f1f77bcf86cd799439015' } },
+      ],
     });
 
     expect(result.data).toEqual([mockPlans[3]]);
@@ -246,10 +251,12 @@ describe('DiscoveryService.getTrendings', () => {
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockRejectedValue(new Error('Database error'))
+      exec: vi.fn().mockRejectedValue(new Error('Database error')),
     };
     mockTravelPlan.find.mockReturnValue(mockFind as any);
 
-    await expect(DiscoveryService.getTrendings()).rejects.toThrow('Database error');
+    await expect(DiscoveryService.getTrendings()).rejects.toThrow(
+      'Database error',
+    );
   });
-}); 
+});
