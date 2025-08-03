@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { canEditPlan } from '@/utils/planPermissions';
-import { useLikeToggle } from '@/hooks/useLikeToggle';
 
 import {
   Calendar,
@@ -44,7 +43,6 @@ import {
 } from './ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
-// Add a type for the user profile
 interface AuthorProfile {
   username: string;
   displayName?: string;
@@ -57,9 +55,6 @@ interface TripHeaderProps {
   onTripUpdate?: (updatedTrip: Trip) => void;
 }
 
-/**
- * Renders the header section of the trip plan.
- */
 const TripHeader: React.FC<TripHeaderProps> = ({
   trip,
   editMode = false,
@@ -79,7 +74,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCoverImageLoading, setIsCoverImageLoading] = useState(false);
-  // Add state for author profile
   const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(
     null,
   );
@@ -88,13 +82,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const { isLiked, likesCount, pop, handleToggleLike } = useLikeToggle({
-    targetId: trip._id,
-    initialIsLiked: !!trip.isLiked,
-    initialLikesCount: trip.likesCount ?? 0,
-    onModel: 'TravelPlan',
-    apiPath: '/plans',
-  });
+  // This is the correct and ONLY declaration for isLiked and likesCount.
+  // It gets the state from the parent component via the 'trip' prop.
+  const { isLiked, likesCount } = trip;
 
   useEffect(() => {
     let isMounted = true;
@@ -120,13 +110,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
     };
   }, [trip.author]);
 
-  useEffect(() => {
-    // Clear the timer if the component is unmounted
-    return () => {
-      // The debounceTimer is now managed by useLikeToggle
-    };
-  }, []);
-
   const handleEditTitle = () => {
     setIsEditingTitle(true);
     setEditedTitle(trip.title);
@@ -149,10 +132,8 @@ const TripHeader: React.FC<TripHeaderProps> = ({
         title: editedTitle.trim(),
       });
 
-      // Update the local trip data
       const updatedTrip = { ...trip, title: editedTitle.trim() };
 
-      // Call the parent component's update function if provided
       if (onTripUpdate) {
         onTripUpdate(updatedTrip);
       }
@@ -197,10 +178,8 @@ const TripHeader: React.FC<TripHeaderProps> = ({
         privacy: newPrivacy,
       });
 
-      // Update the local trip data
       const updatedTrip = { ...trip, privacy: newPrivacy };
 
-      // Call the parent component's update function if provided
       if (onTripUpdate) {
         onTripUpdate(updatedTrip);
       }
@@ -228,7 +207,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
     const file = event.target.files?.[0];
     if (file) {
       setSelectedImage(file);
-      // Create preview URL
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviewUrl(e.target?.result as string);
@@ -244,12 +222,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
     }
 
     setIsCoverImageLoading(true);
-
-    // Show loading toast
     const loadingToast = toast.loading('Uploading cover image...');
 
     try {
-      // Single step: Upload file and update travel plan in one request
       const formData = new FormData();
       formData.append('coverImage', selectedImage);
 
@@ -263,10 +238,8 @@ const TripHeader: React.FC<TripHeaderProps> = ({
         },
       );
 
-      // Update the local trip data with the response
       const updatedTrip = response.data;
 
-      // Call the parent component's update function if provided
       if (onTripUpdate) {
         onTripUpdate(updatedTrip);
       }
@@ -275,13 +248,10 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       setSelectedImage(null);
       setPreviewUrl(null);
 
-      // Dismiss loading toast and show success
       toast.dismiss(loadingToast);
       toast.success('Cover image updated successfully!');
     } catch (error) {
       console.error('Error updating cover image:', error);
-
-      // Dismiss loading toast and show error
       toast.dismiss(loadingToast);
       toast.error('Failed to update cover image. Please try again.');
     } finally {
@@ -408,7 +378,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             )}
           </div>
 
-          {/* Show edit button in header for plan authors in view mode */}
           {!editMode && canEditPlan(trip, user) && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -428,7 +397,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             </Tooltip>
           )}
 
-          {/* Show view button in header when in edit mode */}
           {editMode && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -447,7 +415,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
               </TooltipContent>
             </Tooltip>
           )}
-          {/* Delete Plan button for author, only in edit mode */}
           {editMode && canEditPlan(trip, user) && (
             <>
               <Button
@@ -489,7 +456,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
           )}
         </div>
 
-        {/* Visibility Section - Only show in edit mode */}
         {editMode && (
           <div className='flex items-center'>
             <div className='flex items-center text-gray-600 text-sm'>
@@ -620,18 +586,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             ) : (
               <>
                 <div className='flex items-center'>
-                  <Button
-                    variant='ghost'
-                    type='button'
-                    onClick={handleToggleLike}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className={`
-                      group flex items-center gap-2 px-2 py-1 rounded-full
-                      transition bg-transparent hover:bg-gray-100 active:bg-gray-200
-                      focus:outline-none cursor-pointer active:scale-95
-                    `}
-                    aria-label={isLiked ? 'Unlike' : 'Like'}
-                    tabIndex={0}
+                  <div
+                    className='flex items-center gap-2 px-2 py-1'
+                    aria-label='Likes'
                   >
                     <Heart
                       size={22}
@@ -639,10 +596,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                         transition-all duration-200
                         ${
                           isLiked
-                            ? 'text-red-500 fill-red-500 group-hover:scale-125 group-hover:fill-red-500 group-hover:text-red-500'
-                            : 'text-gray-400 fill-transparent group-hover:scale-125 group-hover:text-red-500 group-hover:fill-red-200'
+                            ? 'text-red-500 fill-red-500'
+                            : 'text-gray-400 fill-transparent'
                         }
-                        ${pop ? 'scale-150' : ''}
                       `}
                       style={{
                         filter: isLiked
@@ -652,7 +608,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                       }}
                     />
                     <span className='font-medium'>{likesCount}</span>
-                  </Button>
+                  </div>
                   <Button variant='ghost'>
                     <MessageCircle />
                     {trip.commentsCount ?? 0}
@@ -668,7 +624,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
         </div>
       </Card>
 
-      {/* Cover Image Edit Modal */}
       <Dialog
         open={isCoverImageModalOpen}
         onOpenChange={setIsCoverImageModalOpen}
@@ -679,7 +634,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
           </DialogHeader>
 
           <div className='space-y-4'>
-            {/* Current Image Preview */}
             <div className='space-y-2 grid'>
               <label className='text-sm font-medium'>Current Image</label>
               <div className='relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden'>
@@ -697,7 +651,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
               </div>
             </div>
 
-            {/* File Upload */}
             <div className='space-y-2 grid'>
               <label className='text-sm font-medium'>Select New Image</label>
               <div className='flex items-center gap-2'>
@@ -720,7 +673,6 @@ const TripHeader: React.FC<TripHeaderProps> = ({
               </div>
             </div>
 
-            {/* Preview */}
             {previewUrl && (
               <div className='space-y-2 grid'>
                 <label className='text-sm font-medium'>Preview</label>

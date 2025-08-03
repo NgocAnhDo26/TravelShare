@@ -147,7 +147,12 @@ const SocialSection: React.FC<SocialSectionProps> = ({
           }`}
           onClick={handleToggleLike}
         >
-          <Heart className={isLiked ? 'fill-current' : ''} /> Like
+          <Heart
+            size={18}
+            className='mr-2'
+            fill={isLiked ? 'currentColor' : 'none'}
+          />
+          <span className='font-medium'>{isLiked ? 'Liked' : 'Like'}</span>
         </Button>
         <Separator orientation='vertical' />
         <span className='text-sm text-gray-500'>{likesCount} likes</span>
