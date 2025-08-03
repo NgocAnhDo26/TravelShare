@@ -53,7 +53,7 @@ class DiscoveryService {
   }
 
   async getPlans(query?: string, userId?: string) {
-    let filter: any = { privacy: 'public' };
+    const filter: any = { privacy: 'public' };
     
     if (query) {
       filter.$or = [
@@ -73,7 +73,7 @@ class DiscoveryService {
   }
 
   async getPosts(query?: string, userId?: string) {
-    let filter: any = { privacy: 'public' };
+    const filter: any = { privacy: 'public' };
     
     // Exclude user's own posts
     if (userId) {
@@ -98,7 +98,7 @@ class DiscoveryService {
   }
 
   async getPeople(query?: string, userId?: string) {
-    let filter: any = {};
+    const filter: any = {};
     
     // Exclude the current user from people search
     if (userId) {

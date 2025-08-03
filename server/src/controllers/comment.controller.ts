@@ -3,7 +3,10 @@ import { Types } from 'mongoose';
 import CommentService from '../services/comment.service';
 import { LikeService } from '../services/like.service';
 
-const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+// Define a type for the async handler function
+type AsyncHandler = (req: Request, res: Response, next: NextFunction) => Promise<Response | void>;
+
+const asyncHandler = (fn: AsyncHandler) => (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
 };
 
