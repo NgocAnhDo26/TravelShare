@@ -139,7 +139,7 @@ router.post(
   '/:id/items/reorder',
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
-  TravelPlanController.reorderItemsInDay
+  TravelPlanController.reorderItemsInDay,
 );
 
 /**
@@ -187,7 +187,7 @@ router.post(
   '/:id/items/move',
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
-  TravelPlanController.moveItemToAnotherDay
+  TravelPlanController.moveItemToAnotherDay,
 );
 
 export default router;

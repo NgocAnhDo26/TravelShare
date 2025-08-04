@@ -377,12 +377,14 @@ const ItineraryItemCard: React.FC<{
   dragHandleProps,
 }) => {
   const badgeColors = {
-    activity: 'bg-blue-100 text-blue-800',
-    food: 'bg-yellow-100 text-yellow-800',
-    accommodation: 'bg-green-100 text-green-800',
-    transportation: 'bg-purple-100 text-purple-800',
-    shopping: 'bg-pink-100 text-pink-800',
-    other: 'bg-gray-100 text-gray-800',
+    activity: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md',
+    food: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md',
+    accommodation:
+      'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md',
+    transportation:
+      'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md',
+    shopping: 'bg-gradient-to-r from-pink-500 to-pink-600 text-white shadow-md',
+    other: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-md',
   };
 
   const getCategoryLabel = (category: string) => {
@@ -409,7 +411,7 @@ const ItineraryItemCard: React.FC<{
   const handleDelete = () => onDelete(item);
 
   return (
-    <Card className='mt-4 p-4 rounded-sm text-left gap-2'>
+    <Card className='mt-4 p-4 rounded-lg text-left gap-2 border-l-4 border-l-indigo-500 shadow-lg hover:shadow-xl transition-shadow duration-200 bg-gradient-to-r from-white to-gray-50'>
       <CardTitle className='text-lg font-semibold flex items-center justify-between'>
         <div className='flex items-center'>
           {/* Only show drag handle in edit mode */}
@@ -424,10 +426,12 @@ const ItineraryItemCard: React.FC<{
               <GripVertical className='w-4 h-4 text-gray-400' />
             </span>
           )}
-          <Badge className={`${badgeColors[item.type]} mr-2`}>
+          <Badge
+            className={`${badgeColors[item.type]} mr-3 px-3 py-1 rounded-full font-medium`}
+          >
             {getCategoryLabel(item.type)}
           </Badge>
-          {item.title}
+          <span className='text-gray-800'>{item.title}</span>
         </div>
         {editMode && (
           <ItemActionsMenu
@@ -442,37 +446,61 @@ const ItineraryItemCard: React.FC<{
       </CardTitle>
 
       {item.location && (
-        <div className='flex items-center gap-1 text-gray-600 mt-2'>
-          <MapPin className='w-4 h-4 mr-1' />
-          <span className='font-bold'>Location:</span> {item.location.address}
+        <div className='flex items-center gap-1 mt-2'>
+          <MapPin className='w-4 h-4 mr-1 text-emerald-600' />
+          <span className='font-bold text-emerald-700'>Location:</span>
+          <span>
+            {item.location.name && item.location.address ? (
+              <>
+                <span className='font-semibold text-emerald-800'>
+                  {item.location.name}
+                </span>
+                <span className='text-emerald-400 mx-1'>•</span>
+                <span className='text-sm text-emerald-600'>
+                  {item.location.address}
+                </span>
+              </>
+            ) : (
+              <span className='font-medium text-emerald-700'>
+                {item.location.name || item.location.address}
+              </span>
+            )}
+          </span>
         </div>
       )}
       {(item.startTime || item.endTime) && (
-        <div className='flex items-center gap-1 text-gray-600'>
-          <Clock className='w-4 h-4 mr-1' />
-          <span className='font-bold'>Time:</span>{' '}
-          {item.startTime && item.endTime
-            ? `${getLocaleTimeString(new Date(item.startTime))} - ${getLocaleTimeString(new Date(item.endTime))}`
-            : item.startTime
-              ? getLocaleTimeString(new Date(item.startTime))
-              : item.endTime
-                ? getLocaleTimeString(new Date(item.endTime))
-                : ''}
+        <div className='flex items-center gap-1 text-blue-600'>
+          <Clock className='w-4 h-4 mr-1 text-blue-600' />
+          <span className='font-bold text-blue-700'>Time:</span>{' '}
+          <span className='font-medium text-blue-800'>
+            {item.startTime && item.endTime
+              ? `${getLocaleTimeString(new Date(item.startTime))} - ${getLocaleTimeString(new Date(item.endTime))}`
+              : item.startTime
+                ? getLocaleTimeString(new Date(item.startTime))
+                : item.endTime
+                  ? getLocaleTimeString(new Date(item.endTime))
+                  : ''}
+          </span>
         </div>
       )}
 
-      <div className='flex items-center gap-1 text-gray-600'>
-        <DollarSign className='w-4 h-4 mr-1' />
-        <span className='font-bold'>Budget:</span>{' '}
-        {item.cost && item.cost.trim() !== '' ? item.cost : 'Not specified'}
+      <div className='flex items-center gap-1'>
+        <DollarSign className='w-4 h-4 mr-1 text-amber-600' />
+        <span className='font-bold text-amber-700'>Budget:</span>{' '}
+        <span className='font-medium text-amber-800'>
+          {item.cost && item.cost.trim() !== '' ? item.cost : 'Not specified'}
+        </span>
       </div>
 
-      <CardDescription className='mt-2'>{item.description}</CardDescription>
+      <CardDescription className='mt-3 text-slate-700 leading-relaxed'>
+        {item.description}
+      </CardDescription>
 
       {item.notes && (
-        <div className='mt-2 p-3 bg-gray-50 rounded-md border'>
-          <p className='text-sm text-gray-700'>
-            <span className='font-medium'>Notes:</span> {item.notes}
+        <div className='mt-3 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200 shadow-sm'>
+          <p className='text-sm text-indigo-800'>
+            <span className='font-semibold text-indigo-900'>💡 Notes:</span>{' '}
+            {item.notes}
           </p>
         </div>
       )}

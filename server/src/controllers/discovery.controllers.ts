@@ -3,7 +3,11 @@ import { HTTP_STATUS } from '../constants/http';
 import DiscoveryService from '../services/discovery.service';
 
 class DiscoveryController {
-  public async getTrendings(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async getTrendings(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const after = req.query.after as string | undefined;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -16,7 +20,11 @@ class DiscoveryController {
     }
   }
 
-  public async getPlans(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async getPlans(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { q: query } = req.query;
       const userId = req.user as string | undefined;
@@ -27,7 +35,11 @@ class DiscoveryController {
     }
   }
 
-  public async getPosts(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async getPosts(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { q: query } = req.query;
       const userId = req.user as string | undefined;
@@ -38,7 +50,11 @@ class DiscoveryController {
     }
   }
 
-  public async getPeople(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async getPeople(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { q: query } = req.query;
       const userId = req.user as string | undefined;
