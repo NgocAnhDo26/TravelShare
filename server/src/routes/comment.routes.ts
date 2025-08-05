@@ -20,7 +20,7 @@ export function createCommentRoutes(onModel: TargetModel) {
   router.post(
     '/:id/comments',
     AuthJwtMiddleware.verifyToken,
-    uploadUseCases.singleFileUpload('commentImage'),
+    uploadUseCases.singleFileUpload('commentImage', 'comment-images'),
     (req: Request, res: Response, next: NextFunction) => {
       (req as any).onModel = onModel;
       next();
