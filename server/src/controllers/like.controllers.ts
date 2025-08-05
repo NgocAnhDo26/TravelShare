@@ -5,7 +5,7 @@ import TravelPlan from '../models/travelPlan.model';
 
 /**
  * Like a target (TravelPlan or Post)
- * POST /api/v1/:onModel/:targetId/like
+ * POST /api/:onModel/:targetId/like
  */
 export const likeTarget = async (
   req: Request,

@@ -28,7 +28,6 @@ interface ITravelPlanController {
   ): Promise<void>;
   createTravelPlan(req: Request, res: Response): Promise<void>;
   getTravelPlanById(req: Request, res: Response): Promise<void>;
-  cloneTravelPlan(req: Request, res: Response, next: NextFunction): Promise<void>;
   getTravelPlansByAuthor(req: Request, res: Response): Promise<void>;
   getPublicTravelPlans(req: Request, res: Response): Promise<void>;
   deleteTravelPlan(req: Request, res: Response): Promise<void>;
@@ -63,6 +62,11 @@ interface ITravelPlanController {
     req: Request,
     res: Response,
     next: NextFunction,
+  ): Promise<void>;
+  remixTravelPlan(req: 
+    Request, 
+    res: Response, 
+    next: NextFunction
   ): Promise<void>;
 }
 
@@ -143,51 +147,6 @@ const TravelPlanController: ITravelPlanController = {
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         error: 'An unexpected error occurred while creating the travel plan.',
       });
-    }
-  },
-
-  /**
-   * Clones a travel plan.
-   * POST /api/plans/:id/clone
-   * @param req - Express request object
-   * @param res - Express response object
-   * @param next - Express next middleware function
-   */
-  async cloneTravelPlan(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
-    try {
-      const { id } = req.params;
-      const authorId = req.user as string;
-
-      const clonedPlan = await TravelPlanService.cloneTravelPlan(id, authorId);
-
-      res.status(HTTP_STATUS.CREATED).json(clonedPlan);
-    } catch (error: any) {
-      // Handle validation errors from Mongoose
-      if (error.name === 'ValidationError') {
-        res.status(HTTP_STATUS.BAD_REQUEST).json({
-          message: 'Cloning failed due to a validation error.',
-          error: error.message,
-        });
-        return;
-      }
-
-      // Handle custom errors thrown from the service
-      const knownErrors: Record<string, number> = {
-        'Original travel plan not found.': HTTP_STATUS.NOT_FOUND,
-        'Only public travel plans can be cloned.': HTTP_STATUS.FORBIDDEN,
-      };
-
-      const status = knownErrors[error.message];
-      if (status) {
-        res.status(status).json({ error: error.message });
-      } else {
-        // Pass unexpected errors to the generic error handler
-        next(error);
-      }
     }
   },
 
@@ -679,6 +638,72 @@ const TravelPlanController: ITravelPlanController = {
 
       res.status(200).json({ message: 'Item moved successfully.' });
     } catch (error) {
+      next(error);
+    }
+  },
+
+  async remixTravelPlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      // 1. Extract data from the request
+      const targetPlanId = req.params.id; // The ID of the plan to copy
+      const authorId = req.user as string; // The ID of the user creating the remix
+      const { title, startDate, endDate, privacy } = req.body;
+
+      // 2. Authorization check
+      if (!authorId) {
+        res.status(HTTP_STATUS.UNAUTHORIZED).json({
+          error: 'You must be logged in to remix a plan.',
+        });
+        return;
+      }
+
+      // 3. Input validation
+      if (!title || !startDate || !endDate || !privacy) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          error: 'Request body must include title, startDate, endDate, and privacy.',
+        });
+        return;
+      }
+
+      // 4. Call the service to perform the remix logic
+      const remixedPlan = await TravelPlanService.remixTravelPlan(
+        targetPlanId,
+        {
+          title,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          privacy,
+        },
+        authorId,
+      );
+
+      // 5. Send the successful response
+      res.status(HTTP_STATUS.CREATED).json(remixedPlan);
+    } catch (error: any) {
+      // 6. Handle specific, expected errors from the service layer
+      if (error.message.includes('not found')) {
+        res.status(HTTP_STATUS.NOT_FOUND).json({ error: error.message });
+        return;
+      }
+      if (error.message.includes('Only public')) {
+        res.status(HTTP_STATUS.FORBIDDEN).json({ error: error.message });
+        return;
+      }
+      if (error.message.includes('date cannot be after')) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
+        return;
+      }
+      if (error.name === 'CastError') {
+        res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ error: 'Invalid travel plan ID format.' });
+        return;
+      }
+      // Pass any other unexpected errors to the global error handler
       next(error);
     }
   },

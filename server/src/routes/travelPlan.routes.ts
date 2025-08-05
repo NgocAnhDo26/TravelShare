@@ -17,14 +17,14 @@ router.post(
 );
 
 /**
- * POST /api/plans/:id/clone
+ * POST /api/plans/:id/remix
  * Clone a travel plan
  * Requires: Authentication
  */
 router.post(
-  '/:id/clone',
+  '/:id/remix',
   AuthJwtMiddleware.verifyToken,
-  TravelPlanController.cloneTravelPlan,
+  TravelPlanController.remixTravelPlan,
 );
 
 /**
