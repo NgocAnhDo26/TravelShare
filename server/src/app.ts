@@ -8,10 +8,10 @@ import travelPlanRouter from './routes/travelPlan.routes';
 import cookieParser from 'cookie-parser';
 import postRouter from './routes/post.routes';
 import { logger, morganStream } from './utils/logger';
-import commentRouter from './routes/comment.routes';
+import commentActionRouter, { createCommentRoutes } from './routes/comment.routes';
 import morgan from 'morgan';
 import locationRouter from './routes/location.routes';
-import { createLikeRoutes } from './routes/like.routes';
+import { createLikeRoutes, likeRouter } from './routes/like.routes';
 import discoveryRouter from './routes/discovery.routes';
 import searchRouter from './routes/search.routes';
 dotenv.config();
@@ -19,7 +19,7 @@ dotenv.config();
 const app = express();
 const corsOptions = {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Allow cookies to be sent with requests
 };
@@ -37,7 +37,16 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/plans', travelPlanRouter);
 app.use('/api/plans', createLikeRoutes('TravelPlan'));
-app.use('/api/comments', commentRouter);
+// When you implement posts, add:
+// import postRouter from './routes/post.routes';
+// app.use('/api/posts', postRouter);
+// app.use('/api/posts', createLikeRoutes('Post'));
+app.use('/api/plans', createLikeRoutes('TravelPlan'));
+app.use('/api/plans', createCommentRoutes('TravelPlan'));
+
+app.use('/api/comments', commentActionRouter);
+app.use('/api/likes', likeRouter);
+
 app.use('/api/location', locationRouter);
 app.use('/api/posts', postRouter);
 app.use('/api/discovery', discoveryRouter);

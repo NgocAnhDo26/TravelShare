@@ -2,7 +2,7 @@ import { Like, ILike } from '../models/like.model';
 import TravelPlan from '../models/travelPlan.model';
 import { Types } from 'mongoose';
 
-type OnModel = 'Post' | 'TravelPlan';
+type OnModel = 'Post' | 'TravelPlan' | 'Comment';
 
 export interface LikeFilter {
   user: Types.ObjectId;

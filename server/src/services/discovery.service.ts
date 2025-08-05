@@ -53,7 +53,7 @@ class DiscoveryService {
 
   async getPlans(query?: string, userId?: string) {
     const filter: any = { privacy: 'public' };
-
+    
     if (query) {
       filter.$or = [
         { title: { $regex: query, $options: 'i' } },
@@ -73,7 +73,7 @@ class DiscoveryService {
 
   async getPosts(query?: string, userId?: string) {
     const filter: any = { privacy: 'public' };
-
+    
     // Exclude user's own posts
     if (userId) {
       filter.author = { $ne: userId };

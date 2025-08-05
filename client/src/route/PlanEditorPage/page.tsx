@@ -126,7 +126,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   }, [planId, user, editMode, navigate]);
 
   // It's initialized with data from the plan and provides the live state
-  const { isLiked, likesCount, handleToggleLike } = useLikeToggle({
+  const { isLiked, likesCount} = useLikeToggle({
     targetId: planData?._id ?? '',
     initialIsLiked: planData?.isLiked ?? false,
     initialLikesCount: planData?.likesCount ?? 0,
@@ -222,6 +222,11 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
     actualEditMode,
   });
 
+  const currentUserForSocialSection = user ? {
+    ...user,
+    _id: user.userId,
+  } : null;
+
   // Show loading state – skeleton placeholders
   if (isLoading) {
     return (
@@ -287,12 +292,10 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
         <SocialSection
           targetId={planData._id}
           onModel='TravelPlan'
-          isLiked={isLiked}
-          likesCount={likesCount}
-          handleToggleLike={handleToggleLike}
+          initialLikesCount={planData.likesCount}
           initialCommentsCount={planData.commentsCount}
           initialIsLiked={planData.isLiked}
-          currentUser={user}
+          currentUser={currentUserForSocialSection}
         />
       )}
     </div>
