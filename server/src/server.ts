@@ -3,6 +3,10 @@ import config from './config/config';
 import './config/db.config';
 import cron from 'node-cron';
 import { updateTrendingScores } from './jobs/trending';
+import { safeInitializeSearchIndexes } from './config/searchIndexes';
+
+// Initialize search indexes on startup
+safeInitializeSearchIndexes();
 
 // --- Background Job Scheduling ---
 // Schedule the trending score update to run every 30 minutes.

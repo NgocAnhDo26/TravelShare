@@ -2,7 +2,7 @@ import { Like, ILike } from '../models/like.model';
 import TravelPlan from '../models/travelPlan.model';
 import { Types } from 'mongoose';
 
-type OnModel = 'Post' | 'TravelPlan';
+type OnModel = 'Post' | 'TravelPlan' | 'Comment';
 
 export interface LikeFilter {
   user: Types.ObjectId;
@@ -31,7 +31,10 @@ export class LikeService {
 
     // Increment like count on target
     if (onModel === 'TravelPlan') {
-      await TravelPlan.updateOne({ _id: targetId }, { $inc: { likesCount: 1 } });
+      await TravelPlan.updateOne(
+        { _id: targetId },
+        { $inc: { likesCount: 1 } },
+      );
     }
     // Future: Add Post support here
     // else if (onModel === 'Post') {
@@ -57,7 +60,10 @@ export class LikeService {
     if (result.deletedCount) {
       // Decrement like count on target
       if (onModel === 'TravelPlan') {
-        await TravelPlan.updateOne({ _id: targetId }, { $inc: { likesCount: -1 } });
+        await TravelPlan.updateOne(
+          { _id: targetId },
+          { $inc: { likesCount: -1 } },
+        );
       }
       // Future: Add Post support here
       // else if (onModel === 'Post') {

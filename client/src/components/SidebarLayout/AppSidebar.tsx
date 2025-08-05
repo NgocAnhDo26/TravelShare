@@ -1,4 +1,4 @@
-import { Bell, Bookmark, Globe, Home, User } from 'lucide-react';
+import { Bell, Bookmark, Search, Home, User } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +21,7 @@ const items = [
   {
     title: 'Explore',
     url: '/explore',
-    icon: Globe,
+    icon: Search,
   },
   {
     title: 'Notifications',

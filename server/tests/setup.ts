@@ -46,14 +46,29 @@ console.error = (...args) => {
 vi.mock('../src/config/supabase.config', () => ({
   default: {
     storage: {
-      from: vi.fn().mockReturnThis(),
-      upload: vi
-        .fn()
-        .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
-      getPublicUrl: vi.fn().mockReturnValue({
-        data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
+      // Add the missing methods for bucket operations
+      listBuckets: vi.fn().mockResolvedValue({
+        data: [
+          { name: 'avatars' },
+          { name: 'post-images' },
+          { name: 'post-covers' },
+        ],
+        error: null
       }),
-      remove: vi.fn().mockResolvedValue({ error: null }),
+      createBucket: vi.fn().mockResolvedValue({
+        data: { name: 'test-bucket' },
+        error: null
+      }),
+      // Keep existing methods
+      from: vi.fn().mockReturnValue({
+        upload: vi
+          .fn()
+          .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
+        getPublicUrl: vi.fn().mockReturnValue({
+          data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
+        }),
+        remove: vi.fn().mockResolvedValue({ error: null }),
+      }),
     },
   },
 }));

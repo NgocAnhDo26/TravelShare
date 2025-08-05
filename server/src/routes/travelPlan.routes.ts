@@ -113,7 +113,7 @@ router.put(
   '/:id/cover-image',
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
-  uploadUseCases.singleFileUpload('coverImage'),
+  uploadUseCases.singleFileUpload('coverImage', 'travel-plan-covers'),
   TravelPlanController.updateTravelPlanCoverImage,
 );
 
@@ -139,6 +139,18 @@ router.post(
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
   TravelPlanController.addPlanItem,
+);
+
+/**
+ * @route   POST /api/plans/:id/items/reorder
+ * @desc    Reorder items within a specific day in a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.post(
+  '/:id/items/reorder',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.reorderItemsInDay,
 );
 
 /**
@@ -175,6 +187,18 @@ router.delete(
   AuthJwtMiddleware.verifyToken,
   AuthJwtMiddleware.isAuthor,
   TravelPlanController.deletePlanItem,
+);
+
+/**
+ * @route   POST /api/plans/:id/items/move
+ * @desc    Move an item from one day to another within a travel plan
+ * @access  Private (Requires Authorization - Author only)
+ */
+router.post(
+  '/:id/items/move',
+  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.isAuthor,
+  TravelPlanController.moveItemToAnotherDay,
 );
 
 export default router;

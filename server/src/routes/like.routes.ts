@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import AuthJwtMiddleware from '../middlewares/authJwt';
-import { getUsersWhoLiked } from '../controllers/like.controllers';
+import { getUsersWhoLiked, getCurrentUserLikesForTargets } from '../controllers/like.controllers';
 import { Like } from '../models/like.model';
 import { likeTarget, unlikeTarget } from '../controllers/like.controllers';
 
@@ -39,18 +39,24 @@ export function createLikeRoutes(onModel: 'TravelPlan' | 'Post') {
       } catch (err) {
         next(err);
       }
-    }
+    },
   );
 
   // Get users who liked
-  router.get(
-    '/:id/likes',
-    (req, res, next) => {
-      (req.params as any).onModel = onModel;
-      (req.params as any).targetId = req.params.id;
-      return getUsersWhoLiked(req, res, next);
-    }
-  );
+  router.get('/:id/likes', (req, res, next) => {
+    (req.params as any).onModel = onModel;
+    (req.params as any).targetId = req.params.id;
+    return getUsersWhoLiked(req, res, next);
+  });
 
   return router;
 }
+const likeRouter = Router();
+
+likeRouter.get(
+    '/me/targets',
+    AuthJwtMiddleware.verifyToken,
+    getCurrentUserLikesForTargets
+);
+
+export { likeRouter };

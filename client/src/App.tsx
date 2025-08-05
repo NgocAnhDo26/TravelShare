@@ -3,11 +3,11 @@ import LoginPage from './route/login/page';
 import ForgotPasswordPage from './route/forgot-password/page';
 import ResetPasswordPage from './route/reset-password/page';
 import UserProfilePage from './route/UserProfilePage/page';
-import OtherProfilePage from './route/OtherProfilePage/page';
 import TripPlanningPage from './route/trip-planning/page';
 import PlanEditorPage from './route/PlanEditorPage/page';
 import ItineraryPage from './route/itinerary/page';
 import MainPage from './route/main/page';
+import SearchPage from './route/search/page';
 import NotFound from './utils/404';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
@@ -16,6 +16,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import FeedLayout from './components/SidebarLayout/FeedLayout';
+import PostEditor from './components/PostEditor';
+import DiscoverPage from './route/DiscoverPage/page';
+import PostDetailsPage from './route/PostDetailsPage/page';
 
 function App() {
   return (
@@ -37,24 +40,22 @@ function App() {
               path='plans/:planId'
               element={<PlanEditorPage editMode={false} />}
             />
+            <Route path='/explore' element={<DiscoverPage />} />
+            <Route path='/search' element={<SearchPage />} />
+            <Route path='/posts/:postId' element={<PostDetailsPage />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path='profile' element={<UserProfilePage />}>
-                <Route index element={<UserProfilePage />} />
-                <Route path=':userId' element={<UserProfilePage />} />
-              </Route>
-              <Route
-                path='other-profile/:userId'
-                element={<OtherProfilePage />}
-              />
+              <Route path='profile' element={<UserProfilePage />} />
+              <Route path='profile/:userId' element={<UserProfilePage />} />
               <Route path='plans/create' element={<TripPlanningPage />} />
               <Route
                 path='plans/:planId/edit'
                 element={<PlanEditorPage editMode={true} />}
               />
               <Route path='itinerary' element={<ItineraryPage />} />
-              <Route path='test' element={<ItineraryPage />} />
+              <Route path='post-editor' element={<PostEditor />} />
+              <Route path='test' element={<PostEditor />} />
             </Route>
 
             <Route path='*' element={<NotFound />} />

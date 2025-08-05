@@ -9,7 +9,7 @@ export interface ILike extends Document {
   /** ID of the liked content */
   targetId: Types.ObjectId;
   /** Type of content being liked */
-  onModel: 'TravelPlan' | 'Post';
+  onModel: 'TravelPlan' | 'Post'| 'Comment';
   /** When the like was created */
   createdAt: Date;
   /** When the like was last updated */
@@ -21,12 +21,17 @@ export interface ILike extends Document {
  */
 const likeSchema: Schema<ILike> = new Schema(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
     targetId: { type: Schema.Types.ObjectId, required: true, index: true },
     onModel: {
       type: String,
       required: true,
-      enum: ['TravelPlan', 'Post'],
+      enum: ['TravelPlan', 'Post', 'Comment'],
       index: true,
     },
   },

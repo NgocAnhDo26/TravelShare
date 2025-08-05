@@ -1,43 +1,89 @@
-import { Request, Response } from 'express';
-import mongoose, { Model } from 'mongoose';
-import Comment from '../models/comment.model';
-import TravelPlan, { ITravelPlan } from '../models/travelPlan.model';
-import Post, { IPost } from '../models/post.model';
+import mongoose, { Model, Types } from 'mongoose';
+import Comment, { IComment } from '../models/comment.model';
+import TravelPlan from '../models/travelPlan.model';
+import Post from '../models/post.model';
+import { Like } from '../models/like.model';
+import User from '../models/user.model';
 
 type TargetModelName = 'TravelPlan' | 'Post';
+
+export interface ICommentLean {
+  _id: Types.ObjectId;
+  user: {
+    _id: Types.ObjectId;
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+  };
+  content: string;
+  targetId: Types.ObjectId;
+  onModel: TargetModelName;
+  parentId?: Types.ObjectId;
+  likesCount: number;
+  replyCount: number;
+  mentions?: { _id: Types.ObjectId; username: string }[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ICommentService {
+  getCommentsForTarget(
+    targetId: string,
+    onModel: TargetModelName,
+    page: number,
+    limit: number
+  ): Promise<{ comments: ICommentLean[]; totalPages: number; currentPage: number }>;
+  getRepliesForComment(commentId: string): Promise<ICommentLean[]>;
+  addComment(
+    userId: string,
+    targetId: string,
+    onModel: TargetModelName,
+    data: { content?: string; parentId?: string; imageUrl?: string }
+  ): Promise<ICommentLean | null>;
+  updateComment(commentId: string, userId: string, content: string): Promise<ICommentLean>;
+  deleteComment(commentId: string, userId: string): Promise<void>;
+  toggleLike(commentId: string, userId: string): Promise<ICommentLean | null>;
+  getCommentById(commentId: string): Promise<ICommentLean | null>;
+}
 
 const TargetModelMap: Record<TargetModelName, Model<any>> = {
   TravelPlan,
   Post,
 };
 
-interface ICommentService {
-  addComment(req: Request, res: Response): Promise<void>;
-  deleteComment(req: Request, res: Response): Promise<void>;
-  getCommentsForTarget(req: Request, res: Response): Promise<void>;
-}
-
 const CommentService: ICommentService = {
-  addComment: async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user as string;
-    const { content, targetId, onModel } = req.body as {
-      content: string;
-      targetId: string;
-      onModel: TargetModelName;
+  async getCommentsForTarget(targetId, onModel, page, limit) {
+    const skip = (page - 1) * limit;
+    const comments = await Comment.find({ targetId, onModel, parentId: null })
+      .populate({ path: 'user', select: 'username displayName avatarUrl _id' })
+      .populate({ path: 'mentions', select: 'username _id' })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalComments = await Comment.countDocuments({ targetId, onModel, parentId: null });
+
+    return {
+      comments: comments as unknown as ICommentLean[], // SỬA Ở ĐÂY: Dùng ép kiểu kép
+      totalPages: Math.ceil(totalComments / limit),
+      currentPage: page,
     };
+  },
 
-    if (!content || !targetId || !onModel) {
-      res
-        .status(400)
-        .json({ error: 'Content, targetId, and onModel are required.' });
-      return;
-    }
+  async getRepliesForComment(commentId) {
+    const replies = await Comment.find({ parentId: commentId })
+      .populate({ path: 'user', select: 'username displayName avatarUrl _id' })
+      .populate({ path: 'mentions', select: 'username _id' })
+      .sort({ createdAt: 'asc' })
+      .lean();
+    return replies as unknown as ICommentLean[]; // SỬA Ở ĐÂY: Dùng ép kiểu kép
+  },
 
-    if (!TargetModelMap[onModel]) {
-      res
-        .status(400)
-        .json({ error: 'Invalid onModel. Must be "TravelPlan" or "Post".' });
-      return;
+  async addComment(userId, targetId, onModel, data) {
+    const { content, parentId, imageUrl } = data;
+    if (!content && !imageUrl) {
+      throw new Error('Comment must have content or an image.');
     }
 
     const session = await mongoose.startSession();
@@ -45,118 +91,129 @@ const CommentService: ICommentService = {
 
     try {
       const TargetModel = TargetModelMap[onModel];
-
-      const target = await TargetModel.findByIdAndUpdate(
-        targetId,
-        { $inc: { commentsCount: 1 } },
-        { new: true, session },
-      );
+      if (!TargetModel) {
+        throw new Error(`Invalid onModel value: ${onModel}`);
+      }
+      const target = await TargetModel.findById(targetId).session(session);
 
       if (!target) {
-        await session.abortTransaction();
-        res.status(404).json({ error: `${onModel} not found.` });
-        return;
+        throw new Error(`${onModel} not found.`);
       }
 
-      const comment = new Comment({ content, targetId, onModel, user: userId });
+      let mentionedUserIds: Types.ObjectId[] = [];
+      if (content) {
+        const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+        const mentionedUsernames = new Set<string>();
+        let match;
+        while ((match = mentionRegex.exec(content)) !== null) {
+            mentionedUsernames.add(match[1]);
+        }
+        if (mentionedUsernames.size > 0) {
+            const users = await User.find({ username: { $in: Array.from(mentionedUsernames) } }, '_id', { session });
+            mentionedUserIds = users.map(u => u._id as Types.ObjectId);
+        }
+      }
+
+      const comment = new Comment({
+        content,
+        targetId,
+        onModel,
+        user: userId,
+        parentId,
+        imageUrl,
+        mentions: mentionedUserIds,
+      });
       await comment.save({ session });
 
-      const populatedComment = await comment.populate({
-        path: 'user',
-        select: 'username displayName avatarUrl _id',
-      });
+      if (parentId) {
+        await Comment.updateOne({ _id: parentId }, { $inc: { replyCount: 1 } }, { session });
+      } else {
+        await TargetModel.updateOne({ _id: targetId }, { $inc: { commentsCount: 1 } }, { session });
+      }
 
       await session.commitTransaction();
-
-      res.status(201).json(populatedComment);
-      return;
+      return this.getCommentById((comment._id as Types.ObjectId).toString());
     } catch (error) {
       await session.abortTransaction();
-      console.error('Error adding comment:', error);
-      res.status(500).json({ error: 'Internal Server Error.' });
-      return;
+      throw error;
     } finally {
       await session.endSession();
     }
   },
 
-  deleteComment: async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user as string;
-    const { commentId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(commentId)) {
-      res.status(400).json({ error: 'Invalid comment ID.' });
-      return;
+  async updateComment(commentId, userId, content) {
+    if (!content) {
+      throw new Error('Content is required.');
     }
+    const updatedComment = await Comment.findOneAndUpdate(
+      { _id: commentId, user: userId },
+      { content },
+      { new: true }
+    )
+    .populate({ path: 'user', select: 'username displayName avatarUrl _id' })
+    .populate({ path: 'mentions', select: 'username _id' })
+    .lean();
 
+    if (!updatedComment) {
+      throw new Error('Comment not found or you do not have permission to edit.');
+    }
+    return updatedComment as unknown as ICommentLean; // SỬA Ở ĐÂY: Dùng ép kiểu kép
+  },
+
+  async deleteComment(commentId, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      const comment = await Comment.findOneAndDelete(
-        { _id: commentId, user: userId },
-        { session },
-      );
-
+      const comment = await Comment.findOne({ _id: commentId, user: userId }, null, { session });
       if (!comment) {
-        await session.abortTransaction();
-        res
-          .status(404)
-          .json({
-            error: 'Comment not found or you do not have permission to delete.',
-          });
-        return;
+        throw new Error('Comment not found or you do not have permission to delete.');
       }
-
-      const TargetModel = TargetModelMap[comment.onModel as TargetModelName];
-      await TargetModel.findByIdAndUpdate(
-        comment.targetId,
-        { $inc: { commentsCount: -1 } },
-        { session },
-      );
-
+      if (comment.parentId) {
+        await Comment.updateOne({ _id: comment.parentId }, { $inc: { replyCount: -1 } }, { session });
+      } else {
+        const modelToUpdate = TargetModelMap[comment.onModel as TargetModelName];
+        await modelToUpdate.updateOne({ _id: comment.targetId }, { $inc: { commentsCount: -(1 + comment.replyCount) } }, { session });
+      }
+      await Comment.deleteMany({ parentId: commentId }, { session });
+      await comment.deleteOne({ session });
       await session.commitTransaction();
-
-      res.status(200).json({ message: 'Comment deleted successfully.' });
-      return;
     } catch (error) {
       await session.abortTransaction();
-      console.error('Error deleting comment:', error);
-      res.status(500).json({ error: 'Internal Server Error.' });
-      return;
+      throw error;
     } finally {
       await session.endSession();
     }
   },
 
-  getCommentsForTarget: async (req: Request, res: Response): Promise<void> => {
-    const { targetId, onModel } = req.query as {
-      targetId: string;
-      onModel: TargetModelName;
-    };
-
-    if (!targetId || !onModel) {
-      res
-        .status(400)
-        .json({ error: 'targetId and onModel are required query parameters.' });
-      return;
-    }
-
+  async toggleLike(commentId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
-      const comments = await Comment.find({ targetId, onModel })
-        .populate({
-          path: 'user',
-          select: 'username displayName avatarUrl _id',
-        })
-        .sort({ createdAt: -1 });
-
-      res.status(200).json(comments);
-      return;
+      const existingLike = await Like.findOne({ user: userId, targetId: commentId, onModel: 'Comment' }, null, { session });
+      if (existingLike) {
+        await existingLike.deleteOne({ session });
+        await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: -1 } }, { session });
+      } else {
+        await Like.create([{ user: userId, targetId: commentId, onModel: 'Comment' }], { session });
+        await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: 1 } }, { session });
+      }
+      await session.commitTransaction();
+      return this.getCommentById(commentId);
     } catch (error) {
-      console.error('Error fetching comments:', error);
-      res.status(500).json({ error: 'Internal Server Error.' });
-      return;
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
     }
+  },
+
+  async getCommentById(commentId) {
+    const comment = await Comment.findById(commentId)
+      .populate({ path: 'user', select: 'username displayName avatarUrl _id' })
+      .populate({ path: 'mentions', select: 'username _id' })
+      .lean();
+    return comment as unknown as (ICommentLean | null); // SỬA Ở ĐÂY: Dùng ép kiểu kép
   },
 };
 

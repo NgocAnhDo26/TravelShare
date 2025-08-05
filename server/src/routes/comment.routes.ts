@@ -1,20 +1,64 @@
-import { Router } from 'express';
-import CommentController from '../controllers/comment.controller';
-
+import { Router, Request, Response, NextFunction } from 'express';
 import AuthJwtMiddleware from '../middlewares/authJwt';
+import CommentController from '../controllers/comment.controller';
+import uploadUseCases from '../middlewares/upload';
 
-const commentRouter: Router = Router();
+type TargetModel = 'TravelPlan' | 'Post';
 
-commentRouter.get('/', CommentController.getCommentsForTarget);
-commentRouter.post(
-  '/',
-  [AuthJwtMiddleware.verifyToken],
-  CommentController.addComment,
-);
-commentRouter.delete(
+export function createCommentRoutes(onModel: TargetModel) {
+  const router = Router({ mergeParams: true });
+
+  router.get(
+    '/:id/comments',
+    (req: Request, res: Response, next: NextFunction) => {
+      (req as any).onModel = onModel;
+      next();
+    },
+    CommentController.getCommentsForTarget
+  );
+
+  router.post(
+    '/:id/comments',
+    AuthJwtMiddleware.verifyToken,
+    uploadUseCases.singleFileUpload('commentImage', 'comment-images'),
+    (req: Request, res: Response, next: NextFunction) => {
+      (req as any).onModel = onModel;
+      next();
+    },
+    CommentController.addComment
+  );
+
+  return router;
+}
+
+const commentActionRouter = Router();
+
+commentActionRouter.patch(
   '/:commentId',
-  [AuthJwtMiddleware.verifyToken],
-  CommentController.deleteComment,
+  AuthJwtMiddleware.verifyToken,
+  CommentController.updateComment
 );
 
-export default commentRouter;
+commentActionRouter.delete(
+  '/:commentId',
+  AuthJwtMiddleware.verifyToken,
+  CommentController.deleteComment
+);
+
+commentActionRouter.post(
+  '/:commentId/like',
+  AuthJwtMiddleware.verifyToken,
+  CommentController.toggleLike
+);
+
+commentActionRouter.get(
+  '/:commentId/likes',
+  CommentController.getCommentLikers
+);
+
+commentActionRouter.get(
+  '/:commentId/replies',
+  CommentController.getRepliesForComment
+);
+
+export default commentActionRouter;

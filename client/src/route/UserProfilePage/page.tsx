@@ -336,27 +336,30 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                       alt={plan.title}
                       className='w-full h-20 object-cover'
                     />
-                    <div className='absolute top-2 right-2 z-10'>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size='icon'
-                            variant='ghost'
-                            className='w-7 h-7'
-                          >
-                            <EllipsisVerticalIcon />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align='end'>
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/plans/${plan._id}/edit`)}
-                          >
-                            <PencilIcon />
-                            Edit plan
-                          </DropdownMenuItem>
-                          {user &&
-                            plan.author &&
-                            user.userId === plan.author.toString() && (
+                    {user &&
+                      plan.author &&
+                      user.userId === plan.author.toString() && (
+                        <div className='absolute top-2 right-2 z-10'>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size='icon'
+                                variant='ghost'
+                                className='w-7 h-7'
+                              >
+                                <EllipsisVerticalIcon />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align='end'>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate(`/plans/${plan._id}/edit`)
+                                }
+                              >
+                                <PencilIcon />
+                                Edit plan
+                              </DropdownMenuItem>
+
                               <DropdownMenuItem
                                 className='text-red-600 focus:text-red-700'
                                 onClick={() => {
@@ -367,10 +370,10 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                                 <TrashIcon className='text-red-600' />
                                 Delete plan
                               </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
                     <div
                       className='pointer-events-none absolute bottom-0 left-0 w-full h-1/2'
                       style={{

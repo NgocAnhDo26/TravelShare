@@ -15,8 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import API from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import { useGoogleLogin } from '@react-oauth/google';
-import { LocationPermissionDialog } from './LocationPermissionDialog';
-import { LocationService, type UserLocation } from '@/utils/locationService';
+import { LocationService } from '@/utils/locationService';
 
 export function LoginForm({
   className,
@@ -25,7 +24,6 @@ export function LoginForm({
   const [, setEmail] = useState('');
   const [, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showLocationDialog, setShowLocationDialog] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -38,24 +36,15 @@ export function LoginForm({
     }
   }, [user, navigate]);
 
-  const handleLocationPermissionComplete = (location: UserLocation) => {
-    console.log('Location obtained:', location);
-    setShowLocationDialog(false);
-    navigate('/');
-  };
-
-  const handleLocationPermissionSkip = () => {
-    setShowLocationDialog(false);
-    navigate('/');
-  };
-
-  const checkAndPromptLocationPermission = () => {
-    // Check if user should be prompted for location on first login
-    if (LocationService.shouldPromptOnFirstLogin()) {
-      setShowLocationDialog(true);
-    } else {
-      navigate('/');
+  const initializeLocationAndNavigate = async () => {
+    // Initialize location automatically without prompts
+    try {
+      await LocationService.initializeLocationForSession();
+      console.log('Location initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize location:', error);
     }
+    navigate('/');
   };
 
   const handleGoogleLogin = useGoogleLogin({
@@ -69,7 +58,7 @@ export function LoginForm({
         toast.dismiss(loadingToast);
         toast.success(response.data.message || 'Login successful!');
         await refreshUser();
-        checkAndPromptLocationPermission();
+        initializeLocationAndNavigate();
       } catch (error: unknown) {
         toast.dismiss(loadingToast);
         const axiosError = error as {
@@ -124,7 +113,7 @@ export function LoginForm({
           console.log('Login successful:', response.data);
           toast.success('Login successful!');
           await refreshUser();
-          checkAndPromptLocationPermission();
+          initializeLocationAndNavigate();
         })
         .catch((error) => {
           toast.dismiss(loadingToast);
@@ -214,13 +203,6 @@ export function LoginForm({
           </CardContent>
         </Card>
       </div>
-
-      {/* Location Permission Dialog */}
-      <LocationPermissionDialog
-        isOpen={showLocationDialog}
-        onComplete={handleLocationPermissionComplete}
-        onSkip={handleLocationPermissionSkip}
-      />
     </>
   );
 }

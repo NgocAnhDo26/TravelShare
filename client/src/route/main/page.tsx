@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import HeaderTabs from '@/components/HeaderTabs';
+import { SearchInput } from '@/components/SearchInput';
 import { useAuth } from '../../context/AuthContext';
 import CreatePlanSection from './CreatePlanSection';
 import FeedSection from './FeedSection';
@@ -35,9 +36,23 @@ const MainPage: React.FC = () => {
   }
 
   return (
-    <div className='min-h-screen'>
-      <div className='max-w-3xl mx-auto py-6 px-4'>
-        <HeaderTabs />
+    <div className='flex flex-col'>
+      <main className='flex-1 p-6 max-w-7xl mx-auto w-full'>
+        {/* Full width search bar like Twitter */}
+        <div className='mb-6'>
+          <SearchInput
+            placeholder='Search for travel plans, posts, or people...'
+            fullWidth={true}
+          />
+        </div>
+
+        <HeaderTabs
+          tabs={[
+            { label: 'For you', value: 'for-you', to: '/' },
+            { label: 'Following', value: 'following', to: '/following' },
+          ]}
+        />
+
         {user ? (
           <>
             <CreatePlanSection onCreatePlan={handleCreatePlan} />
@@ -49,7 +64,7 @@ const MainPage: React.FC = () => {
             <PublicFeedPreview onRegister={handleRegister} />
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 };
