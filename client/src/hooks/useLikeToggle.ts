@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import API from '../utils/axiosInstance';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export type OnModel = 'TravelPlan' | 'Post';
 
@@ -18,6 +20,8 @@ export function useLikeToggle({
   initialLikesCount,
   apiPath,
 }: UseLikeToggleOptions) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   // UI state for immediate visual feedback
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
@@ -50,6 +54,12 @@ export function useLikeToggle({
   const handleToggleLike = useCallback(
     (e?: React.MouseEvent) => {
       e?.stopPropagation?.();
+      // If the user is not logged in, show a toast and redirect.
+      if (!user) {
+        toast.error('Please log in.');
+        navigate('/login');
+        return; // Stop further execution
+      }
 
       // 1. Perform an optimistic UI update for immediate feedback.
       // This makes the interface feel responsive.
