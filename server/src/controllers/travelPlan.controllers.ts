@@ -207,10 +207,16 @@ const TravelPlanController: ITravelPlanController = {
    */
   async getTravelPlansByAuthor(req: Request, res: Response): Promise<void> {
     try {
+      let travelPlans;
       const { authorId } = req.params;
       const userId = req.user as string;
-      const travelPlans =
+      if (userId === authorId) {
+        travelPlans =
         await TravelPlanService.getTravelPlansByAuthor(authorId);
+      } else {
+        travelPlans =
+        await TravelPlanService.getPublicTravelPlansByAuthor(authorId);
+      }
 
       let likes: any[] = [];
       if (userId && travelPlans.length > 0) {

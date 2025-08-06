@@ -273,18 +273,6 @@ const UserService: IUserService = {
       throw new Error('User not found.');
     }
 
-    // Fetch user's trip plans (light summary)
-    const tripPlans = await TravelPlanService.getTravelPlansByAuthor(userId);
-    const tripPlansSummary = tripPlans.map((plan) => ({
-      _id: plan._id,
-      title: plan.title,
-      destination: plan.destination,
-      coverImageUrl: plan.coverImageUrl,
-      startDate: plan.startDate,
-      endDate: plan.endDate,
-      author: plan.author, // include author for permission checks
-    }));
-
     return {
       _id: userProfile._id,
       username: userProfile.username,
@@ -294,7 +282,6 @@ const UserService: IUserService = {
       bio: userProfile.bio,
       followerCount: userProfile.followerCount,
       followingCount: userProfile.followingCount,
-      tripPlans: tripPlansSummary,
     };
   },
 };

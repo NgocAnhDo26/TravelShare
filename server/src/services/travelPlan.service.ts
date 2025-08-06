@@ -42,6 +42,7 @@ interface ITravelPlanService {
   ): Promise<any>;
   getTravelPlanById(planId: string): Promise<any | null>;
   getTravelPlansByAuthor(authorId: string): Promise<any[]>;
+  getPublicTravelPlansByAuthor(authorId: string): Promise<any[]>;
   getPublicTravelPlans(): Promise<any[]>;
   incrementLikes(planId: string): Promise<void>;
   decrementLikes(planId: string): Promise<void>;
@@ -184,6 +185,14 @@ const TravelPlanService: ITravelPlanService = {
   async getTravelPlansByAuthor(authorId: string): Promise<any[]> {
     try {
       return await TravelPlan.find({ author: authorId });
+    } catch (error) {
+      console.error('Error getting travel plans by author:', error);
+      throw error;
+    }
+  },
+  async getPublicTravelPlansByAuthor(authorId: string): Promise<any[]> {
+    try {
+      return await TravelPlan.find({ author: authorId, privacy: 'public' });
     } catch (error) {
       console.error('Error getting travel plans by author:', error);
       throw error;
