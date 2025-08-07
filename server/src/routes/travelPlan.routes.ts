@@ -52,6 +52,7 @@ router.get(
  */
 router.get(
   '/:id',
+  AuthJwtMiddleware.optionalAuth,
   AuthJwtMiddleware.isAuthorOrPublic,
   TravelPlanController.getTravelPlanById,
 );
