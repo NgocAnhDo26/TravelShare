@@ -5,10 +5,12 @@ import { MapPin, NotebookPen, ScrollText } from 'lucide-react';
 
 interface CreatePlanSectionProps {
   onCreatePlan: () => void;
+  onCreatePost: () => void;
 }
 
 const CreatePlanSection: React.FC<CreatePlanSectionProps> = ({
   onCreatePlan,
+  onCreatePost
 }) => (
   <Card className='mb-8 bg-gradient-to-r from-white to-blue-50/50 border-0 shadow-lg shadow-blue-500/10'>
     <CardContent className='p-4 text-center'>
@@ -31,7 +33,7 @@ const CreatePlanSection: React.FC<CreatePlanSectionProps> = ({
         </Button>
         <span>/</span>
         <Button
-          onClick={onCreatePlan}
+          onClick={onCreatePost}
           className='bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 shadow-lg shadow-blue-500/25 transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/30'
         >
           <ScrollText />
