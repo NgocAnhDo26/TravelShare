@@ -63,6 +63,7 @@ router.get(
  */
 router.get(
   '/author/:authorId',
+  AuthJwtMiddleware.optionalAuth,
   TravelPlanController.getTravelPlansByAuthor,
 );
 
