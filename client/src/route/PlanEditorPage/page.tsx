@@ -230,7 +230,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Show loading state – skeleton placeholders
   if (isLoading) {
     return (
-      <div className='flex flex-col h-full max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
+      <div className='flex flex-col h-full max-w-7xl mx-auto lg:mx-8 my-8'>
         <Card className='w-full overflow-hidden pt-0'>
           {/* Cover image skeleton */}
           <Skeleton className='w-full h-72' />
@@ -255,7 +255,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   // Show error state if no plan data
   if (!planData) {
     return (
-      <div className='flex flex-col h-full justify-center max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
+      <div className='flex flex-col h-full justify-center max-w-7xl mx-auto lg:mx-8 my-8'>
         <div className='flex items-center justify-center'>
           <div className='text-lg text-red-600'>Plan not found</div>
         </div>
@@ -270,7 +270,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
 }
 
   return (
-    <div className='flex flex-col justify-center max-w-7xl mx-auto lg:mx-8 mx-4 my-8'>
+    <div className='flex flex-col justify-center max-w-7xl mx-auto lg:mx-8 my-8'>
       <Card className='w-full overflow-hidden pt-0'>
         <TripHeader
           trip={displayTripData}
@@ -297,6 +297,39 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           initialIsLiked={planData.isLiked}
           currentUser={currentUserForSocialSection}
         />
+      )}
+
+      {/* Related Posts */}
+      {!actualEditMode && (
+        <Card className="mt-8">
+          <div className="p-4 border-b">
+            <h2 className="text-2xl font-bold text-left mb-4">Related Posts</h2>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-gradient-to-br p-2 rounded-lg">
+              <div className="rounded-lg p-4 shadow-sm hover:shadow transition flex flex-col bg-transparent">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-base">Exploring Đà Lạt: Top 5 Cafés</span>
+                  <span className="ml-2 text-xs text-gray-400">by Jane Doe</span>
+                </div>
+                <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                  <span>12 likes</span>
+                  <span>3 comments</span>
+                </div>
+              </div>
+              <div className="rounded-lg p-4 shadow-sm hover:shadow transition flex flex-col bg-transparent">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-base">Hiking Langbiang Mountain</span>
+                  <span className="ml-2 text-xs text-gray-400">by John Smith</span>
+                </div>
+                <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                  <span>8 likes</span>
+                  <span>1 comment</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
       )}
     </div>
   );
