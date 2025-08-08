@@ -10,8 +10,6 @@ import MainPage from './route/main/page';
 import SearchPage from './route/search/page';
 import NotFound from './utils/404';
 import { Toaster } from 'react-hot-toast';
-import './App.css';
-
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -19,6 +17,7 @@ import FeedLayout from './components/SidebarLayout/FeedLayout';
 import PostEditor from './components/PostEditor';
 import DiscoverPage from './route/DiscoverPage/page';
 import PostDetailsPage from './route/PostDetailsPage/page';
+import './App.css';
 
 function App() {
   return (
@@ -56,7 +55,7 @@ function App() {
               />
               <Route path='itinerary' element={<ItineraryPage />} />
               <Route path='/posts/create' element={<PostEditor />} />
-              <Route path='test' element={<PostEditor />} />
+              <Route path='test' element={<PostDetailsPage/>} />
             </Route>
 
             <Route path='*' element={<NotFound />} />
