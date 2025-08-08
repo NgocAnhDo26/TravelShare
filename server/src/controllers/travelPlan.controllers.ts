@@ -73,6 +73,11 @@ interface ITravelPlanController {
     res: Response, 
     next: NextFunction
   ): Promise<void>;
+  getRelatedPostById(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
 }
 
 /**
@@ -769,6 +774,40 @@ const TravelPlanController: ITravelPlanController = {
         return;
       }
       // Pass any other unexpected errors to the global error handler
+      next(error);
+    }
+  },
+
+  /**
+   * Get all posts related to a specific travel plan, including author info.
+   * GET /api/plans/:id/related-posts
+   */
+  async getRelatedPostById(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const posts = await TravelPlanService.getRelatedPostById(id);
+
+      if (!posts || posts.length === 0) {
+        res.status(HTTP_STATUS.NOT_FOUND).json({
+          error: 'No related posts found for this travel plan.',
+        });
+        return;
+      }
+
+      const data = (posts || []).map((post: any) => ({
+        postId: post._id?.toString(),
+        title: post.title,
+        author: post.author.displayName || post.author.username || 'Unknown',
+        likesCount: post.likesCount,
+        commentsCount: post.commentsCount,
+      }));
+
+      res.status(HTTP_STATUS.OK).json({ data });
+    } catch (error) {
       next(error);
     }
   },
