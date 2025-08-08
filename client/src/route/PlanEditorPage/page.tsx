@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { getActualEditMode } from '@/utils/planPermissions';
 import type { Destination } from '@/types/destination';
 import { useLikeToggle } from '@/hooks/useLikeToggle';
+import RelatedPostsSection from '@/components/RelatedPostsSection';
 
 interface RelatedPost {
   postId: string;
@@ -276,7 +277,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           trip={displayTripData}
           editMode={actualEditMode}
           onTripUpdate={handleTripUpdate}
-          onToggleLike={handleToggleLike} // Pass the handler down
+          onToggleLike={handleToggleLike}
         />
         <ItinerarySection
           itinerary={planData?.schedule || []}
@@ -295,7 +296,6 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           onModel='TravelPlan'
           initialCommentsCount={planData.commentsCount}
           currentUser={currentUserForSocialSection}
-          // Pass the live state and handler down
           likesCount={likesCount}
           isLiked={isLiked}
           onToggleLike={handleToggleLike}
@@ -304,33 +304,10 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
 
       {/* Related Posts */}
       {!actualEditMode && (
-        <Card className="mt-8">
-          <div className="p-4 border-b">
-            <h2 className="text-2xl font-bold text-left mb-4">Related Posts</h2>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-gradient-to-br p-2 rounded-lg">
-              {relatedLoading ? (
-                Array.from({ length: 3 }).map((_, idx) => (
-                  <Skeleton key={idx} className="h-20 w-full" />
-                ))
-              ) : (
-                relatedPosts.map((post) => (
-                  <div key={post.postId} className="rounded-lg p-4 shadow-sm hover:shadow transition flex flex-col bg-transparent">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-base">{post.title}</span>
-                      <span className="ml-2 text-xs text-gray-400">by {post.author}</span>
-                    </div>
-                    <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                      <span>{post.likesCount} likes</span>
-                      <span>{post.commentsCount} comments</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </Card>
+        <RelatedPostsSection
+          relatedPosts={relatedPosts}
+          relatedLoading={relatedLoading}
+        />
       )}
     </div>
   );
