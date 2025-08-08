@@ -115,6 +115,7 @@ class SearchService {
 
     const [posts, total] = await Promise.all([
       Post.find(searchQuery)
+        .populate('author', 'username displayName avatarUrl')
         .populate('relatedPlan', 'title destination')
         .sort({ createdAt: -1 })
         .skip(skip)

@@ -2,17 +2,23 @@ import { Schema, model, Model, Document, Types } from 'mongoose';
 
 // Interface for the Post document
 export interface IPost extends Document {
-  /** Stable unique identifier required by an existing DB index */
-  postId: string;
-  authorID: string;
+  /** Title of the post */
   title: string;
+  /** Content of the post */
   content: string;
+  /** Cover image URL */
   coverImageUrl?: string;
+  /** Additional images */
   images?: string[];
-  /** Optional related travel plan tagged in this post */
-  relatedPlan?: Types.ObjectId;
+  /** Author of the post */
+  author: Types.ObjectId;
+  /** Privacy setting */
   privacy: 'public' | 'private';
+  /** Related travel plan if any */
+  relatedPlan?: Types.ObjectId;
+  /** Number of likes */
   likesCount: number;
+  /** Number of comments */
   commentsCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -21,18 +27,12 @@ export interface IPost extends Document {
 // Schema definition
 const postSchema = new Schema<IPost>(
   {
-    // Satisfy existing unique index in DB: postId_1
-    postId: {
-      type: String,
-      unique: true,
+    /** Reference to the post author */
+    author: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Author is required'],
       index: true,
-      default: () => new Types.ObjectId().toString(),
-    },
-    authorID: {
-      type: String,
-      required: [true, 'Author ID is required'],
-      trim: true,
-      ref: 'users', // Assuming you have a User model
     },
     title: {
       type: String,
@@ -48,7 +48,7 @@ const postSchema = new Schema<IPost>(
     },
     coverImageUrl: {
       type: String,
-      default: null,
+      default: 'https://placehold.co/1200x400/CCCCCC/FFFFFF?text=TravelShare',
     },
     images: {
       type: [String],
@@ -83,8 +83,7 @@ const postSchema = new Schema<IPost>(
 );
 
 // Indexes for faster queries
-postSchema.index({ authorID: 1, createdAt: -1 }); // For author-specific queries sorted by newest first
-postSchema.index({ author: 1 });
+postSchema.index({ author: 1, createdAt: -1 }); // For author-specific queries sorted by newest first
 postSchema.index({ privacy: 1 });
 postSchema.index({ createdAt: -1 }); // For sorting by newest first
 

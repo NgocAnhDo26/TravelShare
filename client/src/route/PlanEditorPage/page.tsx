@@ -126,7 +126,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   }, [planId, user, editMode, navigate]);
 
   // This hook is now the single source of truth for the like state.
-  const { isLiked, likesCount, handleToggleLike } = useLikeToggle({
+  const { isLiked, likesCount } = useLikeToggle({
     targetId: planData?._id ?? '',
     initialIsLiked: planData?.isLiked ?? false,
     initialLikesCount: planData?.likesCount ?? 0,

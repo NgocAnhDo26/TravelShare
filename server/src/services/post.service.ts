@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Post from '../models/post.model'; // Assuming you have a Post model defined
+import { Types } from 'mongoose';
 
 interface IPostService {
   createPost(req: Request, res: Response): Promise<void>;
@@ -21,8 +22,8 @@ const PostService: IPostService = {
   createPost: async (req: Request, res: Response) => {
     // creating a post is add the post data from the request body to the database
     try {
-      const postData: IPostData & { authorID: string } = {
-        authorID: req.user as string,
+      const postData: IPostData & { author: string } = {
+        author: req.user as string,
         title: req.body.title,
         content: req.body.content,
         privacy: req.body.privacy || 'public',
@@ -31,8 +32,16 @@ const PostService: IPostService = {
         relatedPlan: req.body.relatedPlan || undefined,
       };
 
-      Post.validate(postData); // Validate the post data against the model schema
-      const post = new Post(postData);
+      // Convert string ids to ObjectId where necessary
+      const docToCreate: any = {
+        ...postData,
+        author: new Types.ObjectId(postData.author),
+      };
+      if (docToCreate.relatedPlan) {
+        docToCreate.relatedPlan = new Types.ObjectId(docToCreate.relatedPlan);
+      }
+
+      const post = new Post(docToCreate);
       await post.save(); // Save the post to the database
       res
         .status(201)
