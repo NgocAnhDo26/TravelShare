@@ -17,6 +17,17 @@ router.post(
 );
 
 /**
+ * POST /api/plans/:id/remix
+ * Clone a travel plan
+ * Requires: Authentication
+ */
+router.post(
+  '/:id/remix',
+  AuthJwtMiddleware.verifyToken,
+  TravelPlanController.remixTravelPlan,
+);
+
+/**
  * GET /api/plans/public
  * Get public travel plans
  * Requires: Authentication
@@ -52,7 +63,7 @@ router.get(
  */
 router.get(
   '/:id',
-  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.optionalAuth,
   AuthJwtMiddleware.isAuthorOrPublic,
   TravelPlanController.getTravelPlanById,
 );
@@ -64,7 +75,7 @@ router.get(
  */
 router.get(
   '/author/:authorId',
-  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.optionalAuth,
   TravelPlanController.getTravelPlansByAuthor,
 );
 

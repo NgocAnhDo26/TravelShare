@@ -21,6 +21,7 @@ import {
 import type { IPlan } from '@/types/trip';
 import timeAgo from '@/utils/time';
 import { useLikeToggle } from '@/hooks/useLikeToggle';
+import toast  from 'react-hot-toast';
 
 interface FeedPlanProps {
   plan: IPlan;
@@ -50,6 +51,23 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
     onModel: 'TravelPlan',
     apiPath: '/plans',
   });
+
+  const handleShare = async (e: React.MouseEvent) => {
+    // Prevent the card's onClick from firing
+    e.stopPropagation();
+    
+    // Construct the full URL
+    const url = `${window.location.origin}/plans/${plan._id}`;
+    
+    try {
+      // Use the Clipboard API to copy the URL
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy link: ', err);
+      toast.error('Could not copy link.');
+    }
+  };
 
   return (
     <Card
@@ -153,7 +171,11 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
               <MessageCircle className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
               <span className='text-sm font-medium'>{plan.commentsCount}</span>
             </button>
-            <button className='flex items-center gap-2 text-slate-600 hover:text-green-500 transition-colors duration-200 group cursor-pointer'>
+            <button
+              onClick={handleShare}
+              onMouseDown={(e) => e.stopPropagation()}
+              className='flex items-center gap-2 text-slate-600 hover:text-green-500 transition-colors duration-200 group cursor-pointer'
+            >
               <Share2 className='w-5 h-5 group-hover:scale-110 transition-transform duration-200' />
               <span className='text-sm font-medium'>Share</span>
             </button>
