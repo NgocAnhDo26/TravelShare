@@ -56,8 +56,8 @@ const RelatedPostsSection: React.FC<RelatedPostsSectionProps> = ({
                   <span className="ml-2 text-xs text-gray-400">by {post.author}</span>
                 </div>
                 <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                  <span>{post.likesCount} likes</span>
-                  <span>{post.commentsCount} comments</span>
+                  <span>{post.likesCount} like{post.likesCount === 1 ? '' : 's'}</span>
+                  <span>{post.commentsCount} comment{post.commentsCount === 1 ? '' : 's'}</span>
                 </div>
               </div>
             ))
