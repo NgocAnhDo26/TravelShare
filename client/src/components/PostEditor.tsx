@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { X } from 'lucide-react';
 import API from '@/utils/axiosInstance';
+import TagPlanModal, { type PlanLite } from '@/components/TagPlanModal';
 
 type Privacy = 'public' | 'private';
 
@@ -14,6 +15,7 @@ interface FormState {
   coverImage?: File; // Can be a file object or a base64 string
   images?: File[]; // Array of file objects
   privacy: Privacy;
+  relatedPlan?: PlanLite | null;
 }
 
 interface FormErrors {
@@ -26,6 +28,7 @@ export default function PostEditor() {
     title: '',
     content: '<p></p>', // Initialize with empty HTML paragraph
     privacy: 'public',
+    relatedPlan: null,
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(
@@ -36,6 +39,7 @@ export default function PostEditor() {
   // Add new state variables to store actual file objects
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [tagModalOpen, setTagModalOpen] = useState(false);
 
   // Refs for file inputs
   const coverImageRef = useRef<HTMLInputElement>(null);
@@ -87,17 +91,22 @@ export default function PostEditor() {
         formData.append('title', formState.title);
         formData.append('content', formState.content);
         formData.append('privacy', formState.privacy);
-        
+
         // Add the cover image file if it exists
         if (coverImageFile) {
           formData.append('coverImage', coverImageFile);
         }
-        
+
         // Add all image files if they exist
         if (imageFiles && imageFiles.length > 0) {
-          imageFiles.forEach(file => {
+          imageFiles.forEach((file) => {
             formData.append('images', file);
           });
+        }
+
+        // Add related plan if selected
+        if (formState.relatedPlan?._id) {
+          formData.append('relatedPlan', formState.relatedPlan._id);
         }
 
         API.post('/posts/create', formData)
@@ -109,6 +118,7 @@ export default function PostEditor() {
               title: '',
               content: '<p></p>', // Reset to empty HTML paragraph
               privacy: 'public',
+              relatedPlan: null,
             });
             setCoverImagePreview(null);
             setImagesPreviews([]);
@@ -161,7 +171,7 @@ export default function PostEditor() {
         reader.onload = (e) => {
           const result = e.target?.result as string;
           newPreviews.push(result);
-          
+
           // When all previews are ready, update the state
           if (newPreviews.length === filesArray.length) {
             setImagesPreviews(newPreviews);
@@ -239,6 +249,42 @@ export default function PostEditor() {
           {errors.title && (
             <p className='text-xs text-gray-900'>{errors.title}</p>
           )}
+        </div>
+
+        {/* TAG PLAN */}
+        <div className='space-y-2'>
+          <label className='block text-sm font-medium'>Gắn thẻ Kế hoạch</label>
+          <div className='flex items-center gap-2'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setTagModalOpen(true)}
+            >
+              {formState.relatedPlan ? 'Đổi kế hoạch' : 'Gắn thẻ Kế hoạch'}
+            </Button>
+            {formState.relatedPlan && (
+              <div className='flex items-center gap-2 rounded border px-2 py-1 text-sm'>
+                <span className='font-medium'>
+                  {formState.relatedPlan.title}
+                </span>
+                <span className='text-gray-500'>
+                  · {formState.relatedPlan.author?.displayName || 'Ẩn danh'}
+                </span>
+                <button
+                  type='button'
+                  className='ml-2 hover:text-red-600'
+                  onClick={() =>
+                    setFormState({ ...formState, relatedPlan: null })
+                  }
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+          <p className='text-xs text-gray-500'>
+            Kết nối bài viết với một lịch trình để thêm ngữ cảnh.
+          </p>
         </div>
 
         {/* CONTENT */}
@@ -413,6 +459,11 @@ export default function PostEditor() {
           Submit Post
         </Button>
       </form>
+      <TagPlanModal
+        open={tagModalOpen}
+        onClose={() => setTagModalOpen(false)}
+        onSelect={(plan) => setFormState({ ...formState, relatedPlan: plan })}
+      />
     </div>
   );
 }

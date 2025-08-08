@@ -17,8 +17,8 @@ const MainPage: React.FC = () => {
   };
 
   const handleCreatePost = () => {
-    navigate('/post-editor')
-  }
+    navigate('/post-editor');
+  };
 
   const handleLogin = () => {
     navigate('/login');
@@ -58,7 +58,10 @@ const MainPage: React.FC = () => {
 
         {user ? (
           <>
-            <CreatePlanSection onCreatePlan={handleCreatePlan} onCreatePost={handleCreatePost} />
+            <CreatePlanSection
+              onCreatePlan={handleCreatePlan}
+              onCreatePost={handleCreatePost}
+            />
             <FeedSection />
           </>
         ) : (

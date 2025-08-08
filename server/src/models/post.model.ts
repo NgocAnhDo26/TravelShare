@@ -2,11 +2,15 @@ import { Schema, model, Model, Document, Types } from 'mongoose';
 
 // Interface for the Post document
 export interface IPost extends Document {
-  authorID: string,
+  /** Stable unique identifier required by an existing DB index */
+  postId: string;
+  authorID: string;
   title: string;
   content: string;
   coverImageUrl?: string;
   images?: string[];
+  /** Optional related travel plan tagged in this post */
+  relatedPlan?: Types.ObjectId;
   privacy: 'public' | 'private';
   likesCount: number;
   commentsCount: number;
@@ -17,6 +21,13 @@ export interface IPost extends Document {
 // Schema definition
 const postSchema = new Schema<IPost>(
   {
+    // Satisfy existing unique index in DB: postId_1
+    postId: {
+      type: String,
+      unique: true,
+      index: true,
+      default: () => new Types.ObjectId().toString(),
+    },
     authorID: {
       type: String,
       required: [true, 'Author ID is required'],
@@ -28,41 +39,47 @@ const postSchema = new Schema<IPost>(
       required: [true, 'Title is required'],
       trim: true,
       minlength: [2, 'Title must be at least 2 characters long'],
-      maxlength: [100, 'Title cannot exceed 100 characters']
+      maxlength: [100, 'Title cannot exceed 100 characters'],
     },
     content: {
       type: String,
       required: [true, 'Content is required'],
-      minlength: [10, 'Content must be at least 10 characters long']
+      minlength: [10, 'Content must be at least 10 characters long'],
     },
     coverImageUrl: {
       type: String,
-      default: null
+      default: null,
     },
     images: {
       type: [String],
-      default: []
+      default: [],
+    },
+    /** Reference to a tagged TravelPlan */
+    relatedPlan: {
+      type: Schema.Types.ObjectId,
+      ref: 'TravelPlan',
+      required: false,
     },
     privacy: {
       type: String,
       enum: ['public', 'private'],
-      default: 'public'
+      default: 'public',
     },
     likesCount: {
       type: Number,
       default: 0,
-      min: 0
+      min: 0,
     },
     commentsCount: {
       type: Number,
       default: 0,
-      min: 0
+      min: 0,
     },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields automatically
-    versionKey: false // Don't include __v field
-  }
+    versionKey: false, // Don't include __v field
+  },
 );
 
 // Indexes for faster queries
@@ -72,7 +89,7 @@ postSchema.index({ privacy: 1 });
 postSchema.index({ createdAt: -1 }); // For sorting by newest first
 
 // Virtual for formatted created date (can be used in responses)
-postSchema.virtual('createdAtFormatted').get(function() {
+postSchema.virtual('createdAtFormatted').get(function () {
   return this.createdAt.toLocaleDateString();
 });
 
