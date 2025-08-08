@@ -31,16 +31,24 @@ export interface ICommentService {
     targetId: string,
     onModel: TargetModelName,
     page: number,
-    limit: number
-  ): Promise<{ comments: ICommentLean[]; totalPages: number; currentPage: number }>;
+    limit: number,
+  ): Promise<{
+    comments: ICommentLean[];
+    totalPages: number;
+    currentPage: number;
+  }>;
   getRepliesForComment(commentId: string): Promise<ICommentLean[]>;
   addComment(
     userId: string,
     targetId: string,
     onModel: TargetModelName,
-    data: { content?: string; parentId?: string; imageUrl?: string }
+    data: { content?: string; parentId?: string; imageUrl?: string },
   ): Promise<ICommentLean | null>;
-  updateComment(commentId: string, userId: string, content: string): Promise<ICommentLean>;
+  updateComment(
+    commentId: string,
+    userId: string,
+    content: string,
+  ): Promise<ICommentLean>;
   deleteComment(commentId: string, userId: string): Promise<void>;
   toggleLike(commentId: string, userId: string): Promise<ICommentLean | null>;
   getCommentById(commentId: string): Promise<ICommentLean | null>;
@@ -62,7 +70,11 @@ const CommentService: ICommentService = {
       .limit(limit)
       .lean();
 
-    const totalComments = await Comment.countDocuments({ targetId, onModel, parentId: null });
+    const totalComments = await Comment.countDocuments({
+      targetId,
+      onModel,
+      parentId: null,
+    });
 
     return {
       comments: comments as unknown as ICommentLean[], // SỬA Ở ĐÂY: Dùng ép kiểu kép
@@ -106,11 +118,15 @@ const CommentService: ICommentService = {
         const mentionedUsernames = new Set<string>();
         let match;
         while ((match = mentionRegex.exec(content)) !== null) {
-            mentionedUsernames.add(match[1]);
+          mentionedUsernames.add(match[1]);
         }
         if (mentionedUsernames.size > 0) {
-            const users = await User.find({ username: { $in: Array.from(mentionedUsernames) } }, '_id', { session });
-            mentionedUserIds = users.map(u => u._id as Types.ObjectId);
+          const users = await User.find(
+            { username: { $in: Array.from(mentionedUsernames) } },
+            '_id',
+            { session },
+          );
+          mentionedUserIds = users.map((u) => u._id as Types.ObjectId);
         }
       }
 
@@ -126,9 +142,17 @@ const CommentService: ICommentService = {
       await comment.save({ session });
 
       if (parentId) {
-        await Comment.updateOne({ _id: parentId }, { $inc: { replyCount: 1 } }, { session });
+        await Comment.updateOne(
+          { _id: parentId },
+          { $inc: { replyCount: 1 } },
+          { session },
+        );
       } else {
-        await TargetModel.updateOne({ _id: targetId }, { $inc: { commentsCount: 1 } }, { session });
+        await TargetModel.updateOne(
+          { _id: targetId },
+          { $inc: { commentsCount: 1 } },
+          { session },
+        );
       }
 
       await session.commitTransaction();
@@ -148,14 +172,16 @@ const CommentService: ICommentService = {
     const updatedComment = await Comment.findOneAndUpdate(
       { _id: commentId, user: userId },
       { content },
-      { new: true }
+      { new: true },
     )
-    .populate({ path: 'user', select: 'username displayName avatarUrl _id' })
-    .populate({ path: 'mentions', select: 'username _id' })
-    .lean();
+      .populate({ path: 'user', select: 'username displayName avatarUrl _id' })
+      .populate({ path: 'mentions', select: 'username _id' })
+      .lean();
 
     if (!updatedComment) {
-      throw new Error('Comment not found or you do not have permission to edit.');
+      throw new Error(
+        'Comment not found or you do not have permission to edit.',
+      );
     }
     return updatedComment as unknown as ICommentLean; // SỬA Ở ĐÂY: Dùng ép kiểu kép
   },
@@ -165,15 +191,30 @@ const CommentService: ICommentService = {
     session.startTransaction();
 
     try {
-      const comment = await Comment.findOne({ _id: commentId, user: userId }, null, { session });
+      const comment = await Comment.findOne(
+        { _id: commentId, user: userId },
+        null,
+        { session },
+      );
       if (!comment) {
-        throw new Error('Comment not found or you do not have permission to delete.');
+        throw new Error(
+          'Comment not found or you do not have permission to delete.',
+        );
       }
       if (comment.parentId) {
-        await Comment.updateOne({ _id: comment.parentId }, { $inc: { replyCount: -1 } }, { session });
+        await Comment.updateOne(
+          { _id: comment.parentId },
+          { $inc: { replyCount: -1 } },
+          { session },
+        );
       } else {
-        const modelToUpdate = TargetModelMap[comment.onModel as TargetModelName];
-        await modelToUpdate.updateOne({ _id: comment.targetId }, { $inc: { commentsCount: -(1 + comment.replyCount) } }, { session });
+        const modelToUpdate =
+          TargetModelMap[comment.onModel as TargetModelName];
+        await modelToUpdate.updateOne(
+          { _id: comment.targetId },
+          { $inc: { commentsCount: -(1 + comment.replyCount) } },
+          { session },
+        );
       }
       await Comment.deleteMany({ parentId: commentId }, { session });
       await comment.deleteOne({ session });
@@ -190,13 +231,28 @@ const CommentService: ICommentService = {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const existingLike = await Like.findOne({ user: userId, targetId: commentId, onModel: 'Comment' }, null, { session });
+      const existingLike = await Like.findOne(
+        { user: userId, targetId: commentId, onModel: 'Comment' },
+        null,
+        { session },
+      );
       if (existingLike) {
         await existingLike.deleteOne({ session });
-        await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: -1 } }, { session });
+        await Comment.findByIdAndUpdate(
+          commentId,
+          { $inc: { likesCount: -1 } },
+          { session },
+        );
       } else {
-        await Like.create([{ user: userId, targetId: commentId, onModel: 'Comment' }], { session });
-        await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: 1 } }, { session });
+        await Like.create(
+          [{ user: userId, targetId: commentId, onModel: 'Comment' }],
+          { session },
+        );
+        await Comment.findByIdAndUpdate(
+          commentId,
+          { $inc: { likesCount: 1 } },
+          { session },
+        );
       }
       await session.commitTransaction();
       return this.getCommentById(commentId);
@@ -213,7 +269,7 @@ const CommentService: ICommentService = {
       .populate({ path: 'user', select: 'username displayName avatarUrl _id' })
       .populate({ path: 'mentions', select: 'username _id' })
       .lean();
-    return comment as unknown as (ICommentLean | null); // SỬA Ở ĐÂY: Dùng ép kiểu kép
+    return comment as unknown as ICommentLean | null; // SỬA Ở ĐÂY: Dùng ép kiểu kép
   },
 };
 

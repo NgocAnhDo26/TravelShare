@@ -356,8 +356,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
         </div>
       </div>
 
-     
-
       <div
         ref={scrollContainerRef}
         className='flex-1 space-y-6 px-4 sm:px-6 py-4 overflow-y-auto'

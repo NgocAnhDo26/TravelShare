@@ -17,14 +17,14 @@ export interface IComment extends Document {
   likesCount: number;
   replyCount: number;
   mentions: Types.ObjectId[];
-  createdAt: Date;     
+  createdAt: Date;
   updatedAt: Date;
 }
 
 const commentSchema: Schema<IComment> = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    content: { type: String,  trim: true },
+    content: { type: String, trim: true },
     imageUrl: { type: String, trim: true, default: null },
     targetId: { type: Schema.Types.ObjectId, required: true },
     onModel: {

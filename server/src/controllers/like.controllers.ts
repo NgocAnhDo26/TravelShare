@@ -167,28 +167,43 @@ export const getLikedTargetsByUser = async (
   }
 };
 
-export const getCurrentUserLikesForTargets = async (req: Request, res: Response, next: NextFunction) => {
+export const getCurrentUserLikesForTargets = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = req.user as string;
     const { onModel, targetIds } = req.query;
 
-    if (!onModel || !targetIds || typeof targetIds !== 'string' || !['TravelPlan', 'Post', 'Comment'].includes(onModel as string)) {
-      return res.status(400).json({ error: 'onModel and targetIds (comma-separated string) are required.' });
+    if (
+      !onModel ||
+      !targetIds ||
+      typeof targetIds !== 'string' ||
+      !['TravelPlan', 'Post', 'Comment'].includes(onModel as string)
+    ) {
+      return res
+        .status(400)
+        .json({
+          error: 'onModel and targetIds (comma-separated string) are required.',
+        });
     }
 
-    const targetIdsArray = (targetIds as string).split(',').filter(id => Types.ObjectId.isValid(id));
-    
+    const targetIdsArray = (targetIds as string)
+      .split(',')
+      .filter((id) => Types.ObjectId.isValid(id));
+
     if (targetIdsArray.length === 0) {
-        return res.status(200).json([]);
+      return res.status(200).json([]);
     }
 
     const likes = await LikeService.getUserLikesForTargets({
-        userId: new Types.ObjectId(userId),
-        targetIds: targetIdsArray,
-        onModel: onModel as 'TravelPlan' | 'Post' | 'Comment'
+      userId: new Types.ObjectId(userId),
+      targetIds: targetIdsArray,
+      onModel: onModel as 'TravelPlan' | 'Post' | 'Comment',
     });
-    
-    const likedTargetIds = likes.map(like => like.targetId.toString());
+
+    const likedTargetIds = likes.map((like) => like.targetId.toString());
 
     res.status(200).json(likedTargetIds);
   } catch (err) {

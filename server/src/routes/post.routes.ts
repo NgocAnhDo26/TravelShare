@@ -41,7 +41,9 @@ const handleUploads = [
         })
         .catch((error) => {
           console.error('Error uploading cover image:', error);
-          return res.status(500).json({ error: 'Failed to upload cover image' });
+          return res
+            .status(500)
+            .json({ error: 'Failed to upload cover image' });
         });
     } else {
       next();

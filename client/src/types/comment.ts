@@ -1,6 +1,6 @@
 interface IMention {
-    _id: string;
-    username: string;
+  _id: string;
+  username: string;
 }
 export interface IComment {
   _id: string;
@@ -11,7 +11,7 @@ export interface IComment {
     avatarUrl?: string;
   };
   content: string;
-  imageUrl?: string; 
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
   parentId?: string;

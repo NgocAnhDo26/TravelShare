@@ -63,6 +63,11 @@ interface ITravelPlanController {
     res: Response,
     next: NextFunction,
   ): Promise<void>;
+  searchPlansForTagging(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
   remixTravelPlan(req: 
     Request, 
     res: Response, 
@@ -147,6 +152,60 @@ const TravelPlanController: ITravelPlanController = {
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         error: 'An unexpected error occurred while creating the travel plan.',
       });
+    }
+  },
+  /**
+   * Search travel plans for tagging in posts
+   * GET /api/plans/search-for-tagging?q=...
+   * Returns reduced list: _id, title, author.displayName
+   */
+  async searchPlansForTagging(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const userId = req.user as string;
+      const q = (req.query.q as string) || '';
+
+      if (typeof q !== 'string') {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          error: 'Invalid query',
+        });
+        return;
+      }
+
+      const searchRegex = q.trim() ? new RegExp(q.trim(), 'i') : null;
+
+      const TravelPlan = (await import('../models/travelPlan.model')).default;
+
+      const orConditions = searchRegex
+        ? [{ title: searchRegex }, { 'destination.name': searchRegex }]
+        : [{}];
+
+      const results = await TravelPlan.find({
+        $or: [
+          // All plans of current user (any privacy)
+          { author: userId, $or: orConditions },
+          // Public plans of others
+          { author: { $ne: userId }, privacy: 'public', $or: orConditions },
+        ],
+      })
+        .select('title author')
+        .populate('author', 'displayName')
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
+
+      const data = results.map((p: any) => ({
+        _id: p._id,
+        title: p.title,
+        author: { displayName: p.author?.displayName || 'Unknown' },
+      }));
+
+      res.status(HTTP_STATUS.OK).json({ success: true, data });
+    } catch (error) {
+      next(error);
     }
   },
 
