@@ -117,9 +117,11 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
       if (!planId) return;
       try {
         setRelatedLoading(true);
-        const { data } = await API.get(`/api/plans/${planId}/related-posts`);
-        setRelatedPosts(data);
+        const response = await API.get(`/plans/${planId}/related-posts`);
+        console.log('Related posts response:', response.data);
+        setRelatedPosts(response.data.data);
       } catch (error) {
+        console.error('Error fetching related posts:', error);
         setRelatedPosts([]);
       } finally {
         setRelatedLoading(false);
