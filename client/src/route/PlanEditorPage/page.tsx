@@ -13,6 +13,14 @@ import { getActualEditMode } from '@/utils/planPermissions';
 import type { Destination } from '@/types/destination';
 import { useLikeToggle } from '@/hooks/useLikeToggle';
 
+interface RelatedPost {
+  postId: string;
+  title: string;
+  author: string;
+  likesCount: number;
+  commentsCount: number;
+}
+
 function toDestination(raw: unknown): Destination | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const r = raw as Record<string, unknown>;
@@ -76,30 +84,18 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   const [planData, setPlanData] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actualEditMode, setActualEditMode] = useState(editMode);
+  const [relatedPosts, setRelatedPosts] = useState<RelatedPost[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
-    console.log('PlanEditorPage useEffect triggered:', {
-      planId,
-      user,
-      editMode,
-    });
-
     const fetchTripData = async () => {
       try {
         setIsLoading(true);
-        console.log('Fetching plan data for planId:', planId);
         const { data } = await API.get(`/plans/${planId}`);
-        console.log('Plan data received:', data);
         setPlanData(data);
 
         // Validate if user can edit this plan
         const canEdit = getActualEditMode(editMode, data, user);
-        console.log('Can edit check:', {
-          editMode,
-          canEdit,
-          user: user?.userId,
-          planAuthor: data.author,
-        });
 
         if (editMode && !canEdit) {
           toast.error('You can only edit your own plans');
@@ -110,7 +106,6 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           setActualEditMode(canEdit);
         }
       } catch (error) {
-        console.error('Error fetching plan:', error);
         toast.error('Failed to load plan');
         navigate('/itinerary');
       } finally {
@@ -118,10 +113,22 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
       }
     };
 
-    // Fetch data if we have a planId, regardless of user state
-    // The user can be null (not logged in) and we should still show public plans
+    const fetchRelatedPosts = async () => {
+      if (!planId) return;
+      try {
+        setRelatedLoading(true);
+        const { data } = await API.get(`/api/plans/${planId}/related-posts`);
+        setRelatedPosts(data);
+      } catch (error) {
+        setRelatedPosts([]);
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+
     if (planId) {
       fetchTripData();
+      fetchRelatedPosts();
     }
   }, [planId, user, editMode, navigate]);
 
@@ -301,26 +308,24 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           </div>
           <div className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-gradient-to-br p-2 rounded-lg">
-              <div className="rounded-lg p-4 shadow-sm hover:shadow transition flex flex-col bg-transparent">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-base">Exploring Đà Lạt: Top 5 Cafés</span>
-                  <span className="ml-2 text-xs text-gray-400">by Jane Doe</span>
-                </div>
-                <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                  <span>12 likes</span>
-                  <span>3 comments</span>
-                </div>
-              </div>
-              <div className="rounded-lg p-4 shadow-sm hover:shadow transition flex flex-col bg-transparent">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-base">Hiking Langbiang Mountain</span>
-                  <span className="ml-2 text-xs text-gray-400">by John Smith</span>
-                </div>
-                <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                  <span>8 likes</span>
-                  <span>1 comment</span>
-                </div>
-              </div>
+              {relatedLoading ? (
+                Array.from({ length: 3 }).map((_, idx) => (
+                  <Skeleton key={idx} className="h-20 w-full" />
+                ))
+              ) : (
+                relatedPosts.map((post) => (
+                  <div key={post.postId} className="rounded-lg p-4 shadow-sm hover:shadow transition flex flex-col bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-base">{post.title}</span>
+                      <span className="ml-2 text-xs text-gray-400">by {post.author}</span>
+                    </div>
+                    <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                      <span>{post.likesCount} likes</span>
+                      <span>{post.commentsCount} comments</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </Card>
