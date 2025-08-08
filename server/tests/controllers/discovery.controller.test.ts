@@ -30,6 +30,7 @@ describe('GET /api/discovery/discover', () => {
         avatarUrl: 'https://example.com/avatar1.jpg',
       },
       createdAt: '2024-01-01T10:00:00.000Z',
+      isLiked: false,
     },
     {
       _id: '507f1f77bcf86cd799439013',
@@ -43,6 +44,7 @@ describe('GET /api/discovery/discover', () => {
         avatarUrl: 'https://example.com/avatar2.jpg',
       },
       createdAt: '2024-01-01T11:00:00.000Z',
+      isLiked: false,
     },
     {
       _id: '507f1f77bcf86cd799439015',
@@ -56,6 +58,7 @@ describe('GET /api/discovery/discover', () => {
         avatarUrl: 'https://example.com/avatar3.jpg',
       },
       createdAt: '2024-01-01T12:00:00.000Z',
+      isLiked: false,
     },
   ];
 
