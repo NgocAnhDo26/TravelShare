@@ -382,11 +382,11 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                       }}
                     />
                   </div>
-                  <div className='px-4 mt-0 pb-2'>
+                  <div className='px-4 mt-0 pb-2 flex flex-col flex-1'>
                     <h3 className='text-lg font-bold mb-1 text-left'>
-                      {plan.title}
+                      {plan.title}  
                     </h3>
-                    <p className='text-gray-500 text-sm mb-2 text-left'>
+                    <p className='text-gray-500 text-sm mb-2 text-left flex-1'>
                       {plan.destination?.name}
                     </p>
                     <div className='flex justify-between items-center'>
@@ -433,7 +433,6 @@ interface UserProfileData {
   followingCount: number;
   followers: string[];
   following: string[];
-  tripPlans: Trip[];
   guides: string[];
   travelLog: string[];
   faqs: string[];
@@ -447,6 +446,7 @@ const UserProfilePage: React.FC = () => {
   const [userData, setUserData] = useState<UserProfileData | undefined>(
     undefined,
   );
+  const [tripPlans, setTripPlans] = useState<Trip[]>([]);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [followersDialogOpen, setFollowersDialogOpen] =
@@ -474,8 +474,24 @@ const UserProfilePage: React.FC = () => {
         toast.error('Failed to fetch user data');
       }
     };
+    const fetchTripPlansByAuthor = async () => {
+      if (!user && !userId) return;
+      const URL = userId
+        ? `/plans/author/${userId}`
+        : `/plans/author/${user?.userId}`;
+      try {
+        // Replace with actual API call
+        const response = await API.get(URL);
+        const data = response.data;
+        setTripPlans(data);
+      } catch (error) {
+        console.error('Error fetching trip plans:', error);
+        toast.error('Failed to fetch trip plans');
+      }
+    } 
 
     fetchUserData();
+    fetchTripPlansByAuthor();
   }, [user, userId]);
 
   // Check if current user is following the profile user
@@ -626,7 +642,7 @@ const UserProfilePage: React.FC = () => {
             ]}
           />
           <TabsSection
-            tripPlans={userData.tripPlans || []}
+            tripPlans={tripPlans || []}
             guidesCount={0}
             isMyProfile={!userId}
           />

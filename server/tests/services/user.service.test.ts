@@ -110,7 +110,6 @@ describe('UserService', () => {
       expect(mockedUser.findById).toHaveBeenCalledWith(userId);
       expect(result).toEqual({
         ...userProfile,
-        tripPlans: [],
       });
     });
 

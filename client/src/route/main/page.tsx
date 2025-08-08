@@ -16,16 +16,16 @@ const MainPage: React.FC = () => {
     navigate('/plans/create');
   };
 
+  const handleCreatePost = () => {
+    navigate('/posts/create');
+  };
+
   const handleLogin = () => {
     navigate('/login');
   };
 
   const handleRegister = () => {
     navigate('/register');
-  };
-
-  const handleCreatePost = () => {
-    navigate('/post/create');
   };
 
   if (isLoading) {
