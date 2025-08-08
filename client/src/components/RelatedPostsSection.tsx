@@ -25,7 +25,7 @@ const RelatedPostsSection: React.FC<RelatedPostsSectionProps> = ({
   return (
     <Card className="mt-8">
       <div className="p-4 border-b">
-        <h2 className="text-2xl font-bold text-left mb-4">Related Posts</h2>
+        <h2 className="text-2xl font-bold text-left mb-4 ml-6 pl-4">Related Posts</h2>
       </div>
       <div className="p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-gradient-to-br p-2 rounded-lg">
@@ -41,7 +41,7 @@ const RelatedPostsSection: React.FC<RelatedPostsSectionProps> = ({
             relatedPosts.map((post) => (
               <div
                 key={post.postId}
-                className="rounded-lg p-4 shadow-sm hover:shadow-lg hover:bg-gray-50 transition cursor-pointer flex flex-col bg-transparent"
+                className="rounded-lg p-4 shadow-sm hover:shadow-lg hover:bg-gray-50 transition cursor-pointer flex flex-col bg-transparent border border-gray-200"
                 onClick={() => navigate(`/posts/${post.postId}`)}
                 tabIndex={0}
                 onKeyDown={e => {
