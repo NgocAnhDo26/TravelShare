@@ -328,13 +328,13 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                 <Card
                   key={plan._id}
                   className='relative p-0 overflow-hidden group gap-0 cursor-pointer hover:scale-105 transition-transform duration-250'
-                  onClick={() => navigate(`/plans/${plan._id}`)}
                 >
                   <div className='relative w-full h-20'>
                     <img
                       src={plan.coverImageUrl}
                       alt={plan.title}
                       className='w-full h-20 object-cover'
+                      onClick={() => navigate(`/plans/${plan._id}`)}
                     />
                     {user &&
                       plan.author &&
@@ -382,7 +382,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                       }}
                     />
                   </div>
-                  <div className='px-4 mt-0 pb-2'>
+                  <div className='px-4 mt-0 pb-2' onClick={() => navigate(`/plans/${plan._id}`)}>
                     <h3 className='text-lg font-bold mb-1 text-left'>
                       {plan.title}
                     </h3>

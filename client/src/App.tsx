@@ -14,53 +14,58 @@ import './App.css';
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
+import { SocketProvider } from './context/SocketProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import FeedLayout from './components/SidebarLayout/FeedLayout';
 import PostEditor from './components/PostEditor';
 import DiscoverPage from './route/DiscoverPage/page';
 import PostDetailsPage from './route/PostDetailsPage/page';
+import NotificationPage from './route/notifications/page';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div>
-          <Toaster />
-        </div>
+        <SocketProvider>
+          <div>
+            <Toaster />
+          </div>
 
-        <Routes>
-          <Route path='/' element={<FeedLayout />}>
-            {/* Public routes */}
-            <Route index element={<MainPage />} />
-            <Route path='register' element={<RegisterPage />} />
-            <Route path='login' element={<LoginPage />} />
-            <Route path='forgot-password' element={<ForgotPasswordPage />} />
-            <Route path='reset-password' element={<ResetPasswordPage />} />
-            <Route
-              path='plans/:planId'
-              element={<PlanEditorPage editMode={false} />}
-            />
-            <Route path='/explore' element={<DiscoverPage />} />
-            <Route path='/search' element={<SearchPage />} />
-            <Route path='/posts/:postId' element={<PostDetailsPage />} />
-
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path='profile' element={<UserProfilePage />} />
-              <Route path='profile/:userId' element={<UserProfilePage />} />
-              <Route path='plans/create' element={<TripPlanningPage />} />
+          <Routes>
+            <Route path='/' element={<FeedLayout />}>
+              {/* Public routes */}
+              <Route index element={<MainPage />} />
+              <Route path='register' element={<RegisterPage />} />
+              <Route path='login' element={<LoginPage />} />
+              <Route path='forgot-password' element={<ForgotPasswordPage />} />
+              <Route path='reset-password' element={<ResetPasswordPage />} />
               <Route
-                path='plans/:planId/edit'
-                element={<PlanEditorPage editMode={true} />}
+                path='plans/:planId'
+                element={<PlanEditorPage editMode={false} />}
               />
-              <Route path='itinerary' element={<ItineraryPage />} />
-              <Route path='post-editor' element={<PostEditor />} />
-              <Route path='test' element={<PostEditor />} />
-            </Route>
+              <Route path='/explore' element={<DiscoverPage />} />
+              <Route path='/search' element={<SearchPage />} />
+              <Route path='/posts/:postId' element={<PostDetailsPage />} />
 
-            <Route path='*' element={<NotFound />} />
-          </Route>
-        </Routes>
+              {/* Protected routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path='profile' element={<UserProfilePage />} />
+                <Route path='profile/:userId' element={<UserProfilePage />} />
+                <Route path='plans/create' element={<TripPlanningPage />} />
+                <Route
+                  path='plans/:planId/edit'
+                  element={<PlanEditorPage editMode={true} />}
+                />
+                <Route path='notifications' element={<NotificationPage />} />
+                <Route path='itinerary' element={<ItineraryPage />} />
+                <Route path='post-editor' element={<PostEditor />} />
+                <Route path='test' element={<PostEditor />} />
+              </Route>
+
+              <Route path='*' element={<NotFound />} />
+            </Route>
+          </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

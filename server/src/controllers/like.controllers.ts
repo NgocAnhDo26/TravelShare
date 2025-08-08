@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { LikeService } from '../services/like.service';
 import { Types } from 'mongoose';
 import TravelPlan from '../models/travelPlan.model';
+import Post from '../models/post.model';
+import { NotificationService } from '../services/notification.service';
 
 /**
  * Like a target (TravelPlan or Post)
@@ -35,6 +37,35 @@ export const likeTarget = async (
       targetId: new Types.ObjectId(targetId),
       onModel: onModel as 'TravelPlan' | 'Post',
     });
+
+    // Create notification for the content owner
+    try {
+      let contentOwnerId: string | null = null;
+      
+      if (onModel === 'TravelPlan') {
+        const plan = await TravelPlan.findById(targetId).select('author');
+        contentOwnerId = plan?.author?.toString() || null;
+      } else if (onModel === 'Post') {
+        const post = await Post.findById(targetId).select('authorID');
+        contentOwnerId = post?.authorID || null;
+      }
+
+      // Only create notification if the content owner is different from the liker
+      if (contentOwnerId && contentOwnerId !== userId) {
+        const notificationType = onModel === 'TravelPlan' ? 'like_plan' : 'like_post';
+        const targetField = onModel === 'TravelPlan' ? { plan: targetId } : { post: targetId };
+        
+        await NotificationService.createNotification({
+          recipient: contentOwnerId,
+          actor: userId,
+          type: notificationType,
+          target: targetField
+        }, req.io);
+      }
+    } catch (notificationError) {
+      console.error('Failed to create like notification:', notificationError);
+      // Don't fail the like operation if notification creation fails
+    }
 
     res.status(200).json(result);
   } catch (err) {
