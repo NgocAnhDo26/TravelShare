@@ -114,7 +114,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     content,
     editable,
     onUpdate: ({ editor }) => {
-      onChange?.(editor.getHTML());
+      onChange?.(JSON.stringify(editor.getJSON()));
     },
   });
 
