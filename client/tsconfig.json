@@ -13,6 +13,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "module": "es2020",
     "moduleResolution": "bundler",
   }
 }
