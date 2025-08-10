@@ -11,8 +11,6 @@ type Privacy = 'public' | 'private';
 interface FormState {
   title: string;
   content: string;
-  coverImage?: File; // Can be a file object or a base64 string
-  images?: File[]; // Array of file objects
   privacy: Privacy;
 }
 
@@ -41,23 +39,6 @@ export default function PostEditor() {
   const coverImageRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<HTMLInputElement>(null);
 
-  // Updated validation function for rich text content
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!formState.title || formState.title.length < 2) {
-      newErrors.title = 'Title must be at least 2 characters.';
-    }
-
-    // Check if content is empty (accounting for HTML tags)
-    const textContent = formState.content.replace(/<[^>]*>/g, '').trim();
-    if (!formState.content || textContent.length < 10) {
-      newErrors.content = 'Content must be at least 10 characters.';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   // Existing handleInputChange function remains unchanged
   const handleInputChange = (field: keyof FormState, value: string) => {
@@ -75,56 +56,118 @@ export default function PostEditor() {
     }
   };
 
-  // Updated submit handler with logging statements removed
+  // Improved submit handler with better error messages
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      try {
-        // Create a FormData object for multipart/form-data submission
-        const formData = new FormData();
-
-        // Add text fields
-        formData.append('title', formState.title);
-        formData.append('content', formState.content);
-        formData.append('privacy', formState.privacy);
-        
-        // Add the cover image file if it exists
-        if (coverImageFile) {
-          formData.append('coverImage', coverImageFile);
-        }
-        
-        // Add all image files if they exist
-        if (imageFiles && imageFiles.length > 0) {
-          imageFiles.forEach(file => {
-            formData.append('images', file);
-          });
-        }
-
-        API.post('/posts/create', formData)
-          .then((response) => {
-            toast.success('Post created successfully!');
-            console.log('Post created:', response.data);
-            // Reset all form state
-            setFormState({
-              title: '',
-              content: '<p></p>', // Reset to empty HTML paragraph
-              privacy: 'public',
-            });
-            setCoverImagePreview(null);
-            setImagesPreviews([]);
-            setCoverImageFile(null);
-            setImageFiles([]);
-          })
-          .catch((error) => {
-            toast.error('Failed to create post. Please try again.');
-            console.error('Error creating post:', error);
-          });
-      } catch (error) {
-        toast.error('Something went wrong. Please try again.');
-        console.error('Error in handleSubmit:', error);
+    
+    // Create validation errors directly to avoid state timing issues
+    const validationErrors: FormErrors = {};
+    
+    // Check title length
+    if (!formState.title) {
+      validationErrors.title = 'Please enter a title for your post.';
+    } else if (formState.title.length < 5) {
+      validationErrors.title = 'Title must be at least 5 characters long.';
+    }
+    
+    // Check content length - strip HTML tags for accurate character count
+    const textContent = formState.content.replace(/<[^>]*>/g, '').trim();
+    if (!textContent) {
+      validationErrors.content = 'Please add some content to your post.';
+    } else if (textContent.length < 10) {
+      validationErrors.content = 'Content must be at least 10 characters long.';
+    }
+    
+    // Update the errors state
+    setErrors(validationErrors);
+    
+    // Show toast notifications for validation errors
+    if (Object.keys(validationErrors).length > 0) {
+      // If multiple errors, show a summary toast
+      if (validationErrors.title && validationErrors.content) {
+        toast.error('Please fix the errors in your post before publishing.', {
+          duration: 4000,
+        });
+      } 
+      // Show specific toasts for each type of error
+      else if (validationErrors.title) {
+        toast.error(validationErrors.title, {
+          icon: '📝',
+          duration: 3000,
+        });
+      } 
+      else if (validationErrors.content) {
+        toast.error(validationErrors.content, {
+          icon: '📄',
+          duration: 3000,
+        });
       }
-    } else {
-      toast.error('Please fix the errors in the form.');
+      return; // Stop form submission
+    }
+    
+    try {
+      // Create a FormData object for multipart/form-data submission
+      const formData = new FormData();
+
+      // Add text fields
+      formData.append('title', formState.title);
+      formData.append('content', formState.content);
+      formData.append('privacy', formState.privacy);
+      
+      // Add the cover image file if it exists
+      if (coverImageFile) {
+        formData.append('coverImage', coverImageFile);
+      }
+      
+      // Add all image files if they exist
+      if (imageFiles && imageFiles.length > 0) {
+        imageFiles.forEach(file => {
+          formData.append('images', file);
+        });
+      }
+
+      // Show a loading toast while submitting
+      const loadingToast = toast.loading('Creating your post...');
+
+      API.post('/posts/create', formData)
+        .then((response) => {
+          // Dismiss the loading toast
+          toast.dismiss(loadingToast);
+          toast.success('Post created successfully! 🎉', {
+            duration: 4000,
+            icon: '✅'
+          });
+          console.log('Post created:', response.data);
+          // Reset all form state
+          setFormState({
+            title: '',
+            content: '<p></p>', // Reset to empty HTML paragraph
+            privacy: 'public',
+          });
+          setCoverImagePreview(null);
+          setImagesPreviews([]);
+          setCoverImageFile(null);
+          setImageFiles([]);
+        })
+        .catch((error) => {
+          // Dismiss the loading toast
+          toast.dismiss(loadingToast);
+          if (error.response?.data?.error) {
+            toast.error(`Error: ${error.response.data.error}`, {
+              duration: 4000,
+            });
+          } else {
+            toast.error('Failed to create post. Please try again.', {
+              duration: 4000,
+            });
+          }
+          console.error('Error creating post:', error);
+        });
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.', {
+        duration: 4000,
+      });
+      console.error('Error in handleSubmit:', error);
     }
   };
 
@@ -140,7 +183,6 @@ export default function PostEditor() {
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setCoverImagePreview(result);
-        // Don't set file in formState, we already have coverImageFile state
       };
       reader.readAsDataURL(file);
     }
@@ -156,16 +198,20 @@ export default function PostEditor() {
 
       // Generate previews as before
       const newPreviews: string[] = [];
+      
+      // Keep track of loaded images to update state only once all are loaded
+      let loadedCount = 0;
+      
       filesArray.forEach((file) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const result = e.target?.result as string;
           newPreviews.push(result);
+          loadedCount++;
           
           // When all previews are ready, update the state
-          if (newPreviews.length === filesArray.length) {
-            setImagesPreviews(newPreviews);
-            // Don't set files in formState, we already have imageFiles state
+          if (loadedCount === filesArray.length) {
+            setImagesPreviews([...newPreviews]);
           }
         };
         reader.readAsDataURL(file);
@@ -177,28 +223,15 @@ export default function PostEditor() {
   const handleRemoveCoverImage = () => {
     setCoverImagePreview(null);
     setCoverImageFile(null);
-    setFormState({
-      ...formState,
-      coverImage: undefined,
-    });
   };
 
-  // Updated to remove both file and preview
+  // Fixed to remove image from both previews and files arrays
   const handleRemoveImage = (indexToRemove: number) => {
     // Remove from previews
     const updatedPreviews = imagesPreviews.filter(
       (_, index) => index !== indexToRemove,
     );
     setImagesPreviews(updatedPreviews);
-
-    // Remove from form state
-    const updatedImages = formState.images?.filter(
-      (_, index) => index !== indexToRemove,
-    );
-    setFormState({
-      ...formState,
-      images: updatedImages,
-    });
 
     // Remove from file objects array
     const updatedFiles = imageFiles.filter(
@@ -410,7 +443,7 @@ export default function PostEditor() {
           type='submit'
           className='w-full bg-black hover:bg-gray-800 text-white'
         >
-          Submit Post
+          Publish Post
         </Button>
       </form>
     </div>
