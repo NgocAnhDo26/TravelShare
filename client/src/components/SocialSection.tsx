@@ -11,6 +11,7 @@ import CommentSkeleton from './CommentSkeleton';
 import type { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
 import { Textarea } from '@/components/ui/textarea';
+import LikerListDialog from '@/components/LikerListDialog';
 
 interface AuthUser {
   _id: string;
@@ -52,6 +53,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
   const [hiddenCommentIds, setHiddenCommentIds] = useState<Set<string>>(
     new Set(),
   );
+  const [isLikerDialogOpen, setIsLikerDialogOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -348,7 +350,14 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             <span className='font-medium'>{isLiked ? 'Liked' : 'Like'}</span>
           </Button>
           <Separator orientation='vertical' className='h-6' />
-          <span className='text-sm text-gray-500'>{likesCount} likes</span>
+          <button
+              onClick={() => likesCount > 0 && setIsLikerDialogOpen(true)}
+              disabled={likesCount === 0}
+              className='text-sm text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-md disabled:cursor-not-allowed disabled:hover:text-gray-500'
+              aria-label='View users who liked this'
+            >
+              {likesCount} likes
+            </button>
           <span className='text-sm text-gray-500'>•</span>
           <span className='text-sm text-gray-500'>
             {commentsCount} comments
@@ -476,6 +485,12 @@ const SocialSection: React.FC<SocialSectionProps> = ({
           )}
         </form>
       </div>
+      <LikerListDialog
+        isOpen={isLikerDialogOpen}
+        onClose={() => setIsLikerDialogOpen(false)}
+        targetId={targetId}
+        onModel={onModel}
+      />
     </Card>
   );
 };
