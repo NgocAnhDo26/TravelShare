@@ -17,7 +17,7 @@ const MainPage: React.FC = () => {
   };
 
   const handleCreatePost = () => {
-    navigate('/post-editor');
+    navigate('/posts/create');
   };
 
   const handleLogin = () => {
