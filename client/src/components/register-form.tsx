@@ -33,7 +33,7 @@ export function RegisterForm({
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const profilePhotoRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser  } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -42,38 +42,30 @@ export function RegisterForm({
     }
   }, [user, navigate]);
 
-  const handleGoogleRegister = useGoogleLogin({
+  const handleGoogleAuth = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      const loadingToast = toast.loading('Registering with Google...');
+      const loadingToast = toast.loading('Continuing with Google...');
       try {
-        const response = await API.post('/auth/google-register', {
+        const response = await API.post('/auth/google-auth', {
           token: tokenResponse.access_token,
         });
         toast.dismiss(loadingToast);
+        toast.success(response.data.message || 'Authentication successful!');
+        
+        await refreshUser(); 
+        navigate('/');
 
-        toast.success(response.data.message || 'Registration successful!');
-        navigate('/login');
       } catch (error: unknown) {
         toast.dismiss(loadingToast);
-
-        const axiosError = error as {
-          response?: { status?: number; data?: { error?: string } };
-        };
-        if (axiosError?.response?.status === 409) {
-          toast.error(
-            'This Google account is already registered. Please log in instead.',
-          );
-          navigate('/login');
-        } else {
-          const errorMessage =
-            axiosError?.response?.data?.error ||
-            'Google registration failed. Please try again.';
-          toast.error(errorMessage);
-        }
+        const axiosError = error as { response?: { data?: { error?: string } } };
+        const errorMessage =
+          axiosError?.response?.data?.error ||
+          'Google authentication failed. Please try again.';
+        toast.error(errorMessage);
       }
     },
     onError: () => {
-      toast.error('Google registration failed. Please try again.');
+      toast.error('Google authentication failed. Please try again.');
     },
   });
 
@@ -278,9 +270,9 @@ export function RegisterForm({
                   variant='outline'
                   className='w-full'
                   type='button'
-                  onClick={() => handleGoogleRegister()}
+                  onClick={() => handleGoogleAuth()}
                 >
-                  Sign up with Google
+                  Continue with Google
                 </Button>
               </div>
             </div>

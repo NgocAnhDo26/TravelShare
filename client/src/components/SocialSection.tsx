@@ -327,7 +327,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
     c.filter((c) => !hiddenCommentIds.has(c._id));
 
   return (
-    <Card className='flex flex-col mt-4 py-0 border shadow-sm h-[100vh]'>
+    <Card className='flex flex-col mt-4 py-0 border shadow-sm max-h-[100vh]'>
       <div className='flex-shrink-0 px-4 py-3 border-b'>
         <div className='flex items-center gap-4 mx-4'>
           <Button

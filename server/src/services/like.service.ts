@@ -1,7 +1,7 @@
 import { Like, ILike } from '../models/like.model';
 import TravelPlan from '../models/travelPlan.model';
 import { Types } from 'mongoose';
-
+import Follow from '../models/follow.model';
 type OnModel = 'Post' | 'TravelPlan' | 'Comment';
 
 export interface LikeFilter {
@@ -82,31 +82,63 @@ export class LikeService {
     onModel,
     page = 1,
     limit = 20,
+    currentUserId, 
   }: {
     targetId: Types.ObjectId;
     onModel: OnModel;
     page?: number;
     limit?: number;
+    currentUserId?: Types.ObjectId; 
   }) {
+    const matchQuery = { targetId: new Types.ObjectId(targetId), onModel };
     const skip = (page - 1) * limit;
-    const likes = await Like.aggregate([
-      { $match: { targetId: new Types.ObjectId(targetId), onModel } },
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'userDetails',
+
+    const [likers, totalLikes] = await Promise.all([
+      Like.aggregate([
+        { $match: matchQuery },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            as: 'userDetails',
+          },
         },
-      },
-      { $unwind: '$userDetails' },
-      { $replaceRoot: { newRoot: '$userDetails' } },
-      { $project: { _id: 1, username: 1, displayName: 1, avatarUrl: 1 } },
+        { $unwind: '$userDetails' },
+        { $replaceRoot: { newRoot: '$userDetails' } },
+        { $project: { _id: 1, username: 1, displayName: 1, avatarUrl: 1 } },
+      ]),
+      Like.countDocuments(matchQuery),
     ]);
-    return likes;
+
+    if (!likers.length) {
+      return { users: [], totalPages: 0, currentPage: page };
+    }
+
+    let followingSet = new Set();
+    if (currentUserId) {
+      const likerIds = likers.map(l => l._id);
+      const followingRelations = await Follow.find({
+        follower: currentUserId,
+        following: { $in: likerIds },
+      }).select('following').lean();
+      
+      followingSet = new Set(followingRelations.map(f => f.following.toString()));
+    }
+
+    const usersWithFollowStatus = likers.map(user => ({
+      ...user,
+      isFollowing: currentUserId ? followingSet.has(user._id.toString()) : false,
+    }));
+
+    return {
+      users: usersWithFollowStatus,
+      totalPages: Math.ceil(totalLikes / limit),
+      currentPage: page,
+    };
   }
 
   /**
