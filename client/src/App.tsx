@@ -48,20 +48,20 @@ function App() {
               <Route path='/posts/:postId' element={<PostDetailsPage />} />
               <Route path='profile/:userId' element={<UserProfilePage />} />
 
-              {/* Protected routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path='profile/:userId' element={<UserProfilePage />} />
-                <Route path='plans/create' element={<TripPlanningPage />} />
-                <Route path='profile' element={<UserProfilePage />} />
-                <Route
-                  path='plans/:planId/edit'
-                  element={<PlanEditorPage editMode={true} />}
-                />
-                <Route path='itinerary' element={<ItineraryPage />} />
-                <Route path='post-editor' element={<PostEditor />} />
-                <Route path='test' element={<PostEditor />} />
-                <Route path='bookmarks' element={<BookmarksPage />} />
-              </Route>
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path='profile/:userId' element={<UserProfilePage />} />
+              <Route path='plans/create' element={<TripPlanningPage />} />
+              <Route path='profile' element={<UserProfilePage />} />
+              <Route
+                path='plans/:planId/edit'
+                element={<PlanEditorPage editMode={true} />}
+              />
+              <Route path='itinerary' element={<ItineraryPage />} />
+              <Route path='/posts/create' element={<PostEditor />} />
+              <Route path='test' element={<PostEditor />} />
+              <Route path='bookmarks' element={<BookmarksPage />} />
+            </Route>
 
               <Route path='*' element={<NotFound />} />
             </Route>

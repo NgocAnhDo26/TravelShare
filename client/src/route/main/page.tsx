@@ -16,6 +16,10 @@ const MainPage: React.FC = () => {
     navigate('/plans/create');
   };
 
+  const handleCreatePost = () => {
+    navigate('/posts/create');
+  };
+
   const handleLogin = () => {
     navigate('/login');
   };
@@ -55,7 +59,10 @@ const MainPage: React.FC = () => {
 
         {user ? (
           <>
-            <CreatePlanSection onCreatePlan={handleCreatePlan} />
+            <CreatePlanSection
+              onCreatePlan={handleCreatePlan}
+              onCreatePost={handleCreatePost}
+            />
             <FeedSection />
           </>
         ) : (
