@@ -8,6 +8,7 @@ import {
   Share2,
   MapPin,
   Bookmark,
+  Loader2,
   Zap,
 } from 'lucide-react';
 import { Badge } from './ui/badge';
@@ -21,6 +22,7 @@ import {
 import type { IPlan } from '@/types/trip';
 import timeAgo from '@/utils/time';
 import { useLikeToggle } from '@/hooks/useLikeToggle';
+import { useBookmarks } from '@/context/BookmarkContext';
 import toast from 'react-hot-toast';
 
 interface FeedPlanProps {
@@ -51,6 +53,14 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
     onModel: 'TravelPlan',
     apiPath: '/plans',
   });
+
+  const { bookmarkedIds, toggleBookmark, isLoading: isBookmarkLoading } = useBookmarks();
+  const isBookmarked = bookmarkedIds.has(plan._id);
+
+  const handleToggleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleBookmark(plan._id, 'TravelPlan');
+  };
 
   const handleShare = async (e: React.MouseEvent) => {
     // Prevent the card's onClick from firing
@@ -183,12 +193,22 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className='text-slate-600 hover:text-yellow-500 transition-colors duration-200 cursor-pointer'>
-                  <Bookmark className='w-5 h-5 hover:scale-110 transition-transform duration-200' />
+                {/* UPDATED BOOKMARK BUTTON */}
+                <button
+                  onClick={handleToggleBookmark}
+                  onMouseDown={(e) => e.stopPropagation()}
+                   disabled={isBookmarkLoading}
+                  className='text-slate-600 hover:text-yellow-500 transition-colors duration-200 cursor-pointer'
+                >
+                    {isBookmarkLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Bookmark className={`w-5 h-5 hover:scale-110 transition-transform duration-200 ${isBookmarked ? 'fill-yellow-400 text-yellow-500' : 'fill-transparent'}`} />
+                  )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Save it</p>
+                <p>{isBookmarked ? 'Remove from saved' : 'Save it'}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
