@@ -153,10 +153,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   return (
     <div className='flex items-start gap-3'>
-      <Avatar className='w-9 h-9'>
-        <AvatarImage src={avatarUrl} alt={name} />
-        <AvatarFallback>{fallback}</AvatarFallback>
-      </Avatar>
+      <Link to={`/profile/${userId}`}>
+        <Avatar className='w-9 h-9'>
+          <AvatarImage src={avatarUrl} alt={name} />
+          <AvatarFallback>{fallback}</AvatarFallback>
+        </Avatar>
+      </Link>
       <div className='flex-1 group'>
         {isEditing ? (
           <div className='flex flex-col items-end gap-2 w-full'>

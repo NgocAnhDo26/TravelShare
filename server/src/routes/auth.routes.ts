@@ -14,7 +14,6 @@ authRouter.post('/verify-token', authController.verifyToken);
 authRouter.post('/forgot-password', authController.forgotPassword);
 authRouter.post('/reset-password', authController.resetPassword);
 authRouter.post('/logout', authController.logout);
-authRouter.post('/google-login', authController.googleLogin);
-authRouter.post('/google-register', authController.googleRegister);
+authRouter.post('/google-auth', authController.googleAuth);
 
 export default authRouter;

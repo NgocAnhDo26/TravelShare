@@ -122,22 +122,25 @@ const CommentController = {
 
   getCommentLikers: asyncHandler(async (req: Request, res: Response) => {
     const { commentId } = req.params;
+    const currentUserId = req.user as string | undefined; 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (!Types.ObjectId.isValid(commentId)) {
       return res.status(400).json({ message: 'Invalid commentId.' });
+      return res.status(400).json({ message: 'Invalid commentId.' });
     }
-
-    const users = await LikeService.getUsersWhoLiked({
+    
+    const result = await LikeService.getUsersWhoLiked({
       targetId: new Types.ObjectId(commentId),
       onModel: 'Comment',
       page,
       limit,
+      currentUserId: currentUserId ? new Types.ObjectId(currentUserId) : undefined,
     });
 
-    res.status(200).json({ users });
-  }),
+    res.status(200).json(result);
+  })
 };
 
 export default CommentController;
