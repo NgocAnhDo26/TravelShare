@@ -46,8 +46,8 @@ export const likeTarget = async (
         const plan = await TravelPlan.findById(targetId).select('author');
         contentOwnerId = plan?.author?.toString() || null;
       } else if (onModel === 'Post') {
-        const post = await Post.findById(targetId).select('authorID');
-        contentOwnerId = post?.authorID || null;
+        const post = await Post.findById(targetId).select('author');
+        contentOwnerId = post?.author?.toString() || null;
       }
 
       // Only create notification if the content owner is different from the liker
