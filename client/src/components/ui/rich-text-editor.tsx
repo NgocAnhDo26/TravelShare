@@ -70,6 +70,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isColorPaletteOpen, setIsColorPaletteOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
+  const [, forceUpdate] = useState(0);
+
+  // Function to trigger re-render
+  const triggerReRender = () => forceUpdate((prev) => prev + 1);
 
   const colors = [
     '#000000',
@@ -140,6 +144,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
     },
+    // Ensure immediate updates for marks and selection changes
+    onSelectionUpdate: () => {
+      // This callback ensures the component re-renders when selection changes
+      // which updates button active states without needing manual state management
+      triggerReRender();
+    },
   });
 
   const handleSetLink = () => {
@@ -173,26 +183,39 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     disabled?: boolean;
     children: React.ReactNode;
     tooltip: string;
-  }) => (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={isActive ? 'default' : 'ghost'}
-            size='sm'
-            onClick={onClick}
-            disabled={disabled}
-            className='h-8 w-8 p-0'
-          >
-            {children}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+  }) => {
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+      // Force re-render immediately after the command to update button states
+      setTimeout(() => triggerReRender(), 0);
+    };
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={isActive ? 'default' : 'ghost'}
+              size='sm'
+              onClick={handleClick}
+              disabled={disabled}
+              className='h-8 w-8 p-0'
+              type='button'
+              // Prevent losing selection before command applies (avoids needing double click)
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              {children}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   return (
     <div className={cn('border rounded-lg', className)}>
@@ -302,6 +325,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 variant={editor.isActive('link') ? 'default' : 'ghost'}
                 size='sm'
                 className='h-8 w-8 p-0'
+                type='button'
+                onMouseDown={(e) => e.preventDefault()}
               >
                 <LinkIcon className='h-4 w-4' />
               </Button>
@@ -341,7 +366,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             onOpenChange={setIsColorPaletteOpen}
           >
             <DialogTrigger asChild>
-              <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
+              <Button
+                variant='ghost'
+                size='sm'
+                className='h-8 w-8 p-0'
+                type='button'
+                onMouseDown={(e) => e.preventDefault()}
+              >
                 <Palette className='h-4 w-4' />
               </Button>
             </DialogTrigger>
@@ -403,7 +434,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <EditorContent
         editor={editor}
         className={cn(
-          'prose prose-sm max-w-none p-4 focus:outline-none',
+          'prose prose-sm max-w-none p-4',
+          'focus:outline-none focus:ring-0 focus-visible:ring-0',
+          '[&>*]:focus:outline-none [&>*]:focus:ring-0 [&>*]:focus-visible:ring-0',
+          '[&_*]:focus:outline-none [&_*]:focus:ring-0 [&_*]:focus-visible:ring-0',
           'prose-headings:font-semibold prose-p:my-2',
           'prose-ul:my-2 prose-ul:list-disc prose-ul:list-outside prose-ul:ml-4',
           'prose-ol:my-2 prose-ol:list-decimal prose-ol:list-outside prose-ol:ml-4',

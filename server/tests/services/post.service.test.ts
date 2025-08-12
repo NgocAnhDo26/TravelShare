@@ -32,7 +32,11 @@ describe('PostService.createPost (SOC-06)', () => {
   it('creates post and converts author and relatedPlan to ObjectId', async () => {
     const { req, res } = mockReqRes();
 
-    const savedInstance = { ...req.body, _id: new Types.ObjectId(), save: vi.fn().mockResolvedValue(null) } as any;
+    const savedInstance = {
+      ...req.body,
+      _id: new Types.ObjectId(),
+      save: vi.fn().mockResolvedValue(null),
+    } as any;
 
     mockPostCtor.mockImplementation((doc: any) => {
       // Expect doc fields to be ObjectId
@@ -47,7 +51,10 @@ describe('PostService.createPost (SOC-06)', () => {
     expect(savedInstance.save).toHaveBeenCalledTimes(1); // save called once
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'Post created successfully', data: expect.any(Object) }),
+      expect.objectContaining({
+        message: 'Post created successfully',
+        data: expect.any(Object),
+      }),
     );
   });
 

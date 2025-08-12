@@ -182,11 +182,9 @@ export const getCurrentUserLikesForTargets = async (
       typeof targetIds !== 'string' ||
       !['TravelPlan', 'Post', 'Comment'].includes(onModel as string)
     ) {
-      return res
-        .status(400)
-        .json({
-          error: 'onModel and targetIds (comma-separated string) are required.',
-        });
+      return res.status(400).json({
+        error: 'onModel and targetIds (comma-separated string) are required.',
+      });
     }
 
     const targetIdsArray = (targetIds as string)

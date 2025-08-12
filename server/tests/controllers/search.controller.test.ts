@@ -14,7 +14,10 @@ describe('Search Controller (DISC-03)', () => {
   describe('GET /api/search', () => {
     it('returns 400 when query is missing', async () => {
       const res = await request(app).get('/api/search').expect(400);
-      expect(res.body).toEqual({ success: false, message: 'Search query is required' });
+      expect(res.body).toEqual({
+        success: false,
+        message: 'Search query is required',
+      });
       expect(mockedSearchService.searchAll).not.toHaveBeenCalled();
     });
 
@@ -32,7 +35,9 @@ describe('Search Controller (DISC-03)', () => {
       const r3 = await request(app)
         .get('/api/search?q=paris&type=unknown')
         .expect(400);
-      expect(r3.body.message).toBe('Type must be one of: all, plans, posts, users');
+      expect(r3.body.message).toBe(
+        'Type must be one of: all, plans, posts, users',
+      );
     });
 
     it('aggregates results and computes pagination for type=all', async () => {
@@ -69,7 +74,12 @@ describe('Search Controller (DISC-03)', () => {
 
     it('uses totals of selected type for pagination', async () => {
       mockedSearchService.searchAll.mockResolvedValue({
-        plans: [], posts: [], users: [], totalPlans: 7, totalPosts: 0, totalUsers: 0,
+        plans: [],
+        posts: [],
+        users: [],
+        totalPlans: 7,
+        totalPosts: 0,
+        totalUsers: 0,
       } as any);
 
       const res = await request(app)
@@ -105,7 +115,10 @@ describe('Search Controller (DISC-03)', () => {
 
       expect(res.body.success).toBe(true);
       expect(res.body.data.plans[0].type).toBe('plan');
-      expect(mockedSearchService.getSearchSuggestions).toHaveBeenCalledWith('par', 5);
+      expect(mockedSearchService.getSearchSuggestions).toHaveBeenCalledWith(
+        'par',
+        5,
+      );
     });
   });
 
@@ -116,36 +129,58 @@ describe('Search Controller (DISC-03)', () => {
     });
 
     it('returns plans and pagination', async () => {
-      mockedSearchService.searchPlans.mockResolvedValue({ plans: [{ _id: 'p1' }], total: 6 } as any);
+      mockedSearchService.searchPlans.mockResolvedValue({
+        plans: [{ _id: 'p1' }],
+        total: 6,
+      } as any);
       const res = await request(app)
         .get('/api/search/plans?q=paris&page=2&limit=2')
         .expect(200);
 
-      expect(mockedSearchService.searchPlans).toHaveBeenCalledWith('paris', 2, 2);
+      expect(mockedSearchService.searchPlans).toHaveBeenCalledWith(
+        'paris',
+        2,
+        2,
+      );
       expect(res.body.data.pagination.totalPages).toBe(3);
     });
   });
 
   describe('GET /api/search/posts', () => {
     it('returns posts and pagination', async () => {
-      mockedSearchService.searchPosts.mockResolvedValue({ posts: [{ _id: 'po1' }], total: 3 } as any);
+      mockedSearchService.searchPosts.mockResolvedValue({
+        posts: [{ _id: 'po1' }],
+        total: 3,
+      } as any);
       const res = await request(app)
         .get('/api/search/posts?q=paris&page=1&limit=2')
         .expect(200);
 
-      expect(mockedSearchService.searchPosts).toHaveBeenCalledWith('paris', 0, 2);
+      expect(mockedSearchService.searchPosts).toHaveBeenCalledWith(
+        'paris',
+        0,
+        2,
+      );
       expect(res.body.data.pagination.totalPages).toBe(2);
     });
   });
 
   describe('GET /api/search/users', () => {
     it('returns users and pagination', async () => {
-      mockedSearchService.searchUsers.mockResolvedValue({ users: [{ _id: 'u1' }], total: 1 } as any);
+      mockedSearchService.searchUsers.mockResolvedValue({
+        users: [{ _id: 'u1' }],
+        total: 1,
+      } as any);
       const res = await request(app)
         .get('/api/search/users?q=ann&page=1&limit=10')
         .expect(200);
 
-      expect(mockedSearchService.searchUsers).toHaveBeenCalledWith('ann', 0, 10, undefined);
+      expect(mockedSearchService.searchUsers).toHaveBeenCalledWith(
+        'ann',
+        0,
+        10,
+        undefined,
+      );
       expect(res.body.data.pagination.totalPages).toBe(1);
     });
   });

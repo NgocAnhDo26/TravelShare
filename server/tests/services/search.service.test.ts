@@ -47,7 +47,9 @@ describe('Search Service (DISC-03)', () => {
   });
 
   it('searchUsers returns users and total', async () => {
-    mockedUser.find.mockReturnValue(mockChain([{ _id: 'u1', username: 'ann' }]) as any);
+    mockedUser.find.mockReturnValue(
+      mockChain([{ _id: 'u1', username: 'ann' }]) as any,
+    );
     mockedUser.countDocuments.mockResolvedValue(1);
 
     const res = await SearchService.searchUsers('ann', 0, 10);
@@ -58,11 +60,22 @@ describe('Search Service (DISC-03)', () => {
 
   it('searchAll delegates to type-specific methods', async () => {
     const svc = SearchService as any;
-    const sp = vi.spyOn(svc, 'searchPlans').mockResolvedValue({ plans: [1], total: 1 });
-    const spo = vi.spyOn(svc, 'searchPosts').mockResolvedValue({ posts: [2], total: 2 });
-    const su = vi.spyOn(svc, 'searchUsers').mockResolvedValue({ users: [3], total: 3 });
+    const sp = vi
+      .spyOn(svc, 'searchPlans')
+      .mockResolvedValue({ plans: [1], total: 1 });
+    const spo = vi
+      .spyOn(svc, 'searchPosts')
+      .mockResolvedValue({ posts: [2], total: 2 });
+    const su = vi
+      .spyOn(svc, 'searchUsers')
+      .mockResolvedValue({ users: [3], total: 3 });
 
-    const res = await SearchService.searchAll({ query: 'x', page: 1, limit: 10, type: 'all' });
+    const res = await SearchService.searchAll({
+      query: 'x',
+      page: 1,
+      limit: 10,
+      type: 'all',
+    });
     expect(sp).toHaveBeenCalled();
     expect(spo).toHaveBeenCalled();
     expect(su).toHaveBeenCalled();

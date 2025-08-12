@@ -19,10 +19,14 @@ describe('Search Service suggestions (DISC-03)', () => {
 
   it('returns suggestions mapped to expected shape', async () => {
     (TravelPlan as any).find.mockReturnValue(
-      mockChain([{ _id: 'p1', title: 'Paris', destination: { name: 'Paris' } }]) as any,
+      mockChain([
+        { _id: 'p1', title: 'Paris', destination: { name: 'Paris' } },
+      ]) as any,
     );
     (User as any).find.mockReturnValue(
-      mockChain([{ _id: 'u1', username: 'ann', displayName: 'Ann', avatarUrl: 'a' }]) as any,
+      mockChain([
+        { _id: 'u1', username: 'ann', displayName: 'Ann', avatarUrl: 'a' },
+      ]) as any,
     );
     (Post as any).find.mockReturnValue(
       mockChain([{ _id: 'po1', title: 'Trip', content: 'content' }]) as any,
@@ -30,8 +34,24 @@ describe('Search Service suggestions (DISC-03)', () => {
 
     const res = await SearchService.getSearchSuggestions('pa', 5);
 
-    expect(res.plans[0]).toEqual({ id: 'p1', type: 'plan', title: 'Paris', subtitle: 'Paris' });
-    expect(res.users[0]).toEqual({ id: 'u1', type: 'user', title: 'Ann', subtitle: '@ann', avatarUrl: 'a' });
-    expect(res.posts[0]).toEqual({ id: 'po1', type: 'post', title: 'Trip', subtitle: 'content' });
+    expect(res.plans[0]).toEqual({
+      id: 'p1',
+      type: 'plan',
+      title: 'Paris',
+      subtitle: 'Paris',
+    });
+    expect(res.users[0]).toEqual({
+      id: 'u1',
+      type: 'user',
+      title: 'Ann',
+      subtitle: '@ann',
+      avatarUrl: 'a',
+    });
+    expect(res.posts[0]).toEqual({
+      id: 'po1',
+      type: 'post',
+      title: 'Trip',
+      subtitle: 'content',
+    });
   });
 });

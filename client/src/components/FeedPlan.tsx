@@ -21,7 +21,7 @@ import {
 import type { IPlan } from '@/types/trip';
 import timeAgo from '@/utils/time';
 import { useLikeToggle } from '@/hooks/useLikeToggle';
-import toast  from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface FeedPlanProps {
   plan: IPlan;
@@ -55,10 +55,10 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
   const handleShare = async (e: React.MouseEvent) => {
     // Prevent the card's onClick from firing
     e.stopPropagation();
-    
+
     // Construct the full URL
     const url = `${window.location.origin}/plans/${plan._id}`;
-    
+
     try {
       // Use the Clipboard API to copy the URL
       await navigator.clipboard.writeText(url);
