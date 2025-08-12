@@ -11,7 +11,7 @@ interface IPostController {
 const PostController: IPostController = {
   createPost: async (req: Request, res: Response) => {
     await PostService.createPost(req, res);
-  }
+  },
 
   // Placeholder methods for future implementation
   // getPost: async (req: Request, res: Response) => {},

@@ -33,7 +33,7 @@ describe('Bookmark Service', () => {
 
         testPost = await Post.create({
             title: 'Test Post for Bookmarking',
-            authorID: testUser._id,
+            author: testUser._id,
             content: 'This is a valid post content that is long enough.'
         });
     });
@@ -121,7 +121,7 @@ describe('Bookmark Service', () => {
         it('should correctly handle pagination', async () => {
             const anotherPost = await Post.create({ 
                 title: 'Another Post', 
-                authorID: testUser._id, 
+                author: testUser._id, 
                 content: 'This content is definitely long enough.'
             });
             await Bookmark.create({ user: testUser._id, targetId: anotherPost._id, onModel: 'Post' });

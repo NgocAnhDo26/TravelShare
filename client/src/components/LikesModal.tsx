@@ -5,10 +5,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import API from '@/utils/axiosInstance';
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ThumbsUp } from 'lucide-react';
@@ -30,7 +30,11 @@ interface LikesModalProps {
   onModel: 'Comment' | 'TravelPlan' | 'Post';
 }
 
-const LikesModal: React.FC<LikesModalProps> = ({ children, targetId, onModel }) => {
+const LikesModal: React.FC<LikesModalProps> = ({
+  children,
+  targetId,
+  onModel,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [likers, setLikers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);

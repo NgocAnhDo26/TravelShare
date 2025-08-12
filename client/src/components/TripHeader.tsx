@@ -303,7 +303,7 @@ const TripHeader: React.FC<TripHeaderProps> = ({
 
   const handleShare = async () => {
     const url = window.location.origin + '/plans/' + trip._id;
-    
+
     try {
       await navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard!');
@@ -611,8 +611,11 @@ const TripHeader: React.FC<TripHeaderProps> = ({
             ) : (
               <>
                 <Tooltip>
-                  <Button variant='ghost' onClick={handleShare}
-                  className=' text-slate-600 hover:text-green-500 transition-colors duration-200 group cursor-pointer'>
+                  <Button
+                    variant='ghost'
+                    onClick={handleShare}
+                    className=' text-slate-600 hover:text-green-500 transition-colors duration-200 group cursor-pointer'
+                  >
                     <Share2 />
                     Share
                   </Button>
@@ -641,7 +644,9 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                         transition: 'color 0.05s, fill 0.05s, filter 0.05s',
                       }}
                     />
-                    <span className='font-medium w-2 text-left'>{likesCount}</span>
+                    <span className='font-medium w-2 text-left'>
+                      {likesCount}
+                    </span>
                   </div>
                   <Button variant='ghost'>
                     <MessageCircle />

@@ -353,7 +353,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
           <button
               onClick={() => likesCount > 0 && setIsLikerDialogOpen(true)}
               disabled={likesCount === 0}
-              className='text-sm text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-md disabled:cursor-not-allowed disabled:hover:text-gray-500'
+              className='text-sm text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-md disabled:cursor-not-allowed disabled:hover:text-gray-500 cursor-pointer'
               aria-label='View users who liked this'
             >
               {likesCount} likes
@@ -364,8 +364,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
           </span>
         </div>
       </div>
-
-     
 
       <div
         ref={scrollContainerRef}
@@ -451,7 +449,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
                 type='button'
                 size='icon'
                 variant='ghost'
-                className='absolute right-1 top-2 h-8 w-8'
+                className='absolute right-1 top-1 h-8 w-8'
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isPosting || !currentUser}
               >

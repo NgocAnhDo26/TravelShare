@@ -384,7 +384,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                   </div>
                   <div className='px-4 mt-0 pb-2 flex flex-col flex-1'>
                     <h3 className='text-lg font-bold mb-1 text-left'>
-                      {plan.title}  
+                      {plan.title}
                     </h3>
                     <p className='text-gray-500 text-sm mb-2 text-left flex-1'>
                       {plan.destination?.name}
@@ -488,7 +488,7 @@ const UserProfilePage: React.FC = () => {
         console.error('Error fetching trip plans:', error);
         toast.error('Failed to fetch trip plans');
       }
-    } 
+    };
 
     fetchUserData();
     fetchTripPlansByAuthor();

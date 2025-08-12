@@ -8,7 +8,9 @@ import travelPlanRouter from './routes/travelPlan.routes';
 import cookieParser from 'cookie-parser';
 import postRouter from './routes/post.routes';
 import { logger, morganStream } from './utils/logger';
-import commentActionRouter, { createCommentRoutes } from './routes/comment.routes';
+import commentActionRouter, {
+  createCommentRoutes,
+} from './routes/comment.routes';
 import morgan from 'morgan';
 import locationRouter from './routes/location.routes';
 import { createLikeRoutes, likeRouter } from './routes/like.routes';
@@ -26,7 +28,7 @@ const corsOptions = {
 };
 const morganFormat =
   ':method :url :status :res[content-length] - :response-time ms';
-  
+
 app.use(cors(corsOptions));
 app.use(morgan(morganFormat, { stream: morganStream }));
 app.use(express.json());

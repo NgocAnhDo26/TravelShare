@@ -4,36 +4,51 @@ import CommentService from '../services/comment.service';
 import { LikeService } from '../services/like.service';
 
 // Define a type for the async handler function
-type AsyncHandler = (req: Request, res: Response, next: NextFunction) => Promise<Response | void>;
+type AsyncHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => Promise<Response | void>;
 
-const asyncHandler = (fn: AsyncHandler) => (req: Request, res: Response, next: NextFunction) => {
+const asyncHandler =
+  (fn: AsyncHandler) => (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
-};
+  };
 
 const CommentController = {
   getCommentsForTarget: asyncHandler(async (req: Request, res: Response) => {
     const { id: targetId } = req.params;
-    const { onModel } = (req as any);
+    const { onModel } = req as any;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 5;
 
-    const result = await CommentService.getCommentsForTarget(targetId, onModel, page, limit);
+    const result = await CommentService.getCommentsForTarget(
+      targetId,
+      onModel,
+      page,
+      limit,
+    );
     res.status(200).json(result);
   }),
 
   getRepliesForComment: asyncHandler(async (req: Request, res: Response) => {
-      const { commentId } = req.params;
-      const replies = await CommentService.getRepliesForComment(commentId);
-      res.status(200).json(replies);
+    const { commentId } = req.params;
+    const replies = await CommentService.getRepliesForComment(commentId);
+    res.status(200).json(replies);
   }),
 
   addComment: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user as string;
     const { id: targetId } = req.params;
-    const { onModel } = (req as any);
+    const { onModel } = req as any;
     const { content, parentId, fileUrl: imageUrl } = req.body;
 
-    const newComment = await CommentService.addComment(userId, targetId, onModel, { content, parentId, imageUrl });
+    const newComment = await CommentService.addComment(
+      userId,
+      targetId,
+      onModel,
+      { content, parentId, imageUrl },
+    );
     res.status(201).json(newComment);
   }),
 
@@ -42,14 +57,18 @@ const CommentController = {
     const { commentId } = req.params;
     const { content } = req.body;
 
-    const updatedComment = await CommentService.updateComment(commentId, userId, content);
+    const updatedComment = await CommentService.updateComment(
+      commentId,
+      userId,
+      content,
+    );
     res.status(200).json(updatedComment);
   }),
 
   deleteComment: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user as string;
     const { commentId } = req.params;
-    
+
     await CommentService.deleteComment(commentId, userId);
     res.status(200).json({ message: 'Comment deleted successfully.' });
   }),
@@ -59,13 +78,13 @@ const CommentController = {
     const { commentId } = req.params;
 
     if (!Types.ObjectId.isValid(commentId)) {
-        return res.status(400).json({ message: 'Invalid commentId.' });
+      return res.status(400).json({ message: 'Invalid commentId.' });
     }
-    
+
     const updatedComment = await CommentService.toggleLike(commentId, userId);
     res.status(200).json(updatedComment);
   }),
-  
+
   getCommentLikers: asyncHandler(async (req: Request, res: Response) => {
     const { commentId } = req.params;
     const currentUserId = req.user as string | undefined; 
@@ -73,6 +92,7 @@ const CommentController = {
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (!Types.ObjectId.isValid(commentId)) {
+      return res.status(400).json({ message: 'Invalid commentId.' });
       return res.status(400).json({ message: 'Invalid commentId.' });
     }
     

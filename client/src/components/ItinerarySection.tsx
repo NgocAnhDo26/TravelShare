@@ -411,7 +411,7 @@ const ItineraryItemCard: React.FC<{
   const handleDelete = () => onDelete(item);
 
   return (
-    <Card className='mt-4 p-4 rounded-lg text-left gap-2 border-l-4 border-l-indigo-500 shadow-lg hover:shadow-xl transition-shadow duration-200 bg-gradient-to-r from-white to-gray-50'>
+    <Card className='mt-4 p-4 rounded-lg text-left gap-2 border-l-4 border-l-indigo-500 shadow-sm hover:scale-[99%] hover:shadow-md transition-all duration-200 bg-gradient-to-r from-white to-gray-50'>
       <CardTitle className='text-lg font-semibold flex items-center justify-between'>
         <div className='flex items-center'>
           {/* Only show drag handle in edit mode */}
@@ -446,8 +446,8 @@ const ItineraryItemCard: React.FC<{
       </CardTitle>
 
       {item.location && (
-        <div className='flex items-center gap-1 mt-2'>
-          <MapPin className='w-4 h-4 mr-1 text-emerald-600' />
+        <div className='flex items-start gap-1 mt-2'>
+          <MapPin className='w-4 h-4 mr-1 mt-0.5 text-emerald-600' />
           <span className='font-bold text-emerald-700'>Location:</span>
           <span>
             {item.location.name && item.location.address ? (
