@@ -84,28 +84,28 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               {/* Each item is wrapped with a Link component */}
-              <Link to="/profile">
+              <Link to='/profile'>
                 <DropdownMenuItem>
-                  <UserCircle className="mr-2 h-4 w-4" />
+                  <UserCircle className='mr-2 h-4 w-4' />
                   <span>Account</span>
                 </DropdownMenuItem>
               </Link>
-              <Link to="/billing">
+              <Link to='/billing'>
                 <DropdownMenuItem>
-                  <CreditCard className="mr-2 h-4 w-4" />
+                  <CreditCard className='mr-2 h-4 w-4' />
                   <span>Billing</span>
                 </DropdownMenuItem>
               </Link>
-              <Link to="/notifications">
+              <Link to='/notifications'>
                 <DropdownMenuItem>
-                  <Bell className="mr-2 h-4 w-4" />
+                  <Bell className='mr-2 h-4 w-4' />
                   <span>Notifications</span>
                 </DropdownMenuItem>
               </Link>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className='mr-2 h-4 w-4' />
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

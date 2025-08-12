@@ -11,8 +11,8 @@ export default tseslint.config(
       'node_modules/**/*',
       '*.js',
       '*.mjs',
-      'coverage/**/*'
-    ]
+      'coverage/**/*',
+    ],
   },
 
   // Base recommended configs

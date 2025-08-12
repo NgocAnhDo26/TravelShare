@@ -24,7 +24,6 @@ function attachIsLikedToItems(items: any[], likes: any[]): any[] {
   }));
 }
 
-
 class DiscoveryController {
   public async getTrendings(
     req: Request,
@@ -52,7 +51,6 @@ class DiscoveryController {
         data: attachIsLikedToItems(trendings.data, likes),
         pagination: trendings.pagination,
       });
-
     } catch (error) {
       next(error); // Delegate to the central error handler
     }
