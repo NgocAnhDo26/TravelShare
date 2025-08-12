@@ -16,6 +16,10 @@ const MainPage: React.FC = () => {
     navigate('/plans/create');
   };
 
+  const handleCreatePost = () => {
+    navigate('/posts/create');
+  };
+
   const handleLogin = () => {
     navigate('/login');
   };
@@ -38,7 +42,6 @@ const MainPage: React.FC = () => {
   return (
     <div className='flex flex-col'>
       <main className='flex-1 p-6 max-w-7xl mx-auto w-full'>
-        {/* Full width search bar like Twitter */}
         <div className='mb-6'>
           <SearchInput
             placeholder='Search for travel plans, posts, or people...'
@@ -55,7 +58,10 @@ const MainPage: React.FC = () => {
 
         {user ? (
           <>
-            <CreatePlanSection onCreatePlan={handleCreatePlan} />
+            <CreatePlanSection
+              onCreatePlan={handleCreatePlan}
+              onCreatePost={handleCreatePost}
+            />
             <FeedSection />
           </>
         ) : (

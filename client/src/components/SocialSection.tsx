@@ -7,7 +7,6 @@ import { Heart, User as UserIcon, ImagePlus, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import CommentThread from './CommentThread';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useLikeToggle } from '@/hooks/useLikeToggle';
 import CommentSkeleton from './CommentSkeleton';
 import type { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
@@ -24,18 +23,20 @@ interface AuthUser {
 interface SocialSectionProps {
   targetId: string;
   onModel: 'TravelPlan' | 'Post';
-  initialLikesCount: number;
+  likesCount: number;
   initialCommentsCount: number;
-  initialIsLiked?: boolean;
+  isLiked: boolean;
+  onToggleLike: () => void;
   currentUser?: AuthUser | null;
 }
 
 const SocialSection: React.FC<SocialSectionProps> = ({
   targetId,
   onModel,
-  initialLikesCount,
+  likesCount, // Use live prop
   initialCommentsCount,
-  initialIsLiked = false,
+  isLiked, // Use live prop
+  onToggleLike, // Use handler from props
   currentUser,
 }) => {
   const [comments, setComments] = useState<IComment[]>([]);
@@ -58,18 +59,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const targetApiPrefix = onModel === 'TravelPlan' ? '/plans' : '/posts';
-
-  // Determine the API path based on the model
-  const apiPath = onModel === 'TravelPlan' ? '/plans' : '/posts';
-
-  // Use the like toggle hook for like functionality
-  const { isLiked, likesCount, handleToggleLike } = useLikeToggle({
-    targetId,
-    initialIsLiked,
-    initialLikesCount,
-    onModel,
-    apiPath,
-  });
 
   useEffect(() => {
     setCommentsCount(initialCommentsCount);
@@ -349,7 +338,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
                 ? 'text-red-600 hover:text-red-700'
                 : 'text-gray-600 hover:text-red-600'
             }`}
-            onClick={handleToggleLike}
+            onClick={onToggleLike} // Use the handler from props
           >
             <Heart
               size={18}
@@ -366,8 +355,6 @@ const SocialSection: React.FC<SocialSectionProps> = ({
           </span>
         </div>
       </div>
-
-     
 
       <div
         ref={scrollContainerRef}

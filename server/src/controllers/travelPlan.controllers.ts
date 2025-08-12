@@ -63,6 +63,16 @@ interface ITravelPlanController {
     res: Response,
     next: NextFunction,
   ): Promise<void>;
+  searchPlansForTagging(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
+  remixTravelPlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
 }
 
 /**
@@ -144,6 +154,60 @@ const TravelPlanController: ITravelPlanController = {
       });
     }
   },
+  /**
+   * Search travel plans for tagging in posts
+   * GET /api/plans/search-for-tagging?q=...
+   * Returns reduced list: _id, title, author.displayName
+   */
+  async searchPlansForTagging(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const userId = req.user as string;
+      const q = (req.query.q as string) || '';
+
+      if (typeof q !== 'string') {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          error: 'Invalid query',
+        });
+        return;
+      }
+
+      const searchRegex = q.trim() ? new RegExp(q.trim(), 'i') : null;
+
+      const TravelPlan = (await import('../models/travelPlan.model')).default;
+
+      const orConditions = searchRegex
+        ? [{ title: searchRegex }, { 'destination.name': searchRegex }]
+        : [{}];
+
+      const results = await TravelPlan.find({
+        $or: [
+          // All plans of current user (any privacy)
+          { author: userId, $or: orConditions },
+          // Public plans of others
+          { author: { $ne: userId }, privacy: 'public', $or: orConditions },
+        ],
+      })
+        .select('title author')
+        .populate('author', 'displayName')
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
+
+      const data = results.map((p: any) => ({
+        _id: p._id,
+        title: p.title,
+        author: { displayName: p.author?.displayName || 'Unknown' },
+      }));
+
+      res.status(HTTP_STATUS.OK).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  },
 
   /**
    * Get a travel plan by ID
@@ -202,10 +266,15 @@ const TravelPlanController: ITravelPlanController = {
    */
   async getTravelPlansByAuthor(req: Request, res: Response): Promise<void> {
     try {
+      let travelPlans;
       const { authorId } = req.params;
       const userId = req.user as string;
-      const travelPlans =
-        await TravelPlanService.getTravelPlansByAuthor(authorId);
+      if (userId === authorId) {
+        travelPlans = await TravelPlanService.getTravelPlansByAuthor(authorId);
+      } else {
+        travelPlans =
+          await TravelPlanService.getPublicTravelPlansByAuthor(authorId);
+      }
 
       let likes: any[] = [];
       if (userId && travelPlans.length > 0) {
@@ -633,6 +702,73 @@ const TravelPlanController: ITravelPlanController = {
 
       res.status(200).json({ message: 'Item moved successfully.' });
     } catch (error) {
+      next(error);
+    }
+  },
+
+  async remixTravelPlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      // 1. Extract data from the request
+      const targetPlanId = req.params.id; // The ID of the plan to copy
+      const authorId = req.user as string; // The ID of the user creating the remix
+      const { title, startDate, endDate, privacy } = req.body;
+
+      // 2. Authorization check
+      if (!authorId) {
+        res.status(HTTP_STATUS.UNAUTHORIZED).json({
+          error: 'You must be logged in to remix a plan.',
+        });
+        return;
+      }
+
+      // 3. Input validation
+      if (!title || !startDate || !endDate || !privacy) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          error:
+            'Request body must include title, startDate, endDate, and privacy.',
+        });
+        return;
+      }
+
+      // 4. Call the service to perform the remix logic
+      const remixedPlan = await TravelPlanService.remixTravelPlan(
+        targetPlanId,
+        {
+          title,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          privacy,
+        },
+        authorId,
+      );
+
+      // 5. Send the successful response
+      res.status(HTTP_STATUS.CREATED).json(remixedPlan);
+    } catch (error: any) {
+      // 6. Handle specific, expected errors from the service layer
+      if (error.message.includes('not found')) {
+        res.status(HTTP_STATUS.NOT_FOUND).json({ error: error.message });
+        return;
+      }
+      if (error.message.includes('Only public')) {
+        res.status(HTTP_STATUS.FORBIDDEN).json({ error: error.message });
+        return;
+      }
+      if (error.message.includes('date cannot be after')) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
+        return;
+      }
+      if (error.name === 'CastError') {
+        res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ error: 'Invalid travel plan ID format.' });
+        return;
+      }
+      // Pass any other unexpected errors to the global error handler
       next(error);
     }
   },

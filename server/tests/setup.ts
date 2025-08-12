@@ -64,17 +64,18 @@ vi.mock('../src/config/supabase.config', () => ({
           { name: 'post-images' },
           { name: 'post-covers' },
         ],
-        error: null
+        error: null,
       }),
       createBucket: vi.fn().mockResolvedValue({
         data: { name: 'test-bucket' },
-        error: null
+        error: null,
       }),
       // Keep existing methods
       from: vi.fn().mockReturnValue({
-        upload: vi
-          .fn()
-          .mockResolvedValue({ data: { path: 'public/mock-path' }, error: null }),
+        upload: vi.fn().mockResolvedValue({
+          data: { path: 'public/mock-path' },
+          error: null,
+        }),
         getPublicUrl: vi.fn().mockReturnValue({
           data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
         }),

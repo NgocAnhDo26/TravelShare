@@ -3,12 +3,10 @@ import TravelPlan, {
   ITravelPlan,
   IPlanItem,
   ITomTomLocationBase,
-  IPOILocation,
 } from '../models/travelPlan.model';
 import { generateSchedule } from '../utils/travelPlan';
 import supabase from '../config/supabase.config';
 import Follow from '../models/follow.model';
-import { FollowService } from './user.service';
 
 /**
  * @interface ITravelPlanService
@@ -44,6 +42,7 @@ interface ITravelPlanService {
   ): Promise<any>;
   getTravelPlanById(planId: string): Promise<any | null>;
   getTravelPlansByAuthor(authorId: string): Promise<any[]>;
+  getPublicTravelPlansByAuthor(authorId: string): Promise<any[]>;
   getPublicTravelPlans(): Promise<any[]>;
   incrementLikes(planId: string): Promise<void>;
   decrementLikes(planId: string): Promise<void>;
@@ -96,6 +95,12 @@ interface ITravelPlanService {
     targetIndex: number,
     authorId: string,
   ): Promise<boolean>;
+
+  remixTravelPlan(
+    targetPlanId: string,
+    remixData: IRemixTravelPlanRequest,
+    authorId: string,
+  ): Promise<ITravelPlan | null>;
 }
 
 interface CreateTravelPlanRequest {
@@ -104,6 +109,17 @@ interface CreateTravelPlanRequest {
   startDate: Date;
   endDate: Date;
   privacy?: 'public' | 'private';
+}
+
+/**
+ * @interface IRemixTravelPlanRequest
+ * @description Defines the data required to remix a travel plan.
+ */
+interface IRemixTravelPlanRequest {
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  privacy: 'public' | 'private';
 }
 
 /**
@@ -169,6 +185,14 @@ const TravelPlanService: ITravelPlanService = {
   async getTravelPlansByAuthor(authorId: string): Promise<any[]> {
     try {
       return await TravelPlan.find({ author: authorId });
+    } catch (error) {
+      console.error('Error getting travel plans by author:', error);
+      throw error;
+    }
+  },
+  async getPublicTravelPlansByAuthor(authorId: string): Promise<any[]> {
+    try {
+      return await TravelPlan.find({ author: authorId, privacy: 'public' });
     } catch (error) {
       console.error('Error getting travel plans by author:', error);
       throw error;
@@ -739,6 +763,89 @@ const TravelPlanService: ITravelPlanService = {
       return true;
     } catch (error) {
       console.error('Error in moveItemToAnotherDay:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new travel plan by remixing an existing public plan.
+   * The new plan copies the destination and daily itinerary but uses new dates,
+   * title, and privacy settings provided by the user.
+   * @param targetPlanId - The ID of the public plan to be remixed.
+   * @param remixData - The new data for the remixed plan.
+   * @param authorId - The ID of the user creating the remix.
+   * @returns The newly created ITravelPlan document or null if the original is not found or private.
+   */
+  async remixTravelPlan(
+    targetPlanId: string,
+    remixData: IRemixTravelPlanRequest,
+    authorId: string,
+  ): Promise<ITravelPlan | null> {
+    try {
+      // 1. Find the original plan and ensure it's public and exists.
+      // Using .lean() for a fast, read-only query.
+      const originalPlan = await TravelPlan.findById(targetPlanId).lean();
+
+      if (!originalPlan) {
+        throw new Error('Original travel plan not found.');
+      }
+
+      if (originalPlan.privacy !== 'public') {
+        throw new Error('Only public travel plans can be remixed.');
+      }
+
+      if (new Date(remixData.startDate) > new Date(remixData.endDate)) {
+        throw new Error('Start date cannot be after end date.');
+      }
+
+      // 2. Create a map of the original plan's itinerary for easy lookup.
+      // Maps dayNumber to its array of items.
+      const originalScheduleMap = new Map(
+        originalPlan.schedule.map((day) => [day.dayNumber, day.items]),
+      );
+
+      // 3. Generate a new schedule structure based on the new dates.
+      const newScheduleBase = generateSchedule(
+        new Date(remixData.startDate),
+        new Date(remixData.endDate),
+      );
+
+      // 4. Populate the new schedule with items from the original plan.
+      // This intelligently handles shorter or longer trip durations.
+      const newSchedule = newScheduleBase.map((day) => {
+        // Find items from the corresponding day number in the original plan.
+        const itemsToCopy = originalScheduleMap.get(day.dayNumber) || [];
+
+        // Return a new day object with the copied items. Mongoose will generate new _ids for these items.
+        return {
+          ...day,
+          items: itemsToCopy,
+        };
+      });
+
+      // 5. Create the new travel plan document.
+      const newPlanData = {
+        title: remixData.title,
+        destination: originalPlan.destination, // Copy destination from original
+        author: new Types.ObjectId(authorId),
+        startDate: new Date(remixData.startDate),
+        endDate: new Date(remixData.endDate),
+        privacy: remixData.privacy,
+        schedule: newSchedule,
+        originalPlan: originalPlan._id, // Link back to the original plan
+        coverImageUrl: originalPlan.coverImageUrl, // Copy cover image as well
+      };
+
+      const remixedPlan = await TravelPlan.create(newPlanData);
+
+      // 6. Increment the remix count on the original plan (fire-and-forget).
+      await TravelPlan.findByIdAndUpdate(targetPlanId, {
+        $inc: { remixCount: 1 },
+      });
+
+      return remixedPlan;
+    } catch (error) {
+      console.error('Error remixing travel plan:', error);
       throw error;
     }
   },

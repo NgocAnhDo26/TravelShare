@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { canEditPlan } from '@/utils/planPermissions';
+import RemixPlanForm from '@/components/remix-plan-form';
 
 import {
   Calendar,
@@ -23,6 +24,7 @@ import {
   Upload,
   X,
   TrashIcon,
+  Share2,
 } from 'lucide-react';
 import type { Trip } from '@/types/trip';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
@@ -49,16 +51,19 @@ interface AuthorProfile {
   avatarUrl?: string;
 }
 
+// Updated Props: Added onToggleLike handler
 interface TripHeaderProps {
   trip: Trip;
   editMode?: boolean;
   onTripUpdate?: (updatedTrip: Trip) => void;
+  onToggleLike: () => void;
 }
 
 const TripHeader: React.FC<TripHeaderProps> = ({
   trip,
   editMode = false,
   onTripUpdate,
+  onToggleLike, // Receive the handler from props
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -81,9 +86,8 @@ const TripHeader: React.FC<TripHeaderProps> = ({
   const [authorError, setAuthorError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isRemixModalOpen, setIsRemixModalOpen] = useState(false);
 
-  // This is the correct and ONLY declaration for isLiked and likesCount.
-  // It gets the state from the parent component via the 'trip' prop.
   const { isLiked, likesCount } = trip;
 
   useEffect(() => {
@@ -294,6 +298,27 @@ const TripHeader: React.FC<TripHeaderProps> = ({
       toast.error(errorMessage);
     } finally {
       setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.origin + '/plans/' + trip._id;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy link: ', err);
+      toast.error('Could not copy link.');
+    }
+  };
+
+  const handleRemixClick = () => {
+    if (user) {
+      setIsRemixModalOpen(true);
+    } else {
+      toast('Please log in to remix a plan.');
+      navigate('/login');
     }
   };
 
@@ -585,10 +610,22 @@ const TripHeader: React.FC<TripHeaderProps> = ({
               </>
             ) : (
               <>
+                <Tooltip>
+                  <Button
+                    variant='ghost'
+                    onClick={handleShare}
+                    className=' text-slate-600 hover:text-green-500 transition-colors duration-200 group cursor-pointer'
+                  >
+                    <Share2 />
+                    Share
+                  </Button>
+                </Tooltip>
                 <div className='flex items-center'>
+                  {/* Updated: Added onClick handler and cursor-pointer */}
                   <div
-                    className='flex items-center gap-2 px-2 py-1'
+                    className='flex items-center gap-2 px-2 py-1 rounded-md hover:bg-red-50 cursor-pointer'
                     aria-label='Likes'
+                    onClick={onToggleLike}
                   >
                     <Heart
                       size={22}
@@ -607,13 +644,15 @@ const TripHeader: React.FC<TripHeaderProps> = ({
                         transition: 'color 0.05s, fill 0.05s, filter 0.05s',
                       }}
                     />
-                    <span className='font-medium'>{likesCount}</span>
+                    <span className='font-medium w-2 text-left'>
+                      {likesCount}
+                    </span>
                   </div>
                   <Button variant='ghost'>
                     <MessageCircle />
                     {trip.commentsCount ?? 0}
                   </Button>
-                  <Button className='ml-2'>
+                  <Button className='ml-2' onClick={handleRemixClick}>
                     <Repeat />
                     Remix
                   </Button>
@@ -623,6 +662,14 @@ const TripHeader: React.FC<TripHeaderProps> = ({
           </div>
         </div>
       </Card>
+
+      {user && (
+        <RemixPlanForm
+          trip={trip}
+          isOpen={isRemixModalOpen}
+          onOpenChange={setIsRemixModalOpen}
+        />
+      )}
 
       <Dialog
         open={isCoverImageModalOpen}

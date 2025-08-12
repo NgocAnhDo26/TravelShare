@@ -17,11 +17,33 @@ router.post(
 );
 
 /**
+ * POST /api/plans/:id/remix
+ * Clone a travel plan
+ * Requires: Authentication
+ */
+router.post(
+  '/:id/remix',
+  AuthJwtMiddleware.verifyToken,
+  TravelPlanController.remixTravelPlan,
+);
+
+/**
  * GET /api/plans/public
  * Get public travel plans
  * Requires: Authentication
  */
 router.get('/public', TravelPlanController.getPublicTravelPlans);
+
+/**
+ * GET /api/plans/search-for-tagging?q=...
+ * Search travel plans for tagging in posts.
+ * Includes: (1) all current user's plans (public/private) AND (2) public plans of others.
+ */
+router.get(
+  '/search-for-tagging',
+  AuthJwtMiddleware.verifyToken,
+  TravelPlanController.searchPlansForTagging,
+);
 
 /**
  * GET /api/plans/feed
@@ -41,7 +63,7 @@ router.get(
  */
 router.get(
   '/:id',
-  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.optionalAuth,
   AuthJwtMiddleware.isAuthorOrPublic,
   TravelPlanController.getTravelPlanById,
 );
@@ -53,7 +75,7 @@ router.get(
  */
 router.get(
   '/author/:authorId',
-  AuthJwtMiddleware.verifyToken,
+  AuthJwtMiddleware.optionalAuth,
   TravelPlanController.getTravelPlansByAuthor,
 );
 

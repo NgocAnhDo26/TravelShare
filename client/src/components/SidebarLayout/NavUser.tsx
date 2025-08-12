@@ -5,6 +5,7 @@ import {
   Bell,
   UserCircle,
 } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Make sure Link is imported
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -16,16 +17,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-
 import { useAuth } from '@/context/AuthContext';
-import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
 
 export function NavUser() {
@@ -85,23 +83,30 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <UserCircle />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
+              {/* Each item is wrapped with a Link component */}
+              <Link to='/profile'>
+                <DropdownMenuItem>
+                  <UserCircle className='mr-2 h-4 w-4' />
+                  <span>Account</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link to='/billing'>
+                <DropdownMenuItem>
+                  <CreditCard className='mr-2 h-4 w-4' />
+                  <span>Billing</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link to='/notifications'>
+                <DropdownMenuItem>
+                  <Bell className='mr-2 h-4 w-4' />
+                  <span>Notifications</span>
+                </DropdownMenuItem>
+              </Link>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
-              <LogOut />
-              Log out
+              <LogOut className='mr-2 h-4 w-4' />
+              <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
