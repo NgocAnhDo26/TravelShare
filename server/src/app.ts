@@ -16,6 +16,7 @@ import locationRouter from './routes/location.routes';
 import { createLikeRoutes, likeRouter } from './routes/like.routes';
 import discoveryRouter from './routes/discovery.routes';
 import searchRouter from './routes/search.routes';
+import { createNotificationRouter } from './routes/notification.routes';
 import bookmarkRouter, { createBookmarkRoutes } from './routes/bookmark.routes';
 dotenv.config();
 
@@ -54,6 +55,7 @@ app.use('/api/location', locationRouter);
 app.use('/api/posts', postRouter);
 app.use('/api/discovery', discoveryRouter);
 app.use('/api/search', searchRouter);
+app.use('/api', createNotificationRouter());
 
 app.use('/api/bookmarks', bookmarkRouter); 
 app.use('/api/plans', createBookmarkRoutes('TravelPlan')); 
