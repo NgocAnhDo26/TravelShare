@@ -13,6 +13,7 @@ export interface IPost {
   privacy: 'public' | 'private';
   relatedPlan?: string;
   likesCount: number;
+  isBookmarked?: boolean;
   commentsCount: number;
   createdAt: string;
   updatedAt: string;

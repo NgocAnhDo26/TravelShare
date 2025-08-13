@@ -797,7 +797,7 @@ const TravelPlanService: ITravelPlanService = {
       if (originalPlan.privacy !== 'public') {
         throw new Error('Only public travel plans can be remixed.');
       }
-      
+
       if (new Date(remixData.startDate) > new Date(remixData.endDate)) {
         throw new Error('Start date cannot be after end date.');
       }
@@ -819,7 +819,7 @@ const TravelPlanService: ITravelPlanService = {
       const newSchedule = newScheduleBase.map((day) => {
         // Find items from the corresponding day number in the original plan.
         const itemsToCopy = originalScheduleMap.get(day.dayNumber) || [];
-        
+
         // Return a new day object with the copied items. Mongoose will generate new _ids for these items.
         return {
           ...day,

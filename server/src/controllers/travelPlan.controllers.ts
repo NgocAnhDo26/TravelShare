@@ -68,10 +68,10 @@ interface ITravelPlanController {
     res: Response,
     next: NextFunction,
   ): Promise<void>;
-  remixTravelPlan(req: 
-    Request, 
-    res: Response, 
-    next: NextFunction
+  remixTravelPlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
   ): Promise<void>;
   getRelatedPostById(
     req: Request,
@@ -275,11 +275,10 @@ const TravelPlanController: ITravelPlanController = {
       const { authorId } = req.params;
       const userId = req.user as string;
       if (userId === authorId) {
-        travelPlans =
-        await TravelPlanService.getTravelPlansByAuthor(authorId);
+        travelPlans = await TravelPlanService.getTravelPlansByAuthor(authorId);
       } else {
         travelPlans =
-        await TravelPlanService.getPublicTravelPlansByAuthor(authorId);
+          await TravelPlanService.getPublicTravelPlansByAuthor(authorId);
       }
 
       let likes: any[] = [];
@@ -734,7 +733,8 @@ const TravelPlanController: ITravelPlanController = {
       // 3. Input validation
       if (!title || !startDate || !endDate || !privacy) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Request body must include title, startDate, endDate, and privacy.',
+          error:
+            'Request body must include title, startDate, endDate, and privacy.',
         });
         return;
       }

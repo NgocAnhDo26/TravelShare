@@ -14,6 +14,13 @@ const suppressedErrors = [
   'Failed to delete old cover image:',
   'Token verification error:',
   'Password reset requested for non-existent user:',
+  // Test-time external service noise
+  '[Redis] Client Error',
+  '[Redis] Connection failed',
+  'Redis Client Error',
+  'Redis connection or operation failed:',
+  // Intentional error cases in tests
+  'Database connection failed',
 ];
 
 // Suppress console.log for expected test messages and dotenv
@@ -22,6 +29,10 @@ const suppressedLogs = [
   'Password reset requested for non-existent user:',
   '[dotenv@',
   'injecting env',
+  // Reduce chatty test-time logs
+  'Trying to send socket...',
+  '[Notification] Real-time event sent to user',
+  'Trending score update job scheduled to run every 30 minutes.',
 ];
 
 console.log = (...args) => {
@@ -61,12 +72,10 @@ vi.mock('../src/config/supabase.config', () => ({
       }),
       // Keep existing methods
       from: vi.fn().mockReturnValue({
-        upload: vi
-          .fn()
-          .mockResolvedValue({
-            data: { path: 'public/mock-path' },
-            error: null,
-          }),
+        upload: vi.fn().mockResolvedValue({
+          data: { path: 'public/mock-path' },
+          error: null,
+        }),
         getPublicUrl: vi.fn().mockReturnValue({
           data: { publicUrl: 'https://mock-supabase.com/public/mock-path' },
         }),
@@ -75,6 +84,33 @@ vi.mock('../src/config/supabase.config', () => ({
     },
   },
 }));
+
+// Mock Redis client to avoid real connections and noisy errors during tests
+vi.mock('../src/config/redis.config', () => {
+  const store = new Map<string, string>();
+
+  return {
+    default: {
+      set: vi.fn(async (key: string, value: string) => {
+        store.set(String(key), String(value));
+        return 'OK';
+      }),
+      get: vi.fn(async (key: string) => {
+        return store.has(String(key)) ? store.get(String(key)) : null;
+      }),
+      del: vi.fn(async (key: string) => {
+        return store.delete(String(key)) ? 1 : 0;
+      }),
+      scanIterator: vi.fn(async function* () {
+        for (const key of store.keys()) {
+          yield key;
+        }
+      }),
+      on: vi.fn(),
+      connect: vi.fn(),
+    },
+  };
+});
 
 // Mock nodemailer
 vi.mock('nodemailer');

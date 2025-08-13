@@ -10,7 +10,7 @@ interface CreatePlanSectionProps {
 
 const CreatePlanSection: React.FC<CreatePlanSectionProps> = ({
   onCreatePlan,
-  onCreatePost
+  onCreatePost,
 }) => (
   <Card className='mb-8 bg-gradient-to-r from-white to-blue-50/50 border-0 shadow-lg shadow-blue-500/10'>
     <CardContent className='p-4 text-center'>

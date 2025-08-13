@@ -18,7 +18,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.status === 200) {
         const data = response.data;
-        console.log('Auth verification successful:', data);
         // The server returns user data directly, not nested under a 'user' property
         setUser({
           userId: data.userId,
@@ -60,9 +59,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []); // The empty dependency array ensures this runs only once on mount
 
   const value = { user, isLoading, logout, refreshUser };
-
-  // Debug log when user state changes
-  console.log('AuthProvider state:', { user, isLoading });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

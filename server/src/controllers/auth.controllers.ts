@@ -8,8 +8,7 @@ interface IAuthController {
   forgotPassword(req: Request, res: Response): Promise<void>;
   resetPassword(req: Request, res: Response): Promise<void>;
   logout(req: Request, res: Response): Promise<void>;
-  googleLogin(req: Request, res: Response): Promise<void>;
-  googleRegister(req: Request, res: Response): Promise<void>;
+  googleAuth(req: Request, res: Response): Promise<void>;
 }
 
 const AuthController: IAuthController = {
@@ -33,11 +32,8 @@ const AuthController: IAuthController = {
   logout: async (req: Request, res: Response) => {
     await AuthService.logout(req, res);
   },
-  googleLogin: async (req: Request, res: Response) => {
-    await AuthService.googleLogin(req, res);
-  },
-  googleRegister: async (req: Request, res: Response) => {
-    await AuthService.googleRegister(req, res);
+  googleAuth: async (req: Request, res: Response) => {
+    await AuthService.googleAuth(req, res);
   },
 };
 

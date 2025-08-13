@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { FollowService, UserService } from '../services/user.service';
 import { isValidObjectId, Types } from 'mongoose';
 import { HTTP_STATUS } from '../constants/http';
+import { NotificationService } from '../services/notification.service';
 
 /**
  * @interface IFollowController
@@ -42,6 +43,19 @@ const FollowController: IFollowController = {
       }
 
       const result = await FollowService.followUser(followerId, followingId);
+      
+      // Create notification for the followed user
+      try {
+        await NotificationService.createNotification({
+          recipient: followingId,
+          actor: followerId,
+          type: 'follow'
+        }, req.io);
+      } catch (notificationError) {
+        console.error('Failed to create follow notification:', notificationError);
+        // Don't fail the follow operation if notification creation fails
+      }
+
       res
         .status(HTTP_STATUS.CREATED)
         .json({ message: 'User followed successfully.', data: result });

@@ -121,4 +121,5 @@ export interface IPlan {
   createdAt: string; // The API sends timestamps as ISO strings
   source_type?: 'followed' | 'trending'; // Optional field to identify post source
   isLiked?: boolean;
+  isBookmarked?: boolean;
 }

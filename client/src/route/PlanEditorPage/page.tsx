@@ -223,10 +223,12 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
     });
   };
 
-  const currentUserForSocialSection = user ? {
-    ...user,
-    _id: user.userId,
-  } : null;
+  const currentUserForSocialSection = user
+    ? {
+        ...user,
+        _id: user.userId,
+      }
+    : null;
 
   // Show loading state – skeleton placeholders
   if (isLoading) {
