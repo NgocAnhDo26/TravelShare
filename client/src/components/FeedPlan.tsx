@@ -82,7 +82,6 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
   return (
     <Card
       className='overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left gap-0 pb-1'
-      onClick={handleViewPlan}
     >
       <CardHeader className='pb-4'>
         <div className='flex items-center gap-3'>
@@ -120,7 +119,7 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
       </CardHeader>
       <CardContent className='px-6 pb-4'>
         <div className='mb-4'>
-          <h4 className='text-xl font-bold text-slate-800 mb-2'>
+          <h4 className='text-xl font-bold text-slate-800 mb-2 cursor-pointer' onClick={handleViewPlan}>
             {plan.title}
           </h4>
           <p className='text-slate-600 flex items-center gap-2'>
@@ -128,7 +127,7 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
             Destination: {plan.destination.name}
           </p>
         </div>
-        <div className='relative rounded-2xl overflow-hidden group'>
+        <div className='relative rounded-2xl overflow-hidden group cursor-pointer' onClick={handleViewPlan}>
           <img
             src={plan.coverImageUrl}
             alt={plan.title}

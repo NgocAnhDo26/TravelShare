@@ -53,6 +53,8 @@ app.use('/api/likes', likeRouter);
 
 app.use('/api/location', locationRouter);
 app.use('/api/posts', postRouter);
+app.use('/api/posts', createLikeRoutes('Post'));
+app.use('/api/posts', createCommentRoutes('Post'));
 app.use('/api/discovery', discoveryRouter);
 app.use('/api/search', searchRouter);
 app.use('/api', createNotificationRouter());

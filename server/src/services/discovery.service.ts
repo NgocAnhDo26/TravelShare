@@ -10,40 +10,68 @@ class DiscoveryService {
 
     if (after) {
       try {
-        // Parse the cursor which contains trendingScore and _id
-        const [trendingScore, id] = after.split('|');
+        // Parse the cursor which contains trendingScore, type, and _id
+        const [trendingScore, type, id] = after.split('|');
         const score = parseFloat(trendingScore);
 
-        // Use compound cursor to handle ties properly
-        query.$or = [
-          { trendingScore: { $lt: score } },
-          {
-            trendingScore: score,
-            _id: { $lt: id },
-          },
-        ];
+        // Validate that we have all required parts and score is a valid number
+        if (trendingScore && type && id && !isNaN(score)) {
+          // Use compound cursor to handle ties properly
+          query.$or = [
+            { trendingScore: { $lt: score } },
+            {
+              trendingScore: score,
+              _id: { $lt: id },
+            },
+          ];
+        } else {
+          // Invalid cursor format, reset query to just privacy filter
+          console.error('Invalid cursor format: missing parts or invalid score');
+        }
       } catch (error) {
         console.error('Invalid cursor format:', error);
-        // Fallback to no cursor if parsing fails
+        // Fallback to no cursor if parsing fails - query remains { privacy: 'public' }
       }
     }
 
-    const trendings = await TravelPlan.find(query)
+    // Get trending travel plans
+    const trendingPlans = await TravelPlan.find(query)
       .populate('author', 'username displayName avatarUrl')
       .sort({ trendingScore: -1, _id: -1 })
       .limit(limit)
       .lean()
       .exec();
 
+    // Get trending posts
+    const trendingPosts = await Post.find(query)
+      .populate('author', 'username displayName avatarUrl')
+      .sort({ trendingScore: -1, _id: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+
+    // Combine and sort by trending score
+    const allTrendings = [
+      ...trendingPlans.map(plan => ({ ...plan, type: 'TravelPlan' })),
+      ...trendingPosts.map(post => ({ ...post, type: 'Post' }))
+    ].sort((a, b) => {
+      // Sort by trending score (descending), then by _id for consistency
+      if (b.trendingScore !== a.trendingScore) {
+        return (b.trendingScore || 0) - (a.trendingScore || 0);
+      }
+      // When scores are equal, sort by _id in descending order for consistency
+      return b._id.toString().localeCompare(a._id.toString());
+    }).slice(0, limit);
+
     // Prepare pagination info with compound cursor
     let next_cursor = null;
-    if (trendings.length === limit) {
-      const lastItem = trendings[trendings.length - 1];
-      next_cursor = `${lastItem.trendingScore}|${lastItem._id}`;
+    if (allTrendings.length === limit) {
+      const lastItem = allTrendings[allTrendings.length - 1];
+      next_cursor = `${lastItem.trendingScore}|${lastItem.type}|${lastItem._id}`;
     }
 
     return {
-      data: trendings,
+      data: allTrendings,
       pagination: {
         next_cursor,
         has_next_page: next_cursor !== null,
@@ -90,7 +118,7 @@ class DiscoveryService {
 
     const posts = await Post.find(filter)
       .populate('author', 'username displayName avatarUrl')
-      .sort({ createdAt: -1 })
+      .sort({ trendingScore: -1, createdAt: -1 })
       .limit(50);
 
     return posts;

@@ -24,6 +24,8 @@ import {
   PencilIcon,
   Share,
   TrashIcon,
+  Lock,
+  Globe,
 } from 'lucide-react';
 import EditProfileForm from '@/components/edit-profile-form';
 import FollowersFollowingDialog from '@/components/FollowersFollowingDialog';
@@ -34,6 +36,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { Trip } from '@/types/trip';
+import { Badge } from '@/components/ui/badge';
+
+// Post interface for user profile posts
+interface Post {
+  _id: string;
+  title: string;
+  content: string;
+  coverImageUrl?: string;
+  images?: string[];
+  author: string;
+  privacy: 'public' | 'private';
+  likesCount: number;
+  commentsCount: number;
+  remixCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // --- ProfileCard Component (can be a separate file like components/profile/ProfileCard.tsx) ---
 interface ProfileCardProps {
@@ -142,95 +161,37 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   );
 };
 
-// --- TravelLogCard Component (replaces MapOverviewCard, can be components/profile/TravelLogCard.tsx) ---
-interface TravelLogCardProps {
-  countriesVisited: number;
-  citiesVisited: number;
-  regionsVisited: number;
-  rank: string;
-  travelLog: { country: string; cities: string[] }[];
-}
-
-const TravelLogCard: React.FC<TravelLogCardProps> = ({
-  countriesVisited,
-  citiesVisited,
-  regionsVisited,
-  // rank,
-  travelLog,
-}) => {
-  return (
-    <Card className='p-6 text-left rounded-md overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 gap-0'>
-      {' '}
-      {/* Added text-left here */}
-      {/* Top section: COUNTRIES, CITIES, & REGIONS stats */}
-      <div className='flex items-center justify-between mb-4'>
-        <div className='flex space-x-4 text-gray-700 text-sm font-semibold'>
-          <Card className='gap-2 p-3 bg-blue-400 text-white w-40 rounded-md border-none'>
-            <span className='block text-3xl font-bold mb-2'>
-              {countriesVisited}
-            </span>
-            <span>COUNTRIES</span>
-          </Card>
-          <Card className='gap-2 p-3 bg-amber-400 text-white w-40 rounded-md border-none'>
-            <span className='block text-3xl font-bold mb-2'>
-              {citiesVisited + regionsVisited}
-            </span>
-            <span>CITIES & REGIONS</span>
-          </Card>
-        </div>
-      </div>
-      {/* Rank display */}
-      {/* <div className='flex items-center mb-4 text-gray-700 text-sm'>
-        <i className='fas fa-medal text-lg text-blue-500 mr-2'></i>
-        <span className='font-semibold'>{rank}</span>
-      </div> */}
-      {/* Travel Log Section with Scrollbar */}
-      <h2 className='text-2xl font-bold my-4'>Travel Log</h2>
-      <div className='overflow-y-auto custom-scrollbar pr-4 max-h-52'>
-        {/* Fixed height for scroll area */}
-        {travelLog.length > 0 ? (
-          travelLog.map((entry, index) => (
-            <div key={index}>
-              {/* Ensured text alignment is left by default for block elements */}
-              <p className='text-gray-700 font-semibold'>
-                {entry.country}:{' '}
-                {entry.cities.map((city, cityIndex) => (
-                  <span key={cityIndex} className='font-normal'>
-                    {city}
-                    {cityIndex < entry.cities.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
-              </p>
-            </div>
-          ))
-        ) : (
-          // Corrected the comment placement outside of the JSX element
-          <p className='text-gray-500 py-4'>
-            Chưa có chuyến đi nào được ghi lại.
-          </p>
-        )}
-      </div>
-    </Card>
-  );
-};
-
 // --- TabsSection Component (can be a separate file like components/profile/TabsSection.tsx) ---
 interface TabsSectionProps {
   tripPlans: Trip[];
+  posts: Post[];
   guidesCount: number;
   isMyProfile?: boolean; // Optional prop to check if this is the user's own profile
+  setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
 }
 
 const TabsSection: React.FC<TabsSectionProps> = ({
   tripPlans = [],
+  posts = [],
   isMyProfile = false,
+  setPosts,
 }) => {
   const [activeTab, setActiveTab] = useState('tripPlans');
   const [plans, setPlans] = useState(tripPlans);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<Trip | null>(null);
+  const [postDeleteDialogOpen, setPostDeleteDialogOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<Post | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Debug logging
+  console.log('TabsSection posts:', posts);
+  console.log('TabsSection posts type:', typeof posts);
+  console.log('TabsSection posts isArray:', Array.isArray(posts));
+
+  // Ensure posts is always an array
+  const safePosts = Array.isArray(posts) ? posts : [];
 
   useEffect(() => {
     setPlans(tripPlans);
@@ -262,6 +223,32 @@ const TabsSection: React.FC<TabsSectionProps> = ({
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+    try {
+      await API.delete(`/posts/${postToDelete._id}`);
+      setPosts((prev) => prev.filter((p) => p._id !== postToDelete._id));
+      toast.success('Post deleted successfully');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error &&
+        'response' in err &&
+        typeof err.response === 'object' &&
+        err.response !== null &&
+        'data' in err.response &&
+        typeof err.response.data === 'object' &&
+        err.response.data !== null &&
+        'error' in err.response.data &&
+        typeof err.response.data.error === 'string'
+          ? err.response.data.error
+          : 'Failed to delete post';
+      toast.error(errorMessage);
+    } finally {
+      setPostDeleteDialogOpen(false);
+      setPostToDelete(null);
+    }
+  };
+
   return (
     <Card className='p-6 gap-2 rounded-md overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left'>
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -278,6 +265,25 @@ const TabsSection: React.FC<TabsSectionProps> = ({
               <Button variant='outline'>Cancel</Button>
             </DialogClose>
             <Button variant='destructive' onClick={handleDeletePlan} autoFocus>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={postDeleteDialogOpen} onOpenChange={setPostDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Post</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the post "{postToDelete?.title}"?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant='outline'>Cancel</Button>
+            </DialogClose>
+            <Button variant='destructive' onClick={handleDeletePost} autoFocus>
               Delete
             </Button>
           </DialogFooter>
@@ -307,7 +313,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
             )}
           >
-            <NotepadText /> Guides
+            <NotepadText /> Posts
           </Button>
         </nav>
       </div>
@@ -336,6 +342,15 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                       className='w-full h-20 object-cover'
                       onClick={() => navigate(`/plans/${plan._id}`)}
                     />
+                    {/* Privacy badge */}
+                    <div className='absolute top-2 left-2 z-10'>
+                      <Badge variant={plan.privacy === 'private' ? "secondary" : "default"} className='gap-1 text-xs'>
+                        {plan.privacy === 'private' ? 
+                          <><Lock className='h-3 w-3' /> Private</> : 
+                          <><Globe className='h-3 w-3' /> Public</>
+                        }
+                      </Badge>
+                    </div>
                     {user &&
                       plan.author &&
                       user.userId === plan.author.toString() && (
@@ -383,7 +398,10 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                     />
                   </div>
                   <div className='px-4 mt-0 pb-2 flex flex-col flex-1' onClick={() => navigate(`/plans/${plan._id}`)}>
-                    <h3 className='text-lg font-bold mb-1 text-left'>
+                    <h3 
+                      className='text-lg font-bold mb-1 text-left line-clamp-2'
+                      title={plan.title}
+                    >
                       {plan.title}
                     </h3>
                     <p className='text-gray-500 text-sm mb-2 text-left flex-1'>
@@ -399,6 +417,24 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                           ? new Date(plan.endDate).toLocaleDateString()
                           : ''}
                       </span>
+                      <div className='flex items-center gap-2 text-xs text-gray-400'>
+                        {(plan.likesCount > 0 || plan.commentsCount > 0 || plan.remixCount > 0) ? (
+                          <>
+                            {plan.likesCount > 0 && (
+                              <span className='flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full flex-nowrap whitespace-nowrap'>
+                                ❤️ {plan.likesCount}
+                              </span>
+                            )}
+                            {plan.commentsCount > 0 && (
+                              <span className='flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full flex-nowrap whitespace-nowrap'>
+                                💬 {plan.commentsCount}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className='text-gray-300 text-xs'>No engagement yet</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -406,13 +442,123 @@ const TabsSection: React.FC<TabsSectionProps> = ({
             </div>
           ))}
         {activeTab === 'guides' && (
-          <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
-            <p className='text-gray-600 text-lg mb-4'>
-              {isMyProfile
-                ? "You don't have any guides yet."
-                : "This user doesn't have any guides yet."}
-            </p>
-          </div>
+          (!safePosts || safePosts.length === 0) ? (
+            <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
+              <p className='text-gray-600 text-lg mb-4'>
+                {isMyProfile
+                  ? "You don't have any posts yet."
+                  : "This user doesn't have any posts yet."}
+              </p>
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+              {safePosts.map((post) => (
+                <Card
+                  key={post._id}
+                  className='relative p-0 overflow-hidden group gap-0 cursor-pointer hover:scale-105 transition-transform duration-250'
+                >
+                  <div className='relative w-full h-20'>
+                    <img
+                      src={post.coverImageUrl || 'https://placehold.co/400x200/CCCCCC/FFFFFF?text=No+Image'}
+                      alt={post.title}
+                      className='w-full h-20 object-cover'
+                      onClick={() => navigate(`/posts/${post._id}`)}
+                    />
+                    {/* Privacy badge */}
+                    <div className='absolute top-2 left-2 z-10'>
+                      <Badge variant={post.privacy === 'private' ? "secondary" : "default"} className='gap-1 text-xs'>
+                        {post.privacy === 'private' ? 
+                          <><Lock className='h-3 w-3' /> Private</> : 
+                          <><Globe className='h-3 w-3' /> Public</>
+                        }
+                      </Badge>
+                    </div>
+                    {user &&
+                      post.author &&
+                      user.userId === post.author.toString() && (
+                        <div className='absolute top-2 right-2 z-10'>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size='icon'
+                                variant='ghost'
+                                className='w-7 h-7'
+                              >
+                                <EllipsisVerticalIcon />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align='end'>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate(`/posts/${post._id}/edit`)
+                                }
+                              >
+                                <PencilIcon />
+                                Edit post
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                className='text-red-600 focus:text-red-700'
+                                onClick={() => {
+                                  setPostToDelete(post);
+                                  setPostDeleteDialogOpen(true);
+                                }}
+                              >
+                                <TrashIcon className='text-red-600' />
+                                Delete post
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                    <div
+                      className='pointer-events-none absolute bottom-0 left-0 w-full h-1/2'
+                      style={{
+                        background:
+                          'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)',
+                      }}
+                    />
+                  </div>
+                  <div className='px-4 mt-0 pb-2 flex flex-col flex-1' onClick={() => navigate(`/posts/${post._id}`)}>
+                    <h3 
+                      className='text-lg font-bold mb-1 text-left line-clamp-2'
+                      title={post.title}
+                    >
+                      {post.title}
+                    </h3>
+                    <p className='text-gray-500 text-sm mb-2 text-left flex-1 line-clamp-2'>
+                      {post.content ? post.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : 'No content'}
+                    </p>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-xs text-gray-400'>
+                        {post.createdAt
+                          ? new Date(post.createdAt).toLocaleDateString()
+                          : ''}
+                      </span>
+                      <div className='flex items-center gap-2 text-xs text-gray-400'>
+                        {(post.likesCount > 0 || post.commentsCount > 0 || (post.remixCount && post.remixCount > 0)) ? (
+                          <>
+                            {post.likesCount > 0 && (
+                              <span className='flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full'>
+                                ❤️ {post.likesCount}
+                              </span>
+                            )}
+                            {post.commentsCount > 0 && (
+                              <span className='flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full'>
+                                💬 {post.commentsCount}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className='text-gray-300 text-xs'>No engagement yet</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )
         )}
       </div>
     </Card>
@@ -447,6 +593,7 @@ const UserProfilePage: React.FC = () => {
     undefined,
   );
   const [tripPlans, setTripPlans] = useState<Trip[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [followersDialogOpen, setFollowersDialogOpen] =
@@ -490,8 +637,28 @@ const UserProfilePage: React.FC = () => {
       }
     };
 
+    const fetchPostsByAuthor = async () => {
+      if (!user && !userId) return;
+      const URL = userId
+        ? `/posts/author/${userId}`
+        : `/posts/author/${user?.userId}`;
+      try {
+        const response = await API.get(URL);
+        console.log('Posts API response:', response.data); // Debug log
+        const data = response.data?.data || response.data || [];
+        console.log('Posts data after extraction:', data); // Debug log
+        console.log('Current user data:', user); // Debug log
+        setPosts(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        toast.error('Failed to fetch posts');
+        setPosts([]); // Set empty array on error
+      }
+    };
+
     fetchUserData();
     fetchTripPlansByAuthor();
+    fetchPostsByAuthor();
   }, [user, userId]);
 
   // Check if current user is following the profile user
@@ -624,7 +791,7 @@ const UserProfilePage: React.FC = () => {
             type='following'
             currentUserId={user?.userId || ''}
           />
-          <TravelLogCard
+          {/* <TravelLogCard
             // countriesVisited={userData.countriesVisited}
             // citiesVisited={userData.citiesVisited}
             // regionsVisited={userData.regionsVisited}
@@ -640,11 +807,13 @@ const UserProfilePage: React.FC = () => {
                 cities: ['Hà Nội', 'Đà Nẵng', 'Hồ Chí Minh'],
               },
             ]}
-          />
+          /> */}
           <TabsSection
             tripPlans={tripPlans || []}
+            posts={posts || []}
             guidesCount={0}
             isMyProfile={!userId}
+            setPosts={setPosts}
           />
         </div>
       </main>

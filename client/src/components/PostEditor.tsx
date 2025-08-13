@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,8 +31,15 @@ interface FormErrors {
   content?: string;
 }
 
-export default function PostEditor() {
+interface PostEditorProps {
+  editMode?: boolean;
+  postId?: string;
+}
+
+export default function PostEditor({ editMode = false, postId }: PostEditorProps) {
   const TITLE_MAX = 120;
+  const navigate = useNavigate();
+  const params = useParams();
   const [formState, setFormState] = useState<FormState>({
     title: '',
     content: '<p></p>',
@@ -47,24 +55,82 @@ export default function PostEditor() {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [tagModalOpen, setTagModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const coverImageRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<HTMLInputElement>(null);
+
+  // Get postId from props or URL params
+  const currentPostId = postId || params.postId;
+
+  // Load existing post data if in edit mode
+  useEffect(() => {
+    if (editMode && currentPostId) {
+      loadPostData();
+    }
+  }, [editMode, currentPostId]);
+
+  const loadPostData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await API.get(`/posts/${currentPostId}`);
+      const post = response.data.data;
+      
+      console.log('Loading post data:', post);
+      console.log('Post content:', post.content);
+      console.log('Post content type:', typeof post.content);
+      
+      setFormState({
+        title: post.title,
+        content: post.content,
+        privacy: post.privacy,
+        relatedPlan: post.relatedPlan ? {
+          _id: post.relatedPlan._id,
+          title: post.relatedPlan.title,
+          author: { displayName: post.relatedPlan.author?.displayName || 'Anonymous' }
+        } : null,
+      });
+      
+      console.log('Form state after setting:', {
+        title: post.title,
+        content: post.content,
+        privacy: post.privacy,
+      });
+      
+      if (post.coverImageUrl) {
+        setCoverImagePreview(post.coverImageUrl);
+      }
+      
+      if (post.images && post.images.length > 0) {
+        setImagesPreviews(post.images);
+      }
+    } catch (error) {
+      console.error('Error loading post data:', error);
+      toast.error('Failed to load post data');
+      navigate('/');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
     if (!formState.title || formState.title.length < 2) {
       newErrors.title = 'Title must be at least 2 characters.';
     }
+    
+    // Better content validation that handles HTML content
     const textContent = formState.content.replace(/<[^>]*>/g, '').trim();
-    if (!formState.content || textContent.length < 10) {
-      newErrors.content = 'Content must be at least 10 characters.';
+    if (!textContent || textContent.length < 10) {
+      newErrors.content = 'Content must be at least 10 characters (excluding HTML tags).';
     }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (field: keyof FormState, value: string) => {
+    console.log(`Updating ${field}:`, value); // Debug logging
     setFormState((prev) => ({ ...prev, [field]: value }));
     if (errors[field as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -73,42 +139,97 @@ export default function PostEditor() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if content is just placeholder text or empty
+    const textContent = formState.content.replace(/<[^>]*>/g, '').trim();
+    if (textContent === '' || textContent.length < 10) {
+      toast.error('Please write meaningful content for your post (at least 10 characters).');
+      return;
+    }
+    
     if (!validateForm()) {
       toast.error('Please fix the errors in the form.');
       return;
     }
-    try {
-      const formData = new FormData();
-      formData.append('title', formState.title);
-      formData.append('content', formState.content);
-      formData.append('privacy', formState.privacy);
-      if (coverImageFile) formData.append('coverImage', coverImageFile);
-      if (imageFiles && imageFiles.length > 0) {
-        imageFiles.forEach((file) => formData.append('images', file));
-      }
-      if (formState.relatedPlan?._id) {
-        formData.append('relatedPlan', formState.relatedPlan._id);
-      }
 
-      API.post('/posts/create', formData)
-        .then(() => {
-          toast.success('Post created successfully!');
-          setFormState({
-            title: '',
-            content: '<p></p>',
-            privacy: 'public',
-            relatedPlan: null,
-          });
-          setCoverImagePreview(null);
-          setImagesPreviews([]);
-          setCoverImageFile(null);
-          setImageFiles([]);
-        })
-        .catch(() => {
-          toast.error('Failed to create post. Please try again.');
+    setIsLoading(true);
+    
+    try {
+      if (editMode && currentPostId) {
+        // Edit mode - send PUT request
+        const updateData = {
+          title: formState.title,
+          content: formState.content,
+          privacy: formState.privacy,
+          relatedPlan: formState.relatedPlan?._id || null,
+        };
+
+        API.put(`/posts/${currentPostId}`, updateData)
+          .then(() => {
+            toast.success('Post updated successfully!');
+            setTimeout(() => {
+              navigate(`/posts/${currentPostId}`);
+            }, 1000);
+          })
+          .catch((error) => {
+            console.error('Post update error:', error);
+            const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to update post. Please try again.';
+            toast.error(errorMessage);
+          })
+          .finally(() => setIsLoading(false));
+      } else {
+        // Create mode - send POST request with FormData
+        const formData = new FormData();
+        formData.append('title', formState.title);
+        formData.append('content', formState.content);
+        formData.append('privacy', formState.privacy);
+        if (coverImageFile) formData.append('coverImage', coverImageFile);
+        if (imageFiles && imageFiles.length > 0) {
+          imageFiles.forEach((file) => formData.append('images', file));
+        }
+        if (formState.relatedPlan?._id) {
+          formData.append('relatedPlan', formState.relatedPlan._id);
+        }
+
+        // Debug: Log what's being sent
+        console.log('Submitting form data:', {
+          title: formState.title,
+          content: formState.content,
+          privacy: formState.privacy,
+          hasCoverImage: !!coverImageFile,
+          imageCount: imageFiles.length,
+          relatedPlan: formState.relatedPlan?._id
         });
+
+        API.post('/posts/create', formData)
+          .then((response) => {
+            toast.success('Post created successfully!');
+            
+            // Extract the post ID from the response and navigate to the post detail page
+            const postId = response.data?.data?._id;
+            if (postId) {
+              // Small delay to ensure toast is visible before navigation
+              setTimeout(() => {
+                navigate(`/posts/${postId}`);
+              }, 1000);
+            } else {
+              console.warn('Post ID not found in response:', response.data);
+              // Fallback: navigate to the main feed if post ID is not available
+              setTimeout(() => {
+                navigate('/');
+              }, 1000);
+            }
+          })
+          .catch((error) => {
+            console.error('Post creation error:', error);
+            const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to create post. Please try again.';
+            toast.error(errorMessage);
+          })
+          .finally(() => setIsLoading(false));
+      }
     } catch {
       toast.error('Something went wrong. Please try again.');
+      setIsLoading(false);
     }
   };
 
@@ -261,6 +382,7 @@ export default function PostEditor() {
           </label>
           <div className='mt-2'>
             <RichTextEditor
+              key={editMode ? `edit-${currentPostId}` : 'create'}
               content={formState.content}
               onChange={(content) => handleInputChange('content', content)}
               placeholder='Tell us about your adventure...'
@@ -443,8 +565,15 @@ export default function PostEditor() {
             <Button
               type='submit'
               className='bg-black text-white hover:bg-gray-800'
+              disabled={isLoading}
             >
-              Publish Post
+              {isLoading ? (
+                'Saving...'
+              ) : editMode ? (
+                'Update Post'
+              ) : (
+                'Publish Post'
+              )}
             </Button>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -151,6 +151,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       triggerReRender();
     },
   });
+
+  // Handle content updates from props (especially for edit mode)
+  useEffect(() => {
+    if (editor && content && content !== editor.getHTML()) {
+      // If content is HTML, set it directly
+      if (content.includes('<') && content.includes('>')) {
+        editor.commands.setContent(content, { emitUpdate: false });
+      } else {
+        // If content is JSON or plain text, try to parse it
+        try {
+          const parsed = JSON.parse(content);
+          editor.commands.setContent(parsed, { emitUpdate: false });
+        } catch {
+          // If parsing fails, treat as plain text
+          editor.commands.setContent(content, { emitUpdate: false });
+        }
+      }
+    }
+  }, [editor, content]);
 
   const handleSetLink = () => {
     if (!editor || !linkUrl.trim()) return;

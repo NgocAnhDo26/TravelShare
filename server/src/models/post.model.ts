@@ -20,6 +20,8 @@ export interface IPost extends Document {
   likesCount: number;
   /** Number of comments */
   commentsCount: number;
+  /** Trending score for discovery */
+  trendingScore?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +77,11 @@ const postSchema = new Schema<IPost>(
       default: 0,
       min: 0,
     },
+    trendingScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields automatically
@@ -86,6 +93,7 @@ const postSchema = new Schema<IPost>(
 postSchema.index({ author: 1, createdAt: -1 }); // For author-specific queries sorted by newest first
 postSchema.index({ privacy: 1 });
 postSchema.index({ createdAt: -1 }); // For sorting by newest first
+postSchema.index({ trendingScore: -1, _id: -1 }); // For trending queries
 
 // Virtual for formatted created date (can be used in responses)
 postSchema.virtual('createdAtFormatted').get(function () {
