@@ -12,6 +12,15 @@ import toast from 'react-hot-toast';
 import { getActualEditMode } from '@/utils/planPermissions';
 import type { Destination } from '@/types/destination';
 import { useLikeToggle } from '@/hooks/useLikeToggle';
+import RelatedPostsSection from '@/components/RelatedPostsSection';
+
+interface RelatedPost {
+  postId: string;
+  title: string;
+  author: string;
+  likesCount: number;
+  commentsCount: number;
+}
 
 function toDestination(raw: unknown): Destination | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
@@ -76,30 +85,18 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   const [planData, setPlanData] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actualEditMode, setActualEditMode] = useState(editMode);
+  const [relatedPosts, setRelatedPosts] = useState<RelatedPost[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
-    console.log('PlanEditorPage useEffect triggered:', {
-      planId,
-      user,
-      editMode,
-    });
-
     const fetchTripData = async () => {
       try {
         setIsLoading(true);
-        console.log('Fetching plan data for planId:', planId);
         const { data } = await API.get(`/plans/${planId}`);
-        console.log('Plan data received:', data);
         setPlanData(data);
 
         // Validate if user can edit this plan
         const canEdit = getActualEditMode(editMode, data, user);
-        console.log('Can edit check:', {
-          editMode,
-          canEdit,
-          user: user?.userId,
-          planAuthor: data.author,
-        });
 
         if (editMode && !canEdit) {
           toast.error('You can only edit your own plans');
@@ -110,7 +107,6 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           setActualEditMode(canEdit);
         }
       } catch (error) {
-        console.error('Error fetching plan:', error);
         toast.error('Failed to load plan');
         navigate('/itinerary');
       } finally {
@@ -118,10 +114,24 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
       }
     };
 
-    // Fetch data if we have a planId, regardless of user state
-    // The user can be null (not logged in) and we should still show public plans
+    const fetchRelatedPosts = async () => {
+      if (!planId) return;
+      try {
+        setRelatedLoading(true);
+        const response = await API.get(`/plans/${planId}/related-posts`);
+        console.log('Related posts response:', response.data);
+        setRelatedPosts(response.data.data);
+      } catch (error) {
+        console.error('Error fetching related posts:', error);
+        setRelatedPosts([]);
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+
     if (planId) {
       fetchTripData();
+      fetchRelatedPosts();
     }
   }, [planId, user, editMode, navigate]);
 
@@ -269,7 +279,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           trip={displayTripData}
           editMode={actualEditMode}
           onTripUpdate={handleTripUpdate}
-          onToggleLike={handleToggleLike} // Pass the handler down
+          onToggleLike={handleToggleLike}
         />
         <ItinerarySection
           itinerary={planData?.schedule || []}
@@ -288,10 +298,17 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
           onModel='TravelPlan'
           initialCommentsCount={planData.commentsCount}
           currentUser={currentUserForSocialSection}
-          // Pass the live state and handler down
           likesCount={likesCount}
           isLiked={isLiked}
           onToggleLike={handleToggleLike}
+        />
+      )}
+
+      {/* Related Posts */}
+      {!actualEditMode && (
+        <RelatedPostsSection
+          relatedPosts={relatedPosts}
+          relatedLoading={relatedLoading}
         />
       )}
     </div>

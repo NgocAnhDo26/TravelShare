@@ -7,6 +7,8 @@ import TravelPlan, {
 import { generateSchedule } from '../utils/travelPlan';
 import supabase from '../config/supabase.config';
 import Follow from '../models/follow.model';
+import Post from '../models/post.model';
+import { IPost } from '../models/post.model';
 
 /**
  * @interface ITravelPlanService
@@ -101,6 +103,8 @@ interface ITravelPlanService {
     remixData: IRemixTravelPlanRequest,
     authorId: string,
   ): Promise<ITravelPlan | null>;
+
+  getRelatedPostById(planId: string): Promise<IPost[] | null>;
 }
 
 interface CreateTravelPlanRequest {
@@ -846,6 +850,36 @@ const TravelPlanService: ITravelPlanService = {
       return remixedPlan;
     } catch (error) {
       console.error('Error remixing travel plan:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets all posts related to a specific travel plan, including author info.
+   * @param planId - The travel plan ID
+   * @returns Promise<IPost[] | null>
+   */
+  async getRelatedPostById(planId: string): Promise<IPost[] | null> {
+    try {
+      const posts = await Post.aggregate([
+        {
+          $match: {
+            relatedPlan: new mongoose.Types.ObjectId(planId),
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'author',
+            foreignField: '_id',
+            as: 'author',
+          },
+        },
+        { $unwind: '$author' },
+      ]);
+      return posts;
+    } catch (error) {
+      console.error('Error in getRelatedPostById:', error);
       throw error;
     }
   },
