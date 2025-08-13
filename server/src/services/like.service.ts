@@ -1,5 +1,6 @@
 import { Like, ILike } from '../models/like.model';
 import TravelPlan from '../models/travelPlan.model';
+import Post from '../models/post.model';
 import { Types } from 'mongoose';
 import Follow from '../models/follow.model';
 type OnModel = 'Post' | 'TravelPlan' | 'Comment';
@@ -35,11 +36,12 @@ export class LikeService {
         { _id: targetId },
         { $inc: { likesCount: 1 } },
       );
+    } else if (onModel === 'Post') {
+      await Post.updateOne(
+        { _id: targetId },
+        { $inc: { likesCount: 1 } },
+      );
     }
-    // Future: Add Post support here
-    // else if (onModel === 'Post') {
-    //   await Post.updateOne({ _id: targetId }, { $inc: { likesCount: 1 } });
-    // }
 
     return { liked: true };
   }
@@ -64,11 +66,12 @@ export class LikeService {
           { _id: targetId },
           { $inc: { likesCount: -1 } },
         );
+      } else if (onModel === 'Post') {
+        await Post.updateOne(
+          { _id: targetId },
+          { $inc: { likesCount: -1 } },
+        );
       }
-      // Future: Add Post support here
-      // else if (onModel === 'Post') {
-      //   await Post.updateOne({ _id: targetId }, { $inc: { likesCount: -1 } });
-      // }
       return { unliked: true };
     }
     return { unliked: false };

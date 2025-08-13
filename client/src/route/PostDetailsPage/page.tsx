@@ -13,11 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, MessageCircle, Lock, Globe, ZoomIn } from "lucide-react";
+import { Lock, Globe, ZoomIn } from "lucide-react";
 
 // Splide carousel imports
 import { Splide, SplideSlide, SplideTrack } from '@splidejs/react-splide';
 import '@splidejs/react-splide/css';
+
+// Import SocialSection and useLikeToggle
+import SocialSection from '@/components/SocialSection';
+import { useLikeToggle } from '@/hooks/useLikeToggle';
+import { useAuth } from '@/context/AuthContext';
+import API from '@/utils/axiosInstance';
 
 // Post interface based on your provided structure
 interface IPost {
@@ -32,6 +38,7 @@ interface IPost {
   commentsCount: number;
   createdAt: Date;
   updatedAt: Date;
+  isLiked?: boolean; // Add this property for like state
   author?: {
     name: string;
     profilePicture?: string;
@@ -40,12 +47,13 @@ interface IPost {
 
 function PostDetailsPage(): React.ReactElement {
   const { postId } = useParams<{ postId: string }>();
+  const { user } = useAuth();
   const [post, setPost] = useState<IPost | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
   // Splide carousel states
-  const splideRef = useRef<Splide>(null);
+  const splideRef = useRef<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [progress, setProgress] = useState(0);
   
@@ -56,23 +64,59 @@ function PostDetailsPage(): React.ReactElement {
   // Debug image loading
   const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: boolean}>({});
 
+  // This hook is now the single source of truth for the like state.
+  const { isLiked, likesCount, handleToggleLike } = useLikeToggle({
+    targetId: post?._id ?? '',
+    initialIsLiked: post?.isLiked ?? false,
+    initialLikesCount: post?.likesCount ?? 0,
+    apiPath: '/posts',
+    onModel: 'Post',
+  });
+
   useEffect(() => {
-    // Simulate API call with mock data
     const fetchPostDetails = async () => {
+      if (!postId) return;
+      
       try {
         setLoading(true);
-        
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Fetch real data here when API is ready
-        // For now, using mock data
-        setPost(MOCK_POST);
-        
         setError(null);
-      } catch (err) {
+        
+        const response = await API.get(`/posts/${postId}`);
+        const postData = response.data.data;
+        
+        // Transform the API response to match our interface
+        const transformedPost: IPost = {
+          _id: postData._id,
+          authorID: postData.author._id,
+          title: postData.title,
+          content: postData.content,
+          coverImageUrl: postData.coverImageUrl,
+          images: postData.images || [],
+          privacy: postData.privacy,
+          likesCount: postData.likesCount,
+          commentsCount: postData.commentsCount,
+          isLiked: postData.isLiked,
+          createdAt: new Date(postData.createdAt),
+          updatedAt: new Date(postData.updatedAt),
+          author: {
+            name: postData.author.name,
+            profilePicture: postData.author.profilePicture,
+          },
+        };
+        
+        setPost(transformedPost);
+      } catch (err: any) {
         console.error('Error fetching post details:', err);
-        setError('Failed to load post details');
+        
+        if (err.response?.status === 404) {
+          setError('Post not found');
+        } else if (err.response?.status === 403) {
+          setError('Access denied. This post is private.');
+        } else if (err.response?.status === 401) {
+          setError('Please log in to view this post');
+        } else {
+          setError('Failed to load post details');
+        }
       } finally {
         setLoading(false);
       }
@@ -107,14 +151,12 @@ function PostDetailsPage(): React.ReactElement {
 
   // Handler for Splide events
   const handleSplideMove = () => {
-    if (splideRef.current) {
+    if (splideRef.current && splideRef.current.splide) {
       const splideInstance = splideRef.current.splide;
-      if (splideInstance) {
-        const currentIndex = splideInstance.index;
-        const totalSlides = splideInstance.length;
-        setCurrentSlide(currentIndex);
-        setProgress(((currentIndex) / (totalSlides - 1)) * 100);
-      }
+      const currentIndex = splideInstance.index;
+      const totalSlides = splideInstance.length;
+      setCurrentSlide(currentIndex);
+      setProgress(((currentIndex) / (totalSlides - 1)) * 100);
     }
   };
 
@@ -142,14 +184,29 @@ function PostDetailsPage(): React.ReactElement {
         <CardContent className="flex flex-col items-center pt-6 pb-8 text-center">
           <h2 className="text-2xl font-bold text-red-500 mb-2">Error</h2>
           <p className="text-muted-foreground">{error || 'Post not found'}</p>
+          {error === 'Please log in to view this post' && (
+            <Button 
+              className="mt-4" 
+              onClick={() => window.location.href = '/login'}
+            >
+              Go to Login
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
   }
 
+  const currentUserForSocialSection = user
+    ? {
+        ...user,
+        _id: user.userId,
+      }
+    : null;
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <Card className="border-none shadow-md">
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <Card className="border-none shadow-md py-0 text-left">
         {/* Privacy badge */}
         <div className="absolute top-4 right-4 z-10">
           <Badge variant={post.privacy === 'private' ? "secondary" : "default"} className="gap-1">
@@ -207,7 +264,7 @@ function PostDetailsPage(): React.ReactElement {
 
           {/* Images Gallery */}
           {post?.images && post.images.length > 0 && (
-            <div className="my-10">
+            <div className="mt-10">
               <h3 className="text-xl font-semibold mb-4">Gallery</h3>
               
               {/* Splide Carousel with improved image handling */}
@@ -263,30 +320,21 @@ function PostDetailsPage(): React.ReactElement {
               </div>
             </div>
           )}
-
-          {/* Engagement section */}
-          <div className="border-t border-b py-4 my-6">
-            <div className="flex gap-4">
-              <Button variant="ghost" className="flex items-center gap-2">
-                <Heart className="h-5 w-5" />
-                <span>{post.likesCount}</span>
-              </Button>
-              <Button variant="ghost" className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                <span>{post.commentsCount}</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Comments section placeholder */}
-          <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4">Comments ({post.commentsCount})</h3>
-            <div className="bg-muted rounded-lg p-6 text-center text-muted-foreground">
-              {post.commentsCount > 0 ? 'Loading comments...' : 'No comments yet. Be the first to share your thoughts!'}
-            </div>
-          </div>
         </CardContent>
       </Card>
+
+      {/* SocialSection for comments and likes */}
+      {post && (
+        <SocialSection
+          targetId={post._id}
+          onModel='Post'
+          initialCommentsCount={post.commentsCount}
+          currentUser={currentUserForSocialSection}
+          likesCount={likesCount}
+          isLiked={isLiked}
+          onToggleLike={handleToggleLike}
+        />
+      )}
       
       {/* Direct usage of Lightbox component instead of ImageViewer */}
       {post?.images && post.images.length > 0 && (
@@ -313,46 +361,5 @@ function PostDetailsPage(): React.ReactElement {
     </div>
   );
 }
-
-// Mock data for development and testing
-const MOCK_POST: IPost = {
-  _id: "60d21b4667d0d8992e610c85",
-  authorID: "60d0fe4f5311236168a109ca",
-  title: "Exploring the Hidden Beaches of Bali",
-  content: `
-    <h2>A Journey Off the Beaten Path</h2>
-    <p>After months of planning, I finally made it to Bali - but I wasn't interested in the typical tourist spots. Instead, I embarked on a journey to discover the hidden gems that most travelers miss.</p>
-    
-    <p>The morning started early with a local guide who promised to show me beaches that weren't on any tourist map. We rode motorcycles along winding coastal roads, the warm breeze carrying the scent of salt and frangipani.</p>
-    
-    <h3>Pantai Rahasia (Secret Beach)</h3>
-    <p>Our first stop was a small cove accessible only through a narrow path between two cliffs. The locals call it "Pantai Rahasia" or Secret Beach. The water was crystal clear with gentle waves lapping against pristine white sand.</p>
-    
-    <p>What made this place special wasn't just the absence of crowds, but the small community of local fishermen who still used traditional methods to catch their daily haul. They invited us to join them for a simple meal of grilled fish wrapped in banana leaves.</p>
-    
-    <h3>Sunset at Black Sand Beach</h3>
-    <p>As the day progressed, we made our way to a volcanic black sand beach on the eastern coast. Unlike the popular beaches in Seminyak and Kuta, this stretch of shoreline was practically deserted.</p>
-    
-    <p>The contrast of black sand against the blue ocean created a dramatic landscape that was perfect for photography. As the sun began to set, the sky exploded in hues of orange and pink, reflecting off the wet sand in a display that felt almost otherworldly.</p>
-    
-    <p>This journey reminded me why I travel - not to check destinations off a list, but to find those quiet moments of connection with places most people never see.</p>
-  `,
-  coverImageUrl: "https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80",
-  images: [
-    "https://images.unsplash.com/photo-1502209524164-acea936639a2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1468413253725-0d5181091126?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1519046904884-53103b34b206?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80"
-  ],
-  privacy: 'public',
-  likesCount: 243,
-  commentsCount: 37,
-  createdAt: new Date('2023-06-15T09:24:00'),
-  updatedAt: new Date('2023-06-16T14:32:00'),
-  author: {
-    name: "Maya Traveler",
-    profilePicture: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=250&q=80"
-  }
-};
 
 export default PostDetailsPage;

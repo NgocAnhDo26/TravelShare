@@ -3,7 +3,7 @@ import { formatTimeAgo } from '@/utils/formatTimeAgo';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share, Bookmark,Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Share, Bookmark, Loader2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -17,7 +17,11 @@ interface PostItemProps {
 }
 
 const PostItem: React.FC<PostItemProps> = ({ post }) => {
-   const { bookmarkedIds, toggleBookmark, isLoading: isBookmarkLoading } = useBookmarks();
+  const {
+    bookmarkedIds,
+    toggleBookmark,
+    isLoading: isBookmarkLoading,
+  } = useBookmarks();
   const isBookmarked = bookmarkedIds.has(post._id);
   const handleToggleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,12 +86,18 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button 
-                onClick={handleToggleBookmark} onMouseDown={(e) => e.stopPropagation()} disabled={isBookmarkLoading} className='text-slate-600 hover:text-yellow-500 transition-colors duration-200 cursor-pointer disabled:cursor-wait'>
+                <button
+                  onClick={handleToggleBookmark}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  disabled={isBookmarkLoading}
+                  className='text-slate-600 hover:text-yellow-500 transition-colors duration-200 cursor-pointer disabled:cursor-wait'
+                >
                   {isBookmarkLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className='w-5 h-5 animate-spin' />
                   ) : (
-                    <Bookmark className={`w-5 h-5 hover:scale-110 transition-transform duration-200 ${isBookmarked ? 'fill-yellow-400 text-yellow-500' : 'fill-transparent'}`} />
+                    <Bookmark
+                      className={`w-5 h-5 hover:scale-110 transition-transform duration-200 ${isBookmarked ? 'fill-yellow-400 text-yellow-500' : 'fill-transparent'}`}
+                    />
                   )}
                 </button>
               </TooltipTrigger>

@@ -3,7 +3,7 @@ import PostService from '../services/post.service';
 
 interface IPostController {
   createPost(req: Request, res: Response): Promise<void>;
-  // getPost(req: Request, res: Response): Promise<void>;
+  getPost(req: Request, res: Response): Promise<void>;
   // updatePost(req: Request, res: Response): Promise<void>;
   // deletePost(req: Request, res: Response): Promise<void>;
 }
@@ -13,8 +13,11 @@ const PostController: IPostController = {
     await PostService.createPost(req, res);
   },
 
+  getPost: async (req: Request, res: Response) => {
+    await PostService.getPost(req, res);
+  },
+
   // Placeholder methods for future implementation
-  // getPost: async (req: Request, res: Response) => {},
   // updatePost: async (req: Request, res: Response) => {},
   // deletePost: async (req: Request, res: Response) => {},
 };

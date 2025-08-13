@@ -79,4 +79,7 @@ const handleUploads = [
 
 postRouter.post('/create', handleUploads);
 
+// Get post by ID - requires authentication to check privacy settings
+postRouter.get('/:postId', AuthJwtMiddleware.verifyToken, PostController.getPost);
+
 export default postRouter;

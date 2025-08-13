@@ -53,7 +53,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
         },
       };
     } catch (err) {
-      console.error('Error fetching trending plans:', err);
+      console.error('Error fetching trending content:', err);
       return {
         data: [],
         pagination: { next_cursor: null, has_next_page: false },
@@ -117,7 +117,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
     [fetchPlans, fetchPosts, fetchPeople],
   );
 
-  // Initial data load - fetch trending plans
+  // Initial data load - fetch trending content (plans and posts)
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -126,9 +126,14 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
         setCursor(null);
         setHasMore(true);
 
-        // Fetch trending plans for initial load using the discover endpoint
+        // Fetch trending content (plans and posts) for initial load using the discover endpoint
         const result = await fetchTrendingPlans();
-        setDiscoveryData({ plans: result.data, posts: [], people: [] });
+        
+        // Separate plans and posts from the trending results
+        const plans = result.data.filter((item: any) => item.type === 'TravelPlan' || 'destination' in item);
+        const posts = result.data.filter((item: any) => item.type === 'Post' || 'content' in item);
+        
+        setDiscoveryData({ plans, posts, people: [] });
         setCursor(result.pagination.next_cursor);
         setHasMore(result.pagination.has_next_page);
       } catch (err) {
@@ -150,22 +155,26 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
     try {
       const result = await fetchTrendingPlans(cursor);
 
+      // Separate plans and posts from the trending results
+      const newPlans = result.data.filter((item: any) => item.type === 'TravelPlan' || 'destination' in item);
+      const newPosts = result.data.filter((item: any) => item.type === 'Post' || 'content' in item);
+
       // Prevent duplicates by filtering out items that already exist
-      const existingIds = new Set(
-        discoveryData.plans.map((plan: any) => plan._id),
-      );
-      const newPlans = result.data.filter(
-        (plan: any) => !existingIds.has(plan._id),
-      );
+      const existingPlanIds = new Set(discoveryData.plans.map((plan: any) => plan._id));
+      const existingPostIds = new Set(discoveryData.posts.map((post: any) => post._id));
+      
+      const filteredNewPlans = newPlans.filter((plan: any) => !existingPlanIds.has(plan._id));
+      const filteredNewPosts = newPosts.filter((post: any) => !existingPostIds.has(post._id));
 
       setDiscoveryData((prev) => ({
         ...prev,
-        plans: [...prev.plans, ...newPlans],
+        plans: [...prev.plans, ...filteredNewPlans],
+        posts: [...prev.posts, ...filteredNewPosts],
       }));
       setCursor(result.pagination.next_cursor);
       setHasMore(result.pagination.has_next_page);
     } catch (err) {
-      console.error('Error loading more plans:', err);
+      console.error('Error loading more content:', err);
     } finally {
       setIsLoadingMore(false);
     }
@@ -176,15 +185,21 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
     cursor,
     fetchTrendingPlans,
     discoveryData.plans,
+    discoveryData.posts,
   ]);
 
   // Search function
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) {
-      // If no search query, reset to trending plans for the current tab
+      // If no search query, reset to trending content for the current tab
       if (selectedFilter === 'all') {
         const result = await fetchTrendingPlans();
-        setDiscoveryData({ plans: result.data, posts: [], people: [] });
+        
+        // Separate plans and posts from the trending results
+        const plans = result.data.filter((item: any) => item.type === 'TravelPlan' || 'destination' in item);
+        const posts = result.data.filter((item: any) => item.type === 'Post' || 'content' in item);
+        
+        setDiscoveryData({ plans, posts, people: [] });
         setCursor(result.pagination.next_cursor);
         setHasMore(result.pagination.has_next_page);
       } else {
@@ -203,43 +218,11 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       return;
     }
 
-    setError(null);
-
-    try {
-      switch (selectedFilter) {
-        case 'plans': {
-          const plans = await fetchPlans(searchQuery);
-          setDiscoveryData((prev) => ({ ...prev, plans }));
-          break;
-        }
-        case 'posts': {
-          const posts = await fetchPosts(searchQuery);
-          setDiscoveryData((prev) => ({ ...prev, posts }));
-          break;
-        }
-        case 'people': {
-          const people = await fetchPeople(searchQuery);
-          setDiscoveryData((prev) => ({ ...prev, people }));
-          break;
-        }
-        case 'all':
-        default:
-          await fetchAllData(searchQuery);
-          break;
-      }
-    } catch (err) {
-      console.error('Error searching:', err);
-      setError('Search failed. Please try again.');
-    }
-  }, [
-    searchQuery,
-    selectedFilter,
-    fetchTrendingPlans,
-    fetchPlans,
-    fetchPosts,
-    fetchPeople,
-    fetchAllData,
-  ]);
+    // Perform search
+    await fetchAllData(searchQuery);
+    setCursor(null);
+    setHasMore(false);
+  }, [searchQuery, selectedFilter, fetchTrendingPlans, fetchAllData]);
 
   // Get current data based on selected filter
   const getCurrentData = () => {
@@ -268,14 +251,17 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
         return filterUserContent(discoveryData.people);
       case 'all':
       default: {
-        // For "All" tab, show trending plans by default, or all data if there's a search query
+        // For "All" tab, show trending content (plans and posts) by default, or all data if there's a search query
         const allData = searchQuery.trim()
           ? [
               ...discoveryData.plans,
               ...discoveryData.posts,
               ...discoveryData.people,
             ]
-          : discoveryData.plans;
+          : [
+              ...discoveryData.plans,
+              ...discoveryData.posts,
+            ];
         return filterUserContent(allData);
       }
     }
