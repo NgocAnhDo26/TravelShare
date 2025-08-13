@@ -11,8 +11,11 @@ interface SearchPostCardProps {
 }
 
 const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onClick }) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -20,8 +23,9 @@ const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onClick }) => {
   };
 
   const truncateContent = (content: string, maxLength: number = 150) => {
-    if (content.length <= maxLength) return content;
-    return content.slice(0, maxLength) + '...';
+    const plain = (content || '').replace(/<[^>]*>/g, '');
+    if (plain.length <= maxLength) return plain;
+    return plain.slice(0, maxLength) + '...';
   };
 
   return (
@@ -53,17 +57,19 @@ const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onClick }) => {
           <div className='flex items-center space-x-2'>
             <Avatar className='h-6 w-6'>
               <AvatarImage
-                src={post.author.avatarUrl}
-                alt={post.author.displayName || post.author.username}
+                src={post.author?.avatarUrl || undefined}
+                alt={
+                  post.author?.displayName || post.author?.username || 'Unknown'
+                }
               />
               <AvatarFallback>
-                {(post.author.displayName || post.author.username)
+                {(post.author?.displayName || post.author?.username || 'U')
                   .charAt(0)
                   .toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <span className='text-sm text-muted-foreground'>
-              {post.author.displayName || post.author.username}
+              {post.author?.displayName || post.author?.username || 'Unknown'}
             </span>
           </div>
 
@@ -84,7 +90,7 @@ const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onClick }) => {
             <Calendar className='h-3 w-3 mr-1' />
             {formatDate(post.createdAt)}
           </div>
-          {post.relatedPlan && (
+          {post.relatedPlan?.destination?.name && (
             <div className='text-xs text-blue-600'>
               → {post.relatedPlan.destination.name}
             </div>

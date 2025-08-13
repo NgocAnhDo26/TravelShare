@@ -9,7 +9,7 @@ export interface ILike extends Document {
   /** ID of the liked content */
   targetId: Types.ObjectId;
   /** Type of content being liked */
-  onModel: 'TravelPlan' | 'Post'| 'Comment';
+  onModel: 'TravelPlan' | 'Post' | 'Comment';
   /** When the like was created */
   createdAt: Date;
   /** When the like was last updated */

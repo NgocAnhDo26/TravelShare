@@ -148,7 +148,7 @@ function PostDetailsPage(): React.ReactElement {
   }
 
   return (
-    <div className="w-7xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <Card className="border-none shadow-md">
         {/* Privacy badge */}
         <div className="absolute top-4 right-4 z-10">

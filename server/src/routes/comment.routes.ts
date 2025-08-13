@@ -14,7 +14,7 @@ export function createCommentRoutes(onModel: TargetModel) {
       (req as any).onModel = onModel;
       next();
     },
-    CommentController.getCommentsForTarget
+    CommentController.getCommentsForTarget,
   );
 
   router.post(
@@ -25,7 +25,7 @@ export function createCommentRoutes(onModel: TargetModel) {
       (req as any).onModel = onModel;
       next();
     },
-    CommentController.addComment
+    CommentController.addComment,
   );
 
   return router;
@@ -36,29 +36,30 @@ const commentActionRouter = Router();
 commentActionRouter.patch(
   '/:commentId',
   AuthJwtMiddleware.verifyToken,
-  CommentController.updateComment
+  CommentController.updateComment,
 );
 
 commentActionRouter.delete(
   '/:commentId',
   AuthJwtMiddleware.verifyToken,
-  CommentController.deleteComment
+  CommentController.deleteComment,
 );
 
 commentActionRouter.post(
   '/:commentId/like',
   AuthJwtMiddleware.verifyToken,
-  CommentController.toggleLike
+  CommentController.toggleLike,
 );
 
 commentActionRouter.get(
   '/:commentId/likes',
+  AuthJwtMiddleware.optionalAuth, 
   CommentController.getCommentLikers
 );
 
 commentActionRouter.get(
   '/:commentId/replies',
-  CommentController.getRepliesForComment
+  CommentController.getRepliesForComment,
 );
 
 export default commentActionRouter;

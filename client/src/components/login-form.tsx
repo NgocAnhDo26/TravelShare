@@ -47,12 +47,12 @@ export function LoginForm({
     navigate('/');
   };
 
-  const handleGoogleLogin = useGoogleLogin({
+  const handleGoogleAuth = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setIsLoading(true);
-      const loadingToast = toast.loading('Logging in with Google...');
+      const loadingToast = toast.loading('Continuing with Google...');
       try {
-        const response = await API.post('/auth/google-login', {
+        const response = await API.post('/auth/google-auth', {
           token: tokenResponse.access_token,
         });
         toast.dismiss(loadingToast);
@@ -62,25 +62,18 @@ export function LoginForm({
       } catch (error: unknown) {
         toast.dismiss(loadingToast);
         const axiosError = error as {
-          response?: { status?: number; data?: { error?: string } };
+          response?: { data?: { error?: string } };
         };
-        if (axiosError?.response?.status === 404) {
-          toast.error(
-            'No account found with this Google account. Please register first.',
-          );
-          navigate('/register');
-        } else {
-          const errorMessage =
-            axiosError?.response?.data?.error ||
-            'Google login failed. Please try again.';
-          toast.error(errorMessage);
-        }
+        const errorMessage =
+          axiosError?.response?.data?.error ||
+          'Google authentication failed. Please try again.';
+        toast.error(errorMessage);
       } finally {
         setIsLoading(false);
       }
     },
     onError: () => {
-      toast.error('Google login failed. Please try again.');
+      toast.error('Google authentication failed. Please try again.');
     },
   });
 
@@ -186,9 +179,9 @@ export function LoginForm({
                       className='w-full'
                       disabled={isLoading}
                       type='button'
-                      onClick={() => handleGoogleLogin()}
+                      onClick={() => handleGoogleAuth()}
                     >
-                      Login with Google
+                      Continue with Google
                     </Button>
                   </div>
                 </div>

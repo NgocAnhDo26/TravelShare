@@ -8,12 +8,16 @@ import travelPlanRouter from './routes/travelPlan.routes';
 import cookieParser from 'cookie-parser';
 import postRouter from './routes/post.routes';
 import { logger, morganStream } from './utils/logger';
-import commentActionRouter, { createCommentRoutes } from './routes/comment.routes';
+import commentActionRouter, {
+  createCommentRoutes,
+} from './routes/comment.routes';
 import morgan from 'morgan';
 import locationRouter from './routes/location.routes';
 import { createLikeRoutes, likeRouter } from './routes/like.routes';
 import discoveryRouter from './routes/discovery.routes';
 import searchRouter from './routes/search.routes';
+import { createNotificationRouter } from './routes/notification.routes';
+import bookmarkRouter, { createBookmarkRoutes } from './routes/bookmark.routes';
 dotenv.config();
 
 const app = express();
@@ -25,7 +29,7 @@ const corsOptions = {
 };
 const morganFormat =
   ':method :url :status :res[content-length] - :response-time ms';
-  
+
 app.use(cors(corsOptions));
 app.use(morgan(morganFormat, { stream: morganStream }));
 app.use(express.json());
@@ -51,6 +55,12 @@ app.use('/api/location', locationRouter);
 app.use('/api/posts', postRouter);
 app.use('/api/discovery', discoveryRouter);
 app.use('/api/search', searchRouter);
+app.use('/api', createNotificationRouter());
+
+app.use('/api/bookmarks', bookmarkRouter); 
+app.use('/api/plans', createBookmarkRoutes('TravelPlan')); 
+app.use('/api/posts', createBookmarkRoutes('Post')); 
+
 
 // Global error handler (should be after routes)
 app.use(errorHandler);

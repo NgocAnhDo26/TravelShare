@@ -63,10 +63,20 @@ interface ITravelPlanController {
     res: Response,
     next: NextFunction,
   ): Promise<void>;
-  remixTravelPlan(req: 
-    Request, 
-    res: Response, 
-    next: NextFunction
+  searchPlansForTagging(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
+  remixTravelPlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void>;
+  getRelatedPostById(
+    req: Request,
+    res: Response,
+    next: NextFunction,
   ): Promise<void>;
 }
 
@@ -149,6 +159,60 @@ const TravelPlanController: ITravelPlanController = {
       });
     }
   },
+  /**
+   * Search travel plans for tagging in posts
+   * GET /api/plans/search-for-tagging?q=...
+   * Returns reduced list: _id, title, author.displayName
+   */
+  async searchPlansForTagging(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const userId = req.user as string;
+      const q = (req.query.q as string) || '';
+
+      if (typeof q !== 'string') {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          error: 'Invalid query',
+        });
+        return;
+      }
+
+      const searchRegex = q.trim() ? new RegExp(q.trim(), 'i') : null;
+
+      const TravelPlan = (await import('../models/travelPlan.model')).default;
+
+      const orConditions = searchRegex
+        ? [{ title: searchRegex }, { 'destination.name': searchRegex }]
+        : [{}];
+
+      const results = await TravelPlan.find({
+        $or: [
+          // All plans of current user (any privacy)
+          { author: userId, $or: orConditions },
+          // Public plans of others
+          { author: { $ne: userId }, privacy: 'public', $or: orConditions },
+        ],
+      })
+        .select('title author')
+        .populate('author', 'displayName')
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
+
+      const data = results.map((p: any) => ({
+        _id: p._id,
+        title: p.title,
+        author: { displayName: p.author?.displayName || 'Unknown' },
+      }));
+
+      res.status(HTTP_STATUS.OK).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  },
 
   /**
    * Get a travel plan by ID
@@ -211,11 +275,10 @@ const TravelPlanController: ITravelPlanController = {
       const { authorId } = req.params;
       const userId = req.user as string;
       if (userId === authorId) {
-        travelPlans =
-        await TravelPlanService.getTravelPlansByAuthor(authorId);
+        travelPlans = await TravelPlanService.getTravelPlansByAuthor(authorId);
       } else {
         travelPlans =
-        await TravelPlanService.getPublicTravelPlansByAuthor(authorId);
+          await TravelPlanService.getPublicTravelPlansByAuthor(authorId);
       }
 
       let likes: any[] = [];
@@ -670,7 +733,8 @@ const TravelPlanController: ITravelPlanController = {
       // 3. Input validation
       if (!title || !startDate || !endDate || !privacy) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Request body must include title, startDate, endDate, and privacy.',
+          error:
+            'Request body must include title, startDate, endDate, and privacy.',
         });
         return;
       }
@@ -710,6 +774,40 @@ const TravelPlanController: ITravelPlanController = {
         return;
       }
       // Pass any other unexpected errors to the global error handler
+      next(error);
+    }
+  },
+
+  /**
+   * Get all posts related to a specific travel plan, including author info.
+   * GET /api/plans/:id/related-posts
+   */
+  async getRelatedPostById(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const posts = await TravelPlanService.getRelatedPostById(id);
+
+      if (!posts || posts.length === 0) {
+        res.status(HTTP_STATUS.NOT_FOUND).json({
+          error: 'No related posts found for this travel plan.',
+        });
+        return;
+      }
+
+      const data = (posts || []).map((post: any) => ({
+        postId: post._id?.toString(),
+        title: post.title,
+        author: post.author.displayName || post.author.username || 'Unknown',
+        likesCount: post.likesCount,
+        commentsCount: post.commentsCount,
+      }));
+
+      res.status(HTTP_STATUS.OK).json({ data });
+    } catch (error) {
       next(error);
     }
   },

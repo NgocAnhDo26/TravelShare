@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Link, NavLink } from 'react-router-dom';
 import { NavUser } from './NavUser';
+import { useSocket } from '@/context/SocketProvider';
+import { Badge } from '../ui/badge';
 
 // Menu items.
 const items = [
@@ -41,6 +43,7 @@ const items = [
 ];
 
 export function AppSidebar() {
+  const { unreadCount } = useSocket();
   return (
     <Sidebar>
       <SidebarHeader className='bg-white'>
@@ -73,6 +76,11 @@ export function AppSidebar() {
                       >
                         {item.title}
                       </span>
+                      {item.title === 'Notifications' && unreadCount > 0 && (
+                        <Badge variant='destructive' className='ml-auto inline-flex items-center justify-center rounded-full text-xs shadow-sm border-none'>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Badge>  
+                      )}
                     </div>
                   </SidebarMenuButton>
                 )}

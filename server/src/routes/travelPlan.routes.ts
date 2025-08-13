@@ -35,6 +35,17 @@ router.post(
 router.get('/public', TravelPlanController.getPublicTravelPlans);
 
 /**
+ * GET /api/plans/search-for-tagging?q=...
+ * Search travel plans for tagging in posts.
+ * Includes: (1) all current user's plans (public/private) AND (2) public plans of others.
+ */
+router.get(
+  '/search-for-tagging',
+  AuthJwtMiddleware.verifyToken,
+  TravelPlanController.searchPlansForTagging,
+);
+
+/**
  * GET /api/plans/feed
  * Get personalized travel plan feed for the logged-in user
  * Requires Authentication
@@ -44,6 +55,17 @@ router.get(
   AuthJwtMiddleware.verifyToken,
   TravelPlanController.getHomeFeed,
 );
+
+/**
+ * @route   GET /api/plans/:id/related-posts
+ * @desc    Get all posts related to a specific travel plan, including author info
+ * @access  Public (no authentication required)
+ */
+router.get(
+  '/:id/related-posts',
+  TravelPlanController.getRelatedPostById,
+);
+
 
 /**
  * GET /api/plans/:id

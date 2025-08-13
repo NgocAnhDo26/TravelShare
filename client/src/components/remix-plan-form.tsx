@@ -32,71 +32,71 @@ interface RemixPlanFormProps {
 }
 
 const PrivacySelector = ({
-    value,
-    onValueChange,
-  }: {
-    value: 'public' | 'private';
-    onValueChange: (value: 'public' | 'private') => void;
-  }) => {
-    // Updated: Using the same SVG icons as the trip planning page.
-    const options = [
-      {
-        value: 'public',
-        label: 'Public',
-        icon: (
-          <svg
-            className='inline'
-            width='20'
-            height='20'
-            fill='none'
-            viewBox='0 0 24 24'
-          >
-            <circle
-              cx='12'
-              cy='12'
-              r='10'
-              stroke='currentColor'
-              strokeWidth='2'
-            />
-            <path
-              d='M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z'
-              stroke='currentColor'
-              strokeWidth='2'
-            />
-          </svg>
-        ),
-      },
-      {
-        value: 'private',
-        label: 'Private',
-        icon: (
-          <svg
-            className='inline'
-            width='20'
-            height='20'
-            fill='none'
-            viewBox='0 0 24 24'
-          >
-            <rect
-              x='3'
-              y='11'
-              width='18'
-              height='11'
-              rx='2'
-              stroke='currentColor'
-              strokeWidth='2'
-            />
-            <path
-              d='M7 11V7a5 5 0 0 1 10 0v4'
-              stroke='currentColor'
-              strokeWidth='2'
-            />
-          </svg>
-        ),
-      },
-    ];
-  
-    const selectedOption = options.find((opt) => opt.value === value);
+  value,
+  onValueChange,
+}: {
+  value: 'public' | 'private';
+  onValueChange: (value: 'public' | 'private') => void;
+}) => {
+  // Updated: Using the same SVG icons as the trip planning page.
+  const options = [
+    {
+      value: 'public',
+      label: 'Public',
+      icon: (
+        <svg
+          className='inline'
+          width='20'
+          height='20'
+          fill='none'
+          viewBox='0 0 24 24'
+        >
+          <circle
+            cx='12'
+            cy='12'
+            r='10'
+            stroke='currentColor'
+            strokeWidth='2'
+          />
+          <path
+            d='M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z'
+            stroke='currentColor'
+            strokeWidth='2'
+          />
+        </svg>
+      ),
+    },
+    {
+      value: 'private',
+      label: 'Private',
+      icon: (
+        <svg
+          className='inline'
+          width='20'
+          height='20'
+          fill='none'
+          viewBox='0 0 24 24'
+        >
+          <rect
+            x='3'
+            y='11'
+            width='18'
+            height='11'
+            rx='2'
+            stroke='currentColor'
+            strokeWidth='2'
+          />
+          <path
+            d='M7 11V7a5 5 0 0 1 10 0v4'
+            stroke='currentColor'
+            strokeWidth='2'
+          />
+        </svg>
+      ),
+    },
+  ];
+
+  const selectedOption = options.find((opt) => opt.value === value);
 
   return (
     <DropdownMenu>
@@ -109,7 +109,10 @@ const PrivacySelector = ({
           <ChevronDown className='w-4 h-4' />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='start' className='w-[--radix-dropdown-menu-trigger-width]'>
+      <DropdownMenuContent
+        align='start'
+        className='w-[--radix-dropdown-menu-trigger-width]'
+      >
         {options.map((option) => (
           <DropdownMenuItem
             key={option.value}
@@ -123,7 +126,6 @@ const PrivacySelector = ({
     </DropdownMenu>
   );
 };
-
 
 const RemixPlanForm: React.FC<RemixPlanFormProps> = ({
   trip,
@@ -180,8 +182,7 @@ const RemixPlanForm: React.FC<RemixPlanFormProps> = ({
       navigate(`/plans/${response.data._id}/edit`);
     } catch (err: any) {
       const errorMessage =
-        err.response?.data?.error ||
-        'Failed to remix plan. Please try again.';
+        err.response?.data?.error || 'Failed to remix plan. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -195,12 +196,16 @@ const RemixPlanForm: React.FC<RemixPlanFormProps> = ({
         <DialogHeader>
           <DialogTitle>Remix "{trip.title}"</DialogTitle>
           <DialogDescription>
-            Create a new trip based on this one. You can change the details below.
+            Create a new trip based on this one. You can change the details
+            below.
           </DialogDescription>
         </DialogHeader>
         <div className='space-y-4 py-4'>
           {error && (
-            <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative' role='alert'>
+            <div
+              className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative'
+              role='alert'
+            >
               <span className='block sm:inline'>{error}</span>
             </div>
           )}
@@ -215,7 +220,10 @@ const RemixPlanForm: React.FC<RemixPlanFormProps> = ({
           </div>
           <div className='space-y-2'>
             <Label>Dates</Label>
-            <InitialDateRangePicker onDateChange={setDateRange} initialDateRange={dateRange} />
+            <InitialDateRangePicker
+              onDateChange={setDateRange}
+              initialDateRange={dateRange}
+            />
           </div>
           <div className='space-y-2'>
             <Label>Privacy</Label>
@@ -224,7 +232,9 @@ const RemixPlanForm: React.FC<RemixPlanFormProps> = ({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant='outline' onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant='outline' onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
           </DialogClose>
           <Button onClick={handleRemix} disabled={isLoading}>
             {isLoading ? 'Remixing...' : 'Remix'}
