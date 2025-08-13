@@ -79,7 +79,16 @@ const handleUploads = [
 
 postRouter.post('/create', handleUploads);
 
+// Get posts by author - requires authentication
+postRouter.get('/author/:userId', AuthJwtMiddleware.verifyToken, PostController.getPostsByAuthor);
+
 // Get post by ID - requires authentication to check privacy settings
 postRouter.get('/:postId', AuthJwtMiddleware.verifyToken, PostController.getPost);
+
+// Update post - requires authentication and ownership
+postRouter.put('/:postId', AuthJwtMiddleware.verifyToken, PostController.updatePost);
+
+// Delete post - requires authentication and ownership
+postRouter.delete('/:postId', AuthJwtMiddleware.verifyToken, PostController.deletePost);
 
 export default postRouter;

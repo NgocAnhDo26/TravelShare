@@ -66,6 +66,7 @@ function App() {
                   <Route path='notifications' element={<NotificationPage />} />
                   <Route path='itinerary' element={<ItineraryPage />} />
                   <Route path='/posts/create' element={<PostEditor />} />
+                  <Route path='/posts/:postId/edit' element={<PostEditor editMode={true} />} />
                   <Route path='test' element={<PostDetailsPage/>} />
                   <Route path='bookmarks' element={<BookmarksPage />} />
                 </Route>

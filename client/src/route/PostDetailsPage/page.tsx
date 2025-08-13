@@ -64,6 +64,109 @@ function PostDetailsPage(): React.ReactElement {
   // Debug image loading
   const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: boolean}>({});
 
+  // Function to convert JSON content to HTML if needed
+  const convertContentToHTML = (content: string): string => {
+    try {
+      // Check if content is JSON
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === 'object' && parsed.type === 'doc') {
+        // This is TipTap JSON content, convert to HTML
+        return convertTipTapToHTML(parsed);
+      }
+    } catch (e) {
+      // Content is not JSON, return as-is (HTML)
+      return content;
+    }
+    return content;
+  };
+
+  // Convert TipTap JSON to HTML
+  const convertTipTapToHTML = (doc: any): string => {
+    if (!doc.content) return '';
+    
+    let html = '';
+    
+    doc.content.forEach((node: any) => {
+      if (node.type === 'paragraph') {
+        const attrs = node.attrs || {};
+        const style = attrs.textAlign ? ` style="text-align: ${attrs.textAlign}"` : '';
+        html += `<p${style}>`;
+        
+        if (node.content) {
+          node.content.forEach((textNode: any) => {
+            if (textNode.type === 'text') {
+              let text = textNode.text;
+              if (textNode.marks) {
+                textNode.marks.forEach((mark: any) => {
+                  switch (mark.type) {
+                    case 'bold':
+                      text = `<strong>${text}</strong>`;
+                      break;
+                    case 'italic':
+                      text = `<em>${text}</em>`;
+                      break;
+                    case 'underline':
+                      text = `<u>${text}</u>`;
+                      break;
+                    case 'textStyle':
+                      if (mark.attrs?.color) {
+                        text = `<span style="color: ${mark.attrs.color}">${text}</span>`;
+                      }
+                      break;
+                    case 'highlight':
+                      text = `<mark>${text}</mark>`;
+                      break;
+                  }
+                });
+              }
+              html += text;
+            }
+          });
+        }
+        
+        html += '</p>';
+      } else if (node.type === 'blockquote') {
+        html += '<blockquote>';
+        if (node.content) {
+          html += convertTipTapToHTML({ content: node.content });
+        }
+        html += '</blockquote>';
+      } else if (node.type === 'orderedList') {
+        const attrs = node.attrs || {};
+        const start = attrs.start || 1;
+        html += `<ol start="${start}">`;
+        if (node.content) {
+          node.content.forEach((listItem: any) => {
+            if (listItem.type === 'listItem') {
+              html += '<li>';
+              if (listItem.content) {
+                html += convertTipTapToHTML({ content: listItem.content });
+              }
+              html += '</li>';
+            }
+          });
+        }
+        html += '</ol>';
+      } else if (node.type === 'bulletList') {
+        html += '<ul>';
+        if (node.content) {
+          node.content.forEach((listItem: any) => {
+            if (listItem.type === 'listItem') {
+              html += '<li>';
+              if (listItem.content) {
+                html += convertTipTapToHTML({ content: listItem.content });
+              }
+              html += '</li>';
+            }
+          });
+        }
+        html += '</ul>';
+      }
+    });
+    
+    return html;
+  };
+
   // This hook is now the single source of truth for the like state.
   const { isLiked, likesCount, handleToggleLike } = useLikeToggle({
     targetId: post?._id ?? '',
@@ -259,7 +362,7 @@ function PostDetailsPage(): React.ReactElement {
 
           {/* Post content */}
           <div className="prose prose-slate max-w-none my-8">
-            <div dangerouslySetInnerHTML={{ __html: post.content }} />
+            <div dangerouslySetInnerHTML={{ __html: convertContentToHTML(post.content) }} />
           </div>
 
           {/* Images Gallery */}

@@ -273,7 +273,7 @@ const PlanEditorPage: React.FC<{ editMode?: boolean }> = ({
   };
 
   return (
-    <div className='flex flex-col justify-center max-w-7xl mx-auto lg:mx-8 my-8'>
+    <div className='flex flex-col justify-center max-w-7xl mx-auto sm:mx-8 my-8 self-center'>
       <Card className='w-full overflow-hidden pt-0'>
         <TripHeader
           trip={displayTripData}

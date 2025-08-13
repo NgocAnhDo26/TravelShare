@@ -304,6 +304,33 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
     { value: 'people', label: 'People' },
   ];
 
+  const handlePostDeleted = (postId: string) => {
+    setDiscoveryData(prev => ({
+      ...prev,
+      posts: prev.posts.filter(post => post._id !== postId)
+    }));
+  };
+
+  const renderContentItem = (item: any, type: FilterType) => {
+    switch (type) {
+      case 'plans':
+        return <FeedPlan key={item._id} plan={item} />;
+      case 'posts':
+        return (
+          <PostItem 
+            key={item._id} 
+            post={item} 
+            currentUserId={user?.userId}
+            onPostDeleted={handlePostDeleted}
+          />
+        );
+      case 'people':
+        return <PersonItem key={item._id} person={item} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className='flex flex-col'>
       <main className='flex-1 p-6 max-w-7xl mx-auto w-full'>
@@ -393,17 +420,17 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
                 selectedFilter === 'plans' ||
                 (selectedFilter === 'all' && 'destination' in item)
               ) {
-                return <FeedPlan key={item._id} plan={item} />;
+                return renderContentItem(item, 'plans');
               } else if (
                 selectedFilter === 'posts' ||
                 (selectedFilter === 'all' && 'content' in item)
               ) {
-                return <PostItem key={item._id} post={item} />;
+                return renderContentItem(item, 'posts');
               } else if (
                 selectedFilter === 'people' ||
                 (selectedFilter === 'all' && 'followerCount' in item)
               ) {
-                return <PersonItem key={item._id} person={item} />;
+                return renderContentItem(item, 'people');
               }
               return null;
             })}

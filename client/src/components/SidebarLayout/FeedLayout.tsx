@@ -7,7 +7,7 @@ export default function FeedLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className='bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 h-screen overflow-auto'>
-        <SidebarTrigger className='absolute' />
+        <SidebarTrigger className='fixed' />
         <Outlet />
       </SidebarInset>
     </SidebarProvider>

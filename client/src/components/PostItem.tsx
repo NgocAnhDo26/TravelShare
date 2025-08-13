@@ -3,30 +3,70 @@ import { formatTimeAgo } from '@/utils/formatTimeAgo';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share, Bookmark, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { 
+  Heart, 
+  MessageCircle, 
+  Share, 
+  Bookmark, 
+  Loader2, 
+  EllipsisVerticalIcon,
+  PencilIcon,
+  TrashIcon
+} from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from './ui/dropdown-menu';
 
 import { useBookmarks } from '@/context/BookmarkContext';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import API from '@/utils/axiosInstance';
+
 interface PostItemProps {
   post: IPost;
+  currentUserId?: string;
+  onPostDeleted?: (postId: string) => void;
 }
 
-const PostItem: React.FC<PostItemProps> = ({ post }) => {
+const PostItem: React.FC<PostItemProps> = ({ post, currentUserId, onPostDeleted }) => {
+  const navigate = useNavigate();
   const {
     bookmarkedIds,
     toggleBookmark,
     isLoading: isBookmarkLoading,
   } = useBookmarks();
   const isBookmarked = bookmarkedIds.has(post._id);
+  
   const handleToggleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleBookmark(post._id, 'Post');
   };
+
+  const handleDeletePost = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      try {
+        await API.delete(`/posts/${post._id}`);
+        toast.success('Post deleted successfully');
+        onPostDeleted?.(post._id);
+      } catch (error) {
+        console.error('Error deleting post:', error);
+        toast.error('Failed to delete post');
+      }
+    }
+  };
+
+  const isAuthor = currentUserId && post.author._id === currentUserId;
   return (
     <Card className='w-full'>
       <CardHeader className='pb-3'>
@@ -55,6 +95,38 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
               {formatTimeAgo(post.createdAt)}
             </span>
           </div>
+          {isAuthor && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size='icon'
+                  variant='ghost'
+                  className='w-7 h-7'
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <EllipsisVerticalIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/posts/${post._id}/edit`);
+                  }}
+                >
+                  <PencilIcon className='w-4 h-4 mr-2' />
+                  Edit post
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className='text-red-600 focus:text-red-700'
+                  onClick={handleDeletePost}
+                >
+                  <TrashIcon className='w-4 h-4 mr-2 text-red-600' />
+                  Delete post
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </CardHeader>
       <CardContent className='pt-0'>

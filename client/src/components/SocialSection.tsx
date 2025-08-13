@@ -410,7 +410,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             handleFormSubmit();
           }}
         >
-          <div className='flex items-start gap-2 w-full'>
+          <div className='flex items-center gap-2 w-full'>
             <Avatar>
               {currentUser ? (
                 <>
