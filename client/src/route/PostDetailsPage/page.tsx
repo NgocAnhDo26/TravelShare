@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import Lightbox from 'yet-another-react-lightbox'; // Direct import of Lightbox
 import Captions from 'yet-another-react-lightbox/plugins/captions';
@@ -13,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Lock, Globe, ZoomIn } from 'lucide-react';
+import { Lock, Globe, ZoomIn, MapPin, Route, ArrowRight } from 'lucide-react';
 
 // Splide carousel imports
 import { Splide, SplideSlide, SplideTrack } from '@splidejs/react-splide';
@@ -42,6 +43,13 @@ interface IPost {
   author?: {
     name: string;
     profilePicture?: string;
+  };
+  relatedPlan?: {
+    _id: string;
+    title: string;
+    destination?: {
+      name?: string;
+    };
   };
 }
 
@@ -75,7 +83,7 @@ function PostDetailsPage(): React.ReactElement {
         // This is TipTap JSON content, convert to HTML
         return convertTipTapToHTML(parsed);
       }
-    } catch (e) {
+    } catch {
       // Content is not JSON, return as-is (HTML)
       return content;
     }
@@ -209,17 +217,26 @@ function PostDetailsPage(): React.ReactElement {
             name: postData.author.name,
             profilePicture: postData.author.profilePicture,
           },
+          relatedPlan:
+            postData.relatedPlan && typeof postData.relatedPlan === 'object'
+              ? {
+                  _id: (postData.relatedPlan as any)._id,
+                  title: (postData.relatedPlan as any).title,
+                  destination: (postData.relatedPlan as any).destination,
+                }
+              : undefined,
         };
 
         setPost(transformedPost);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching post details:', err);
+        const e = err as { response?: { status?: number } };
 
-        if (err.response?.status === 404) {
+        if (e.response?.status === 404) {
           setError('Post not found');
-        } else if (err.response?.status === 403) {
+        } else if (e.response?.status === 403) {
           setError('Access denied. This post is private.');
-        } else if (err.response?.status === 401) {
+        } else if (e.response?.status === 401) {
           setError('Please log in to view this post');
         } else {
           setError('Failed to load post details');
@@ -392,6 +409,38 @@ function PostDetailsPage(): React.ReactElement {
               }}
             />
           </div>
+
+          {/* Related Plan Tag / Card */}
+          {post.relatedPlan && (
+            <div className='my-8'>
+              <div className='inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-medium ring-1 ring-blue-100'>
+                Related plan
+              </div>
+              <Link
+                to={`/plans/${post.relatedPlan._id}`}
+                className='group mt-3 flex items-center gap-4 rounded-xl border bg-card/50 p-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500'
+                aria-label={`View plan ${post.relatedPlan.title}`}
+              >
+                <div className='flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200'>
+                  <Route className='h-5 w-5' />
+                </div>
+                <div className='min-w-0 flex-1'>
+                  <div className='font-medium truncate'>
+                    {post.relatedPlan.title}
+                  </div>
+                  {post.relatedPlan.destination?.name && (
+                    <div className='mt-0.5 flex items-center text-xs text-muted-foreground'>
+                      <MapPin className='mr-1 h-3.5 w-3.5' />
+                      <span className='truncate'>
+                        {post.relatedPlan.destination.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <ArrowRight className='h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5' />
+              </Link>
+            </div>
+          )}
 
           {/* Images Gallery */}
           {post?.images && post.images.length > 0 && (

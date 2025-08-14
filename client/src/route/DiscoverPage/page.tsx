@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import FeedPlan from '@/components/FeedPlan';
-import PostItem from '@/components/PostItem';
+import PostItem from '../../components/PostItem';
 import PersonItem from '@/components/PersonItem';
 import type { FilterType, DiscoveryData } from '@/types/discovery';
 import API from '@/utils/axiosInstance';
@@ -9,10 +10,7 @@ import { Button } from '@/components/ui/button';
 import HeaderTabs from '@/components/HeaderTabs';
 import { useAuth } from '@/context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
-
-interface DiscoverPageProps {}
-
-const DiscoverPage: React.FC<DiscoverPageProps> = () => {
+const DiscoverPage = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [discoveryData, setDiscoveryData] = useState<DiscoveryData>({
@@ -27,6 +25,16 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  // Per-tab pagination state
+  const [pagePlans, setPagePlans] = useState(1);
+  const [pagePosts, setPagePosts] = useState(1);
+  const [pagePeople, setPagePeople] = useState(1);
+  const [hasMorePlans, setHasMorePlans] = useState(true);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [hasMorePeople, setHasMorePeople] = useState(true);
+  const [loadingMorePlans, setLoadingMorePlans] = useState(false);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const [loadingMorePeople, setLoadingMorePeople] = useState(false);
 
   // Initialize search query from URL params
   useEffect(() => {
@@ -40,7 +48,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
   // API call functions for different content types
   const fetchTrendingPlans = useCallback(async (cursor?: string | null) => {
     try {
-      const params: any = { limit: 4 };
+      const params: Record<string, string | number> = { limit: 12 };
       if (cursor) {
         params.after = cursor;
       }
@@ -61,95 +69,174 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
     }
   }, []);
 
-  const fetchPlans = useCallback(async (query?: string) => {
-    try {
-      const params = query ? { q: query } : {};
-      const res = await API.get('/discovery/plans', { params });
-      return res.data || [];
-    } catch (err) {
-      console.error('Error fetching plans:', err);
-      return [];
-    }
-  }, []);
-
-  const fetchPosts = useCallback(async (query?: string) => {
-    try {
-      const params = query ? { q: query } : {};
-      const res = await API.get('/discovery/posts', { params });
-      return res.data || [];
-    } catch (err) {
-      console.error('Error fetching posts:', err);
-      return [];
-    }
-  }, []);
-
-  const fetchPeople = useCallback(async (query?: string) => {
-    try {
-      const params = query ? { q: query } : {};
-      const res = await API.get('/discovery/people', { params });
-      return res.data || [];
-    } catch (err) {
-      console.error('Error fetching people:', err);
-      return [];
-    }
-  }, []);
-
-  const fetchAllData = useCallback(
-    async (query?: string) => {
+  const fetchPlans = useCallback(
+    async (query?: string, page = 1, limit = 12) => {
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const [plans, posts, people] = await Promise.all([
-          fetchPlans(query),
-          fetchPosts(query),
-          fetchPeople(query),
-        ]);
-
-        setDiscoveryData({ plans, posts, people });
+        const params: Record<string, string | number> = query
+          ? { q: query, page, limit }
+          : { page, limit };
+        const res = await API.get('/discovery/plans', { params });
+        // If server starts supporting pagination meta, adapt here
+        return {
+          data: res.data || [],
+          hasMore: (res.data?.length || 0) === limit,
+        };
       } catch (err) {
-        console.error('Error fetching discovery data:', err);
-        setError('Failed to load content. Please try again later.');
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching plans:', err);
+        return { data: [], hasMore: false };
       }
     },
-    [fetchPlans, fetchPosts, fetchPeople],
+    [],
   );
 
-  // Initial data load - fetch trending content (plans and posts)
+  const fetchPosts = useCallback(
+    async (query?: string, page = 1, limit = 12) => {
+      try {
+        const params: Record<string, string | number> = query
+          ? { q: query, page, limit }
+          : { page, limit };
+        const res = await API.get('/discovery/posts', { params });
+        return {
+          data: res.data || [],
+          hasMore: (res.data?.length || 0) === limit,
+        };
+      } catch (err) {
+        console.error('Error fetching posts:', err);
+        return { data: [], hasMore: false };
+      }
+    },
+    [],
+  );
+
+  const fetchPeople = useCallback(
+    async (query?: string, page = 1, limit = 12) => {
+      try {
+        const params: Record<string, string | number> = query
+          ? { q: query, page, limit }
+          : { page, limit };
+        const res = await API.get('/discovery/people', { params });
+        return {
+          data: res.data || [],
+          hasMore: (res.data?.length || 0) === limit,
+        };
+      } catch (err) {
+        console.error('Error fetching people:', err);
+        return { data: [], hasMore: false };
+      }
+    },
+    [],
+  );
+
+  // fetchAllData was inlined into the tab/search effect above
+
+  // Refetch data whenever the tab or search query changes
   useEffect(() => {
-    const fetchInitialData = async () => {
+    let cancelled = false;
+    const run = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        setCursor(null);
-        setHasMore(true);
 
-        // Fetch trending content (plans and posts) for initial load using the discover endpoint
-        const result = await fetchTrendingPlans();
+        if (selectedFilter === 'all') {
+          if (searchQuery.trim()) {
+            // When searching, fetch all three categories
+            const [plansRes, postsRes, peopleRes] = await Promise.all([
+              fetchPlans(searchQuery),
+              fetchPosts(searchQuery),
+              fetchPeople(searchQuery),
+            ]);
+            if (!cancelled)
+              setDiscoveryData({
+                plans: plansRes.data,
+                posts: postsRes.data,
+                people: peopleRes.data,
+              });
+            setCursor(null);
+            setHasMore(false);
+          } else {
+            // Default All: trending plans & posts with pagination
+            const result = await fetchTrendingPlans();
+            const plans = result.data.filter(
+              (item: any) =>
+                item.type === 'TravelPlan' || 'destination' in item,
+            );
+            const posts = result.data.filter(
+              (item: any) => item.type === 'Post' || 'content' in item,
+            );
+            if (!cancelled) setDiscoveryData({ plans, posts, people: [] });
+            setCursor(result.pagination.next_cursor);
+            setHasMore(result.pagination.has_next_page);
+          }
+          return;
+        }
 
-        // Separate plans and posts from the trending results
-        const plans = result.data.filter(
-          (item: any) => item.type === 'TravelPlan' || 'destination' in item,
-        );
-        const posts = result.data.filter(
-          (item: any) => item.type === 'Post' || 'content' in item,
-        );
-
-        setDiscoveryData({ plans, posts, people: [] });
-        setCursor(result.pagination.next_cursor);
-        setHasMore(result.pagination.has_next_page);
+        // Individual tabs always refetch fresh data
+        if (selectedFilter === 'plans') {
+          const { data: plans, hasMore } = await fetchPlans(
+            searchQuery.trim() || undefined,
+            1,
+            12,
+          );
+          if (!cancelled) {
+            setDiscoveryData((prev) => ({ ...prev, plans }));
+            setPagePlans(1);
+            setHasMorePlans(hasMore);
+          }
+          setCursor(null);
+          setHasMore(false);
+          return;
+        }
+        if (selectedFilter === 'posts') {
+          const { data: posts, hasMore } = await fetchPosts(
+            searchQuery.trim() || undefined,
+            1,
+            12,
+          );
+          if (!cancelled) {
+            setDiscoveryData((prev) => ({ ...prev, posts }));
+            setPagePosts(1);
+            setHasMorePosts(hasMore);
+          }
+          setCursor(null);
+          setHasMore(false);
+          return;
+        }
+        if (selectedFilter === 'people') {
+          const { data: people, hasMore } = await fetchPeople(
+            searchQuery.trim() || undefined,
+            1,
+            12,
+          );
+          if (!cancelled) {
+            setDiscoveryData((prev) => ({ ...prev, people }));
+            setPagePeople(1);
+            setHasMorePeople(hasMore);
+          }
+          setCursor(null);
+          setHasMore(false);
+          return;
+        }
       } catch (err) {
-        console.error('Error fetching initial data:', err);
+        console.error('Error fetching data for tab:', err);
         setError('Failed to load content. Please try again later.');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedFilter,
+    searchQuery,
+    fetchTrendingPlans,
+    fetchPlans,
+    fetchPosts,
+    fetchPeople,
+  ]);
 
-    fetchInitialData();
-  }, [fetchTrendingPlans]);
+  // Removed: one-off posts loader. All tabs now refetch via the effect above.
 
   // Load more function for infinite scrolling
   const loadMore = useCallback(async () => {
@@ -205,44 +292,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
   ]);
 
   // Search function
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) {
-      // If no search query, reset to trending content for the current tab
-      if (selectedFilter === 'all') {
-        const result = await fetchTrendingPlans();
-
-        // Separate plans and posts from the trending results
-        const plans = result.data.filter(
-          (item: any) => item.type === 'TravelPlan' || 'destination' in item,
-        );
-        const posts = result.data.filter(
-          (item: any) => item.type === 'Post' || 'content' in item,
-        );
-
-        setDiscoveryData({ plans, posts, people: [] });
-        setCursor(result.pagination.next_cursor);
-        setHasMore(result.pagination.has_next_page);
-      } else {
-        // For specific tabs, clear that tab's data
-        setDiscoveryData((prev) => ({
-          ...prev,
-          [selectedFilter === 'plans'
-            ? 'plans'
-            : selectedFilter === 'posts'
-              ? 'posts'
-              : 'people']: [],
-        }));
-        setCursor(null);
-        setHasMore(false);
-      }
-      return;
-    }
-
-    // Perform search
-    await fetchAllData(searchQuery);
-    setCursor(null);
-    setHasMore(false);
-  }, [searchQuery, selectedFilter, fetchTrendingPlans, fetchAllData]);
+  // Search handler logic moved to the effect above
 
   // Get current data based on selected filter
   const getCurrentData = () => {
@@ -252,6 +302,8 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       return items.filter((item) => {
         // For plans and posts, check author._id
         if (item.author && item.author._id) {
+          // For Posts tab, requirement is to show all public posts including user's
+          if (selectedFilter === 'posts') return true;
           return item.author._id !== user.userId;
         }
         // For people, check _id directly
@@ -287,10 +339,21 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
   const currentData = getCurrentData();
   const observer = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const sentinelPlansRef = useRef<HTMLDivElement | null>(null);
+  const sentinelPostsRef = useRef<HTMLDivElement | null>(null);
+  const sentinelPeopleRef = useRef<HTMLDivElement | null>(null);
+  // Track whether user has scrolled in each tab to avoid auto-loading page 2 immediately
+  const hasUserScrolledPlans = useRef(false);
+  const hasUserScrolledPosts = useRef(false);
+  const hasUserScrolledPeople = useRef(false);
 
   // Intersection observer for infinite scrolling
   useEffect(() => {
     if (selectedFilter !== 'all' || !hasMore || isLoadingMore) return;
+
+    const rootEl = sentinelRef.current?.closest(
+      '.overflow-auto, .overflow-y-auto',
+    ) as Element | null;
 
     const currentObserver = new IntersectionObserver(
       (entries) => {
@@ -298,7 +361,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
           loadMore();
         }
       },
-      { threshold: 0.1 },
+      { threshold: 0.1, root: rootEl ?? null, rootMargin: '150px' },
     );
 
     if (sentinelRef.current) {
@@ -313,6 +376,186 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       }
     };
   }, [hasMore, isLoadingMore, selectedFilter, loadMore]);
+
+  // Infinite scroll for Plans tab
+  useEffect(() => {
+    if (selectedFilter !== 'plans' || isLoading) return;
+    hasUserScrolledPlans.current = false; // reset on tab/select change
+    const rootEl = sentinelPlansRef.current?.closest(
+      '.overflow-auto, .overflow-y-auto',
+    ) as Element | null;
+    const onScroll = () => {
+      const el = rootEl as HTMLElement | null;
+      if (el && el.scrollTop > 0) hasUserScrolledPlans.current = true;
+    };
+    if (rootEl) rootEl.addEventListener('scroll', onScroll, { passive: true });
+    const plansObserver = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMorePlans &&
+          !loadingMorePlans &&
+          hasUserScrolledPlans.current
+        ) {
+          (async () => {
+            setLoadingMorePlans(true);
+            const nextPage = pagePlans + 1;
+            const { data: morePlans, hasMore } = await fetchPlans(
+              searchQuery.trim() || undefined,
+              nextPage,
+              12,
+            );
+            let addedCount = 0;
+            setDiscoveryData((prev) => {
+              const filtered = morePlans.filter(
+                (p: any) => !prev.plans.some((x: any) => x._id === p._id),
+              );
+              addedCount = filtered.length;
+              return { ...prev, plans: [...prev.plans, ...filtered] };
+            });
+            setPagePlans(nextPage);
+            setHasMorePlans(hasMore && addedCount > 0);
+            setLoadingMorePlans(false);
+          })();
+        }
+      },
+      { threshold: 0.1, root: rootEl ?? null, rootMargin: '0px' },
+    );
+    if (sentinelPlansRef.current)
+      plansObserver.observe(sentinelPlansRef.current);
+    return () => {
+      plansObserver.disconnect();
+      if (rootEl) rootEl.removeEventListener('scroll', onScroll);
+    };
+  }, [
+    selectedFilter,
+    isLoading,
+    hasMorePlans,
+    loadingMorePlans,
+    pagePlans,
+    fetchPlans,
+    searchQuery,
+  ]);
+
+  // Infinite scroll for Posts tab
+  useEffect(() => {
+    if (selectedFilter !== 'posts' || isLoading) return;
+    hasUserScrolledPosts.current = false;
+    const rootEl = sentinelPostsRef.current?.closest(
+      '.overflow-auto, .overflow-y-auto',
+    ) as Element | null;
+    const onScroll = () => {
+      const el = rootEl as HTMLElement | null;
+      if (el && el.scrollTop > 0) hasUserScrolledPosts.current = true;
+    };
+    if (rootEl) rootEl.addEventListener('scroll', onScroll, { passive: true });
+    const postsObserver = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMorePosts &&
+          !loadingMorePosts &&
+          hasUserScrolledPosts.current
+        ) {
+          (async () => {
+            setLoadingMorePosts(true);
+            const nextPage = pagePosts + 1;
+            const { data: morePosts, hasMore } = await fetchPosts(
+              searchQuery.trim() || undefined,
+              nextPage,
+              12,
+            );
+            let addedCount = 0;
+            setDiscoveryData((prev) => {
+              const filtered = morePosts.filter(
+                (p: any) => !prev.posts.some((x: any) => x._id === p._id),
+              );
+              addedCount = filtered.length;
+              return { ...prev, posts: [...prev.posts, ...filtered] };
+            });
+            setPagePosts(nextPage);
+            setHasMorePosts(hasMore && addedCount > 0);
+            setLoadingMorePosts(false);
+          })();
+        }
+      },
+      { threshold: 0.1, root: rootEl ?? null, rootMargin: '0px' },
+    );
+    if (sentinelPostsRef.current)
+      postsObserver.observe(sentinelPostsRef.current);
+    return () => {
+      postsObserver.disconnect();
+      if (rootEl) rootEl.removeEventListener('scroll', onScroll);
+    };
+  }, [
+    selectedFilter,
+    isLoading,
+    hasMorePosts,
+    loadingMorePosts,
+    pagePosts,
+    fetchPosts,
+    searchQuery,
+  ]);
+
+  // Infinite scroll for People tab
+  useEffect(() => {
+    if (selectedFilter !== 'people' || isLoading) return;
+    hasUserScrolledPeople.current = false;
+    const rootEl = sentinelPeopleRef.current?.closest(
+      '.overflow-auto, .overflow-y-auto',
+    ) as Element | null;
+    const onScroll = () => {
+      const el = rootEl as HTMLElement | null;
+      if (el && el.scrollTop > 0) hasUserScrolledPeople.current = true;
+    };
+    if (rootEl) rootEl.addEventListener('scroll', onScroll, { passive: true });
+    const peopleObserver = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMorePeople &&
+          !loadingMorePeople &&
+          hasUserScrolledPeople.current
+        ) {
+          (async () => {
+            setLoadingMorePeople(true);
+            const nextPage = pagePeople + 1;
+            const { data: morePeople, hasMore } = await fetchPeople(
+              searchQuery.trim() || undefined,
+              nextPage,
+              12,
+            );
+            let addedCount = 0;
+            setDiscoveryData((prev) => {
+              const filtered = morePeople.filter(
+                (p: any) => !prev.people.some((x: any) => x._id === p._id),
+              );
+              addedCount = filtered.length;
+              return { ...prev, people: [...prev.people, ...filtered] };
+            });
+            setPagePeople(nextPage);
+            setHasMorePeople(hasMore && addedCount > 0);
+            setLoadingMorePeople(false);
+          })();
+        }
+      },
+      { threshold: 0.1, root: rootEl ?? null, rootMargin: '0px' },
+    );
+    if (sentinelPeopleRef.current)
+      peopleObserver.observe(sentinelPeopleRef.current);
+    return () => {
+      peopleObserver.disconnect();
+      if (rootEl) rootEl.removeEventListener('scroll', onScroll);
+    };
+  }, [
+    selectedFilter,
+    isLoading,
+    hasMorePeople,
+    loadingMorePeople,
+    pagePeople,
+    fetchPeople,
+    searchQuery,
+  ]);
 
   const filterOptions: { value: FilterType; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -364,22 +607,10 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
           tabs={filterOptions.map((option) => ({
             label: option.label,
             value: option.value,
-            onClick: () => {
-              setSelectedFilter(option.value);
-              // Trigger search for the new tab if there's a search query
-              if (searchQuery.trim()) {
-                setTimeout(() => handleSearch(), 0);
-              }
-            },
+            onClick: () => setSelectedFilter(option.value),
           }))}
           activeTab={selectedFilter}
-          onTabChange={(value) => {
-            setSelectedFilter(value as FilterType);
-            // Trigger search for the new tab if there's a search query
-            if (searchQuery.trim()) {
-              setTimeout(() => handleSearch(), 0);
-            }
-          }}
+          onTabChange={(value) => setSelectedFilter(value as FilterType)}
           className='mb-6'
         />
 
@@ -391,7 +622,9 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
               <p className='text-muted-foreground'>
                 {selectedFilter === 'plans'
                   ? 'Loading plans...'
-                  : 'Loading content...'}
+                  : selectedFilter === 'posts'
+                    ? 'Loading posts...'
+                    : 'Loading content...'}
               </p>
             </div>
           )}
@@ -514,6 +747,48 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
                 )}
               </div>
             )}
+
+          {selectedFilter === 'plans' && !isLoading && !error && (
+            <div className='mt-4'>
+              {hasMorePlans && <div ref={sentinelPlansRef} className='h-4' />}
+              {loadingMorePlans && (
+                <div className='text-center py-4'>
+                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto'></div>
+                  <p className='text-muted-foreground text-sm mt-2'>
+                    Loading more plans...
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedFilter === 'posts' && !isLoading && !error && (
+            <div className='mt-4'>
+              {hasMorePosts && <div ref={sentinelPostsRef} className='h-4' />}
+              {loadingMorePosts && (
+                <div className='text-center py-4'>
+                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto'></div>
+                  <p className='text-muted-foreground text-sm mt-2'>
+                    Loading more posts...
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedFilter === 'people' && !isLoading && !error && (
+            <div className='mt-4'>
+              {hasMorePeople && <div ref={sentinelPeopleRef} className='h-4' />}
+              {loadingMorePeople && (
+                <div className='text-center py-4'>
+                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto'></div>
+                  <p className='text-muted-foreground text-sm mt-2'>
+                    Loading more people...
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>

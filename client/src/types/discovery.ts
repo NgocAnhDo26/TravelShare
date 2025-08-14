@@ -4,6 +4,8 @@ export interface IPost {
   _id: string;
   title: string;
   content: string;
+  coverImageUrl?: string;
+  images?: string[];
   author: {
     _id: string;
     username: string;
@@ -11,8 +13,15 @@ export interface IPost {
     avatarUrl?: string;
   };
   privacy: 'public' | 'private';
-  relatedPlan?: string;
+  relatedPlan?:
+    | string
+    | {
+        _id: string;
+        title?: string;
+        destination?: { name: string };
+      };
   likesCount: number;
+  isLiked?: boolean;
   isBookmarked?: boolean;
   commentsCount: number;
   createdAt: string;
@@ -28,6 +37,7 @@ export interface IPerson {
   followerCount: number;
   followingCount: number;
   registrationDate: string;
+  isFollowing?: boolean;
 }
 
 export interface DiscoveryData {

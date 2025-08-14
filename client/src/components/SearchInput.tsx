@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,18 +29,44 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     showSuggestions,
     setShowSuggestions,
     isLoading,
+    handleSearch,
     handleKeyPress,
     handleSuggestionClick,
   } = useSearchSuggestions();
 
   const finalInputClassName = fullWidth ? 'w-full' : inputClassName;
-  const popoverWidth = fullWidth ? 'w-full' : 'w-64';
+
+  // Measure trigger width so the popover matches the input width exactly
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const [triggerWidth, setTriggerWidth] = useState<number>(0);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (triggerRef.current) {
+        setTriggerWidth(triggerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+
+    // Prefer ResizeObserver when available
+    let ro: ResizeObserver | null = null;
+    const currentEl = triggerRef.current;
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      ro = new ResizeObserver(() => updateWidth());
+      if (currentEl) ro.observe(currentEl);
+    }
+    window.addEventListener('resize', updateWidth);
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+      if (ro && currentEl) ro.unobserve(currentEl);
+    };
+  }, []);
 
   return (
     <div className={`relative ${className}`}>
       <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
         <PopoverTrigger asChild>
-          <div className='relative'>
+          <div ref={triggerRef} className='relative'>
             <Search className='absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 z-10' />
             <Input
               placeholder={placeholder}
@@ -72,8 +98,11 @@ export const SearchInput: React.FC<SearchInputProps> = ({
           </div>
         </PopoverTrigger>
         <PopoverContent
-          className={`${popoverWidth} p-0 border-2 border-gray-200 shadow-lg`}
+          className={`p-0 border-2 border-gray-200 shadow-lg`}
+          style={{ width: triggerWidth || undefined, maxWidth: '100%' }}
           align='start'
+          side='bottom'
+          sideOffset={6}
           onOpenAutoFocus={(e) => e.preventDefault()}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
@@ -88,56 +117,72 @@ export const SearchInput: React.FC<SearchInputProps> = ({
                 No suggestions found.
               </div>
             ) : (
-              <div className='space-y-1'>
-                {suggestions.map((suggestion, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className='p-3 hover:bg-gray-100 rounded-md cursor-pointer transition-colors'
-                  >
-                    <div className='flex items-center justify-between'>
-                      <div className='flex items-center gap-3 flex-1 min-w-0'>
-                        {suggestion.type === 'user' && (
-                          <Avatar className='h-8 w-8 flex-shrink-0'>
-                            <AvatarImage
-                              src={suggestion.avatarUrl}
-                              alt={suggestion.title}
-                            />
-                            <AvatarFallback className='text-xs'>
-                              {suggestion.title.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className='flex flex-col flex-1 min-w-0'>
-                          <span className='font-medium text-sm text-gray-900 truncate'>
-                            {suggestion.title}
-                          </span>
-                          <span className='text-xs text-gray-500 truncate'>
-                            {suggestion.subtitle}
+              <>
+                <div
+                  className='space-y-1'
+                  style={{ maxHeight: '66vh', overflowY: 'auto' }}
+                >
+                  {suggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className='p-3 hover:bg-gray-100 rounded-md cursor-pointer transition-colors'
+                    >
+                      <div className='flex items-center justify-between'>
+                        <div className='flex items-center gap-3 flex-1 min-w-0'>
+                          {suggestion.type === 'user' && (
+                            <Avatar className='h-8 w-8 flex-shrink-0'>
+                              <AvatarImage
+                                src={suggestion.avatarUrl}
+                                alt={suggestion.title}
+                              />
+                              <AvatarFallback className='text-xs'>
+                                {suggestion.title.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div className='flex flex-col flex-1 min-w-0'>
+                            <span className='font-medium text-sm text-gray-900 truncate'>
+                              {suggestion.title}
+                            </span>
+                            <span className='text-xs text-gray-500 truncate'>
+                              {suggestion.subtitle}
+                            </span>
+                          </div>
+                        </div>
+                        <div className='ml-2 flex-shrink-0'>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                              ${
+                                suggestion.type === 'plan'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : suggestion.type === 'user'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800'
+                              }`}
+                          >
+                            {suggestion.type === 'plan'
+                              ? 'Plan'
+                              : suggestion.type === 'user'
+                                ? 'User'
+                                : 'Post'}
                           </span>
                         </div>
                       </div>
-                      <div className='ml-2 flex-shrink-0'>
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                            ${
-                              suggestion.type === 'plan'
-                                ? 'bg-blue-100 text-blue-800'
-                                : suggestion.type === 'user'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-800'
-                            }`}
-                        >
-                          {suggestion.type === 'plan'
-                            ? 'Plan'
-                            : suggestion.type === 'user'
-                              ? 'User'
-                              : 'Post'}
-                        </span>
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </>
+            )}
+            {searchQuery.trim() && (
+              <div className='border-t border-gray-200 mt-2 pt-1'>
+                <button
+                  type='button'
+                  onClick={() => handleSearch(searchQuery)}
+                  className='w-full text-left px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 rounded-md'
+                >
+                  Go to "{searchQuery}"
+                </button>
               </div>
             )}
           </div>
