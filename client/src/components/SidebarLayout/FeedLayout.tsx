@@ -1,4 +1,8 @@
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 

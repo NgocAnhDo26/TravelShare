@@ -315,7 +315,8 @@ const NotificationPage: React.FC = () => {
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [page, setPage] = React.useState(1);
   const limit = 15;
-  const { decrementUnread, incrementUnread, setUnreadCount, unreadCount } = useSocket();
+  const { decrementUnread, incrementUnread, setUnreadCount, unreadCount } =
+    useSocket();
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -401,9 +402,7 @@ const NotificationPage: React.FC = () => {
     const wasUnread = previous.find((n) => n._id === id)?.read === false;
     try {
       // Optimistic update
-      setNotifications((current) =>
-        current.filter((n) => n._id !== id),
-      );
+      setNotifications((current) => current.filter((n) => n._id !== id));
 
       // Optionally adjust pagination counts optimistically
       setPagination((p) => {

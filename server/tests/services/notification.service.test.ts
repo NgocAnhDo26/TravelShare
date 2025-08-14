@@ -40,12 +40,16 @@ describe('NotificationService', () => {
         },
       };
 
-      const notification = await NotificationService.createNotification(notificationData);
+      const notification =
+        await NotificationService.createNotification(notificationData);
 
       expect(notification).toBeDefined();
       expect(notification.recipient.toString()).toBe(testUser1._id.toString());
       // The actor field is populated, so we need to check the _id property
-      expect((notification.actor as any)._id?.toString() || notification.actor.toString()).toBe(testUser2._id.toString());
+      expect(
+        (notification.actor as any)._id?.toString() ||
+          notification.actor.toString(),
+      ).toBe(testUser2._id.toString());
       expect(notification.type).toBe('like_plan');
       expect(notification.read).toBe(false);
     });
@@ -57,7 +61,7 @@ describe('NotificationService', () => {
       };
 
       await expect(
-        NotificationService.createNotification(invalidData as any)
+        NotificationService.createNotification(invalidData as any),
       ).rejects.toThrow();
     });
   });
@@ -80,16 +84,22 @@ describe('NotificationService', () => {
         },
       ]);
 
-      const result = await NotificationService.getUserNotifications(testUser1._id);
+      const result = await NotificationService.getUserNotifications(
+        testUser1._id,
+      );
 
       expect(result.notifications).toHaveLength(2);
       expect(result.totalResults).toBe(2);
       expect(result.totalPages).toBe(1);
-      expect(result.notifications[0].recipient.toString()).toBe(testUser1._id.toString());
+      expect(result.notifications[0].recipient.toString()).toBe(
+        testUser1._id.toString(),
+      );
     });
 
     it('should return empty array for user with no notifications', async () => {
-      const result = await NotificationService.getUserNotifications(testUser1._id);
+      const result = await NotificationService.getUserNotifications(
+        testUser1._id,
+      );
       expect(result.notifications).toHaveLength(0);
       expect(result.totalResults).toBe(0);
       expect(result.totalPages).toBe(0);
@@ -106,19 +116,31 @@ describe('NotificationService', () => {
       await Notification.create(notifications);
 
       // Test first page with limit 10
-      const result1 = await NotificationService.getUserNotifications(testUser1._id, 1, 10);
+      const result1 = await NotificationService.getUserNotifications(
+        testUser1._id,
+        1,
+        10,
+      );
       expect(result1.notifications).toHaveLength(10);
       expect(result1.totalResults).toBe(25);
       expect(result1.totalPages).toBe(3);
 
       // Test second page
-      const result2 = await NotificationService.getUserNotifications(testUser1._id, 2, 10);
+      const result2 = await NotificationService.getUserNotifications(
+        testUser1._id,
+        2,
+        10,
+      );
       expect(result2.notifications).toHaveLength(10);
       expect(result2.totalResults).toBe(25);
       expect(result2.totalPages).toBe(3);
 
       // Test third page
-      const result3 = await NotificationService.getUserNotifications(testUser1._id, 3, 10);
+      const result3 = await NotificationService.getUserNotifications(
+        testUser1._id,
+        3,
+        10,
+      );
       expect(result3.notifications).toHaveLength(5);
       expect(result3.totalResults).toBe(25);
       expect(result3.totalPages).toBe(3);
@@ -136,7 +158,7 @@ describe('NotificationService', () => {
 
       const updatedNotification = await NotificationService.markAsRead(
         notification._id.toString(),
-        testUser1._id
+        testUser1._id,
       );
 
       expect(updatedNotification.read).toBe(true);
@@ -144,13 +166,16 @@ describe('NotificationService', () => {
 
     it('should throw error for invalid notification ID', async () => {
       await expect(
-        NotificationService.markAsRead('invalid-id', testUser1._id)
+        NotificationService.markAsRead('invalid-id', testUser1._id),
       ).rejects.toThrow('Invalid notification ID');
     });
 
     it('should throw error for non-existent notification', async () => {
       await expect(
-        NotificationService.markAsRead(new Types.ObjectId().toString(), testUser1._id)
+        NotificationService.markAsRead(
+          new Types.ObjectId().toString(),
+          testUser1._id,
+        ),
       ).rejects.toThrow('Notification not found');
     });
 
@@ -163,7 +188,10 @@ describe('NotificationService', () => {
       });
 
       await expect(
-        NotificationService.markAsRead(notification._id.toString(), testUser2._id)
+        NotificationService.markAsRead(
+          notification._id.toString(),
+          testUser2._id,
+        ),
       ).rejects.toThrow('Forbidden: You cannot read this notification');
     });
   });
@@ -188,8 +216,10 @@ describe('NotificationService', () => {
 
       await NotificationService.markAllAsRead(testUser1._id);
 
-      const notifications = await Notification.find({ recipient: testUser1._id });
-      expect(notifications.every(n => n.read)).toBe(true);
+      const notifications = await Notification.find({
+        recipient: testUser1._id,
+      });
+      expect(notifications.every((n) => n.read)).toBe(true);
     });
   });
 
@@ -233,7 +263,7 @@ describe('NotificationService', () => {
 
       await NotificationService.deleteNotification(
         notification._id.toString(),
-        testUser1._id
+        testUser1._id,
       );
 
       const deletedNotification = await Notification.findById(notification._id);
@@ -249,8 +279,11 @@ describe('NotificationService', () => {
       });
 
       await expect(
-        NotificationService.deleteNotification(notification._id.toString(), testUser2._id)
+        NotificationService.deleteNotification(
+          notification._id.toString(),
+          testUser2._id,
+        ),
       ).rejects.toThrow('Forbidden: You cannot delete this notification');
     });
   });
-}); 
+});

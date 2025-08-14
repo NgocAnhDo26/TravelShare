@@ -63,7 +63,9 @@ const LikerListDialog: React.FC<LikerListDialogProps> = ({
         // Ensure smooth transition
         const elapsedTime = Date.now() - startTime;
         if (elapsedTime < 500) {
-          await new Promise((resolve) => setTimeout(resolve, 500 - elapsedTime));
+          await new Promise((resolve) =>
+            setTimeout(resolve, 500 - elapsedTime),
+          );
         }
 
         setUsers((prev) => (append ? [...prev, ...newUsers] : newUsers));
@@ -92,13 +94,17 @@ const LikerListDialog: React.FC<LikerListDialogProps> = ({
       if (userToUpdate.isFollowing) {
         await API.delete(`/users/${targetUserId}/unfollow`);
         setUsers((prev) =>
-          prev.map((u) => (u._id === targetUserId ? { ...u, isFollowing: false } : u)),
+          prev.map((u) =>
+            u._id === targetUserId ? { ...u, isFollowing: false } : u,
+          ),
         );
         toast.success('Unfollowed successfully');
       } else {
         await API.post(`/users/${targetUserId}/follow`);
         setUsers((prev) =>
-          prev.map((u) => (u._id === targetUserId ? { ...u, isFollowing: true } : u)),
+          prev.map((u) =>
+            u._id === targetUserId ? { ...u, isFollowing: true } : u,
+          ),
         );
         toast.success('Followed successfully');
       }
@@ -107,7 +113,7 @@ const LikerListDialog: React.FC<LikerListDialogProps> = ({
       toast.error('Failed to update follow status');
     }
   };
-  
+
   const loadMore = () => {
     if (!loading && hasMore) {
       fetchLikers(page + 1, true);
@@ -156,23 +162,45 @@ const LikerListDialog: React.FC<LikerListDialogProps> = ({
               ))}
             </div>
           ) : users.length === 0 ? (
-            <div className='text-center py-8 text-gray-500'>No one has liked this yet.</div>
+            <div className='text-center py-8 text-gray-500'>
+              No one has liked this yet.
+            </div>
           ) : (
             <div className='space-y-1'>
               {users.map((userItem) => (
-                <div key={userItem._id} className='flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 rounded-lg transition-colors'>
-                  <div className='flex items-center gap-3 flex-1 cursor-pointer' onClick={() => handleUserClick(userItem._id)}>
+                <div
+                  key={userItem._id}
+                  className='flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 rounded-lg transition-colors'
+                >
+                  <div
+                    className='flex items-center gap-3 flex-1 cursor-pointer'
+                    onClick={() => handleUserClick(userItem._id)}
+                  >
                     <Avatar className='w-10 h-10'>
-                      <AvatarImage src={userItem.avatarUrl} alt={userItem.username} />
-                      <AvatarFallback>{userItem.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarImage
+                        src={userItem.avatarUrl}
+                        alt={userItem.username}
+                      />
+                      <AvatarFallback>
+                        {userItem.username?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                     <div className='flex-1 min-w-0'>
-                      <p className='font-medium text-gray-900 truncate'>{userItem.displayName || userItem.username}</p>
-                      <p className='text-sm text-gray-500 truncate'>@{userItem.username}</p>
+                      <p className='font-medium text-gray-900 truncate'>
+                        {userItem.displayName || userItem.username}
+                      </p>
+                      <p className='text-sm text-gray-500 truncate'>
+                        @{userItem.username}
+                      </p>
                     </div>
                   </div>
                   {currentUser && currentUser.userId !== userItem._id && (
-                    <Button size='sm' variant={userItem.isFollowing ? 'outline' : 'default'} onClick={() => handleFollowToggle(userItem._id)} className='ml-2 w-20 flex-shrink-0'>
+                    <Button
+                      size='sm'
+                      variant={userItem.isFollowing ? 'outline' : 'default'}
+                      onClick={() => handleFollowToggle(userItem._id)}
+                      className='ml-2 w-20 flex-shrink-0'
+                    >
                       {userItem.isFollowing ? 'Unfollow' : 'Follow'}
                     </Button>
                   )}
@@ -180,7 +208,12 @@ const LikerListDialog: React.FC<LikerListDialogProps> = ({
               ))}
               {hasMore && (
                 <div className='text-center pt-4'>
-                  <Button variant='outline' onClick={loadMore} disabled={loading} className='w-full'>
+                  <Button
+                    variant='outline'
+                    onClick={loadMore}
+                    disabled={loading}
+                    className='w-full'
+                  >
                     {loading ? 'Loading...' : 'Load More'}
                   </Button>
                 </div>

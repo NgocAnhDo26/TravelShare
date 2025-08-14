@@ -26,7 +26,9 @@ class DiscoveryService {
           ];
         } else {
           // Invalid cursor format, reset query to just privacy filter
-          console.error('Invalid cursor format: missing parts or invalid score');
+          console.error(
+            'Invalid cursor format: missing parts or invalid score',
+          );
         }
       } catch (error) {
         console.error('Invalid cursor format:', error);
@@ -52,16 +54,18 @@ class DiscoveryService {
 
     // Combine and sort by trending score
     const allTrendings = [
-      ...trendingPlans.map(plan => ({ ...plan, type: 'TravelPlan' })),
-      ...trendingPosts.map(post => ({ ...post, type: 'Post' }))
-    ].sort((a, b) => {
-      // Sort by trending score (descending), then by _id for consistency
-      if (b.trendingScore !== a.trendingScore) {
-        return (b.trendingScore || 0) - (a.trendingScore || 0);
-      }
-      // When scores are equal, sort by _id in descending order for consistency
-      return b._id.toString().localeCompare(a._id.toString());
-    }).slice(0, limit);
+      ...trendingPlans.map((plan) => ({ ...plan, type: 'TravelPlan' })),
+      ...trendingPosts.map((post) => ({ ...post, type: 'Post' })),
+    ]
+      .sort((a, b) => {
+        // Sort by trending score (descending), then by _id for consistency
+        if (b.trendingScore !== a.trendingScore) {
+          return (b.trendingScore || 0) - (a.trendingScore || 0);
+        }
+        // When scores are equal, sort by _id in descending order for consistency
+        return b._id.toString().localeCompare(a._id.toString());
+      })
+      .slice(0, limit);
 
     // Prepare pagination info with compound cursor
     let next_cursor = null;

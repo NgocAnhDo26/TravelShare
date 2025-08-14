@@ -23,7 +23,10 @@ export class NotificationService {
   /**
    * Register a user's socket connection in Redis
    */
-  static async registerSocketUser(userId: string, socketId: string): Promise<void> {
+  static async registerSocketUser(
+    userId: string,
+    socketId: string,
+  ): Promise<void> {
     try {
       await redisClient.set(userId, socketId);
       console.log(`[Redis] User ${userId} registered with socket ${socketId}`);
@@ -57,7 +60,7 @@ export class NotificationService {
    */
   static async createNotification(
     data: CreateNotificationData,
-    io?: Server
+    io?: Server,
   ): Promise<INotification> {
     const { recipient, actor, type, target } = data;
 
@@ -73,7 +76,7 @@ export class NotificationService {
 
     // Populate actor and relevant targets for richer realtime payload
     const populatedNotification = await Notification.findById(
-      newNotification._id
+      newNotification._id,
     )
       .populate('actor', 'displayName username avatarUrl')
       .populate({
@@ -96,7 +99,7 @@ export class NotificationService {
       throw new Error('Failed to create notification');
     }
 
-    console.log("Trying to send socket...");
+    console.log('Trying to send socket...');
     // Resolve io instance (prefer provided, else fallback to global)
     let ioInstance: Server | undefined = io;
     if (!ioInstance) {
@@ -129,7 +132,7 @@ export class NotificationService {
   ): Promise<void> {
     try {
       const targetSocketId = await redisClient.get(userId);
-      
+
       if (targetSocketId) {
         // Build a minimal client-friendly payload including deep-populated fields if available
         const payload: any = {
@@ -145,14 +148,19 @@ export class NotificationService {
           payload.url = `/plans/${(notification as any).target.plan._id}`;
         } else if ((notification as any).target?.post?._id) {
           payload.url = `/posts/${(notification as any).target.post._id}`;
-        } else if (notification.type === 'follow' && (notification as any).actor?._id) {
+        } else if (
+          notification.type === 'follow' &&
+          (notification as any).actor?._id
+        ) {
           payload.url = `/profile/${(notification as any).actor._id}`;
         }
 
         io.to(targetSocketId).emit('new-notification', payload);
         console.log(`[Notification] Real-time event sent to user ${userId}`);
       } else {
-        console.log(`[Notification] User ${userId} not connected. Notification saved to DB.`);
+        console.log(
+          `[Notification] User ${userId} not connected. Notification saved to DB.`,
+        );
       }
     } catch (error) {
       console.error('[Notification] Error emitting notification:', error);
@@ -164,33 +172,33 @@ export class NotificationService {
    * Get all notifications for a user with pagination
    */
   static async getUserNotifications(
-    userId: string | Types.ObjectId, 
-    page: number = 1, 
-    limit: number = 20
+    userId: string | Types.ObjectId,
+    page: number = 1,
+    limit: number = 20,
   ): Promise<{
     notifications: INotification[];
     totalResults: number;
     totalPages: number;
   }> {
     const skip = (page - 1) * limit;
-    
+
     const [notifications, totalResults] = await Promise.all([
       Notification.find({ recipient: userId })
         .populate('actor', 'displayName username avatarUrl')
         .populate({
           path: 'target.plan',
           select: 'title',
-          model: 'TravelPlan'
+          model: 'TravelPlan',
         })
         .populate({
           path: 'target.post',
           select: 'title',
-          model: 'posts'
+          model: 'posts',
         })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
-      Notification.countDocuments({ recipient: userId })
+      Notification.countDocuments({ recipient: userId }),
     ]);
 
     const totalPages = Math.ceil(totalResults / limit);
@@ -207,7 +215,7 @@ export class NotificationService {
    */
   static async markAsRead(
     notificationId: string,
-    userId: string | Types.ObjectId
+    userId: string | Types.ObjectId,
   ): Promise<INotification> {
     if (!Types.ObjectId.isValid(notificationId)) {
       throw new Error('Invalid notification ID');
@@ -236,15 +244,20 @@ export class NotificationService {
   static async markAllAsRead(userId: string | Types.ObjectId): Promise<void> {
     await Notification.updateMany(
       { recipient: userId, read: false },
-      { read: true }
+      { read: true },
     );
   }
 
   /**
    * Get unread notification count for a user
    */
-  static async getUnreadCount(userId: string | Types.ObjectId): Promise<number> {
-    return await Notification.countDocuments({ recipient: userId, read: false });
+  static async getUnreadCount(
+    userId: string | Types.ObjectId,
+  ): Promise<number> {
+    return await Notification.countDocuments({
+      recipient: userId,
+      read: false,
+    });
   }
 
   /**
@@ -252,7 +265,7 @@ export class NotificationService {
    */
   static async deleteNotification(
     notificationId: string,
-    userId: string | Types.ObjectId
+    userId: string | Types.ObjectId,
   ): Promise<void> {
     if (!Types.ObjectId.isValid(notificationId)) {
       throw new Error('Invalid notification ID');
@@ -271,4 +284,4 @@ export class NotificationService {
 
     await Notification.findByIdAndDelete(notificationId);
   }
-} 
+}

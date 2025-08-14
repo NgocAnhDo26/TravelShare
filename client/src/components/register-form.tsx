@@ -33,7 +33,7 @@ export function RegisterForm({
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const profilePhotoRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { user, refreshUser  } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -51,13 +51,14 @@ export function RegisterForm({
         });
         toast.dismiss(loadingToast);
         toast.success(response.data.message || 'Authentication successful!');
-        
-        await refreshUser(); 
-        navigate('/');
 
+        await refreshUser();
+        navigate('/');
       } catch (error: unknown) {
         toast.dismiss(loadingToast);
-        const axiosError = error as { response?: { data?: { error?: string } } };
+        const axiosError = error as {
+          response?: { data?: { error?: string } };
+        };
         const errorMessage =
           axiosError?.response?.data?.error ||
           'Google authentication failed. Please try again.';

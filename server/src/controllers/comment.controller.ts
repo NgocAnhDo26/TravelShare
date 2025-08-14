@@ -18,18 +18,18 @@ type AsyncHandler = (
 const asyncHandler =
   (fn: AsyncHandler) => (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
-};
+  };
 
 // Helper function to extract mentions from comment content
 const extractMentions = (content: string): string[] => {
   const mentionRegex = /@(\w+)/g;
   const mentions: string[] = [];
   let match;
-  
+
   while ((match = mentionRegex.exec(content)) !== null) {
     mentions.push(match[1]);
   }
-  
+
   return mentions;
 };
 
@@ -100,29 +100,35 @@ const CommentController = {
     }
 
     const updatedComment = await CommentService.toggleLike(commentId, userId);
-    
+
     // Create notification for comment like
     try {
       const comment = await Comment.findById(commentId).select('user');
       if (comment && comment.user.toString() !== userId) {
-        await NotificationService.createNotification({
-          recipient: comment.user.toString(),
-          actor: userId,
-          type: 'like_comment',
-          target: { comment: commentId }
-        }, req.io);
+        await NotificationService.createNotification(
+          {
+            recipient: comment.user.toString(),
+            actor: userId,
+            type: 'like_comment',
+            target: { comment: commentId },
+          },
+          req.io,
+        );
       }
     } catch (notificationError) {
-      console.error('Failed to create comment like notification:', notificationError);
+      console.error(
+        'Failed to create comment like notification:',
+        notificationError,
+      );
       // Don't fail the like operation if notification creation fails
     }
-    
+
     res.status(200).json(updatedComment);
   }),
 
   getCommentLikers: asyncHandler(async (req: Request, res: Response) => {
     const { commentId } = req.params;
-    const currentUserId = req.user as string | undefined; 
+    const currentUserId = req.user as string | undefined;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
 
@@ -130,17 +136,19 @@ const CommentController = {
       return res.status(400).json({ message: 'Invalid commentId.' });
       return res.status(400).json({ message: 'Invalid commentId.' });
     }
-    
+
     const result = await LikeService.getUsersWhoLiked({
       targetId: new Types.ObjectId(commentId),
       onModel: 'Comment',
       page,
       limit,
-      currentUserId: currentUserId ? new Types.ObjectId(currentUserId) : undefined,
+      currentUserId: currentUserId
+        ? new Types.ObjectId(currentUserId)
+        : undefined,
     });
 
     res.status(200).json(result);
-  })
+  }),
 };
 
 export default CommentController;

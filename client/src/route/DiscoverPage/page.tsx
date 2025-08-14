@@ -128,11 +128,15 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
 
         // Fetch trending content (plans and posts) for initial load using the discover endpoint
         const result = await fetchTrendingPlans();
-        
+
         // Separate plans and posts from the trending results
-        const plans = result.data.filter((item: any) => item.type === 'TravelPlan' || 'destination' in item);
-        const posts = result.data.filter((item: any) => item.type === 'Post' || 'content' in item);
-        
+        const plans = result.data.filter(
+          (item: any) => item.type === 'TravelPlan' || 'destination' in item,
+        );
+        const posts = result.data.filter(
+          (item: any) => item.type === 'Post' || 'content' in item,
+        );
+
         setDiscoveryData({ plans, posts, people: [] });
         setCursor(result.pagination.next_cursor);
         setHasMore(result.pagination.has_next_page);
@@ -156,15 +160,27 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       const result = await fetchTrendingPlans(cursor);
 
       // Separate plans and posts from the trending results
-      const newPlans = result.data.filter((item: any) => item.type === 'TravelPlan' || 'destination' in item);
-      const newPosts = result.data.filter((item: any) => item.type === 'Post' || 'content' in item);
+      const newPlans = result.data.filter(
+        (item: any) => item.type === 'TravelPlan' || 'destination' in item,
+      );
+      const newPosts = result.data.filter(
+        (item: any) => item.type === 'Post' || 'content' in item,
+      );
 
       // Prevent duplicates by filtering out items that already exist
-      const existingPlanIds = new Set(discoveryData.plans.map((plan: any) => plan._id));
-      const existingPostIds = new Set(discoveryData.posts.map((post: any) => post._id));
-      
-      const filteredNewPlans = newPlans.filter((plan: any) => !existingPlanIds.has(plan._id));
-      const filteredNewPosts = newPosts.filter((post: any) => !existingPostIds.has(post._id));
+      const existingPlanIds = new Set(
+        discoveryData.plans.map((plan: any) => plan._id),
+      );
+      const existingPostIds = new Set(
+        discoveryData.posts.map((post: any) => post._id),
+      );
+
+      const filteredNewPlans = newPlans.filter(
+        (plan: any) => !existingPlanIds.has(plan._id),
+      );
+      const filteredNewPosts = newPosts.filter(
+        (post: any) => !existingPostIds.has(post._id),
+      );
 
       setDiscoveryData((prev) => ({
         ...prev,
@@ -194,11 +210,15 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
       // If no search query, reset to trending content for the current tab
       if (selectedFilter === 'all') {
         const result = await fetchTrendingPlans();
-        
+
         // Separate plans and posts from the trending results
-        const plans = result.data.filter((item: any) => item.type === 'TravelPlan' || 'destination' in item);
-        const posts = result.data.filter((item: any) => item.type === 'Post' || 'content' in item);
-        
+        const plans = result.data.filter(
+          (item: any) => item.type === 'TravelPlan' || 'destination' in item,
+        );
+        const posts = result.data.filter(
+          (item: any) => item.type === 'Post' || 'content' in item,
+        );
+
         setDiscoveryData({ plans, posts, people: [] });
         setCursor(result.pagination.next_cursor);
         setHasMore(result.pagination.has_next_page);
@@ -258,10 +278,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
               ...discoveryData.posts,
               ...discoveryData.people,
             ]
-          : [
-              ...discoveryData.plans,
-              ...discoveryData.posts,
-            ];
+          : [...discoveryData.plans, ...discoveryData.posts];
         return filterUserContent(allData);
       }
     }
@@ -305,9 +322,9 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
   ];
 
   const handlePostDeleted = (postId: string) => {
-    setDiscoveryData(prev => ({
+    setDiscoveryData((prev) => ({
       ...prev,
-      posts: prev.posts.filter(post => post._id !== postId)
+      posts: prev.posts.filter((post) => post._id !== postId),
     }));
   };
 
@@ -317,9 +334,9 @@ const DiscoverPage: React.FC<DiscoverPageProps> = () => {
         return <FeedPlan key={item._id} plan={item} />;
       case 'posts':
         return (
-          <PostItem 
-            key={item._id} 
-            post={item} 
+          <PostItem
+            key={item._id}
+            post={item}
             currentUserId={user?.userId}
             onPostDeleted={handlePostDeleted}
           />

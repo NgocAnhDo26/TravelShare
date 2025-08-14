@@ -77,9 +77,12 @@ export function AppSidebar() {
                         {item.title}
                       </span>
                       {item.title === 'Notifications' && unreadCount > 0 && (
-                        <Badge variant='destructive' className='ml-auto inline-flex items-center justify-center rounded-full text-xs shadow-sm border-none'>
+                        <Badge
+                          variant='destructive'
+                          className='ml-auto inline-flex items-center justify-center rounded-full text-xs shadow-sm border-none'
+                        >
                           {unreadCount > 99 ? '99+' : unreadCount}
-                        </Badge>  
+                        </Badge>
                       )}
                     </div>
                   </SidebarMenuButton>

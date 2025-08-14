@@ -106,7 +106,7 @@ describe('DiscoveryService.getTrendings', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -119,13 +119,18 @@ describe('DiscoveryService.getTrendings', () => {
       'author',
       'username displayName avatarUrl',
     );
-    expect(mockPlanFind.sort).toHaveBeenCalledWith({ trendingScore: -1, _id: -1 });
+    expect(mockPlanFind.sort).toHaveBeenCalledWith({
+      trendingScore: -1,
+      _id: -1,
+    });
     expect(mockPlanFind.limit).toHaveBeenCalledWith(20);
     expect(mockPlanFind.lean).toHaveBeenCalled();
     expect(mockPlanFind.exec).toHaveBeenCalled();
 
     // Verify the result - should include type field and have no next cursor when results < limit
-    const expectedData = mockPlans.slice(0, 2).map(plan => ({ ...plan, type: 'TravelPlan' }));
+    const expectedData = mockPlans
+      .slice(0, 2)
+      .map((plan) => ({ ...plan, type: 'TravelPlan' }));
     expect(result).toEqual({
       data: expectedData,
       pagination: {
@@ -150,7 +155,7 @@ describe('DiscoveryService.getTrendings', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -159,7 +164,9 @@ describe('DiscoveryService.getTrendings', () => {
     expect(mockPlanFind.limit).toHaveBeenCalledWith(1);
     expect(result.pagination.has_next_page).toBe(true);
     // New cursor format includes type: trendingScore|type|_id
-    expect(result.pagination.next_cursor).toBe('95.2|TravelPlan|507f1f77bcf86cd799439011');
+    expect(result.pagination.next_cursor).toBe(
+      '95.2|TravelPlan|507f1f77bcf86cd799439011',
+    );
   });
 
   it('should handle cursor-based pagination', async () => {
@@ -178,7 +185,7 @@ describe('DiscoveryService.getTrendings', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -213,7 +220,7 @@ describe('DiscoveryService.getTrendings', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -227,7 +234,9 @@ describe('DiscoveryService.getTrendings', () => {
     ];
     expect(result.data).toEqual(expectedData);
     // New cursor format - should be Plan C's ID since it comes last
-    expect(result.pagination.next_cursor).toBe('0|TravelPlan|507f1f77bcf86cd799439015');
+    expect(result.pagination.next_cursor).toBe(
+      '0|TravelPlan|507f1f77bcf86cd799439015',
+    );
   });
 
   it('should handle invalid cursor format gracefully', async () => {
@@ -245,14 +254,18 @@ describe('DiscoveryService.getTrendings', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
-    const result = await DiscoveryService.getTrendings({ after: 'invalid-cursor' });
+    const result = await DiscoveryService.getTrendings({
+      after: 'invalid-cursor',
+    });
 
     // Should still return results despite invalid cursor
-    expect(result.data).toEqual(mockPlans.slice(0, 2).map(plan => ({ ...plan, type: 'TravelPlan' })));
+    expect(result.data).toEqual(
+      mockPlans.slice(0, 2).map((plan) => ({ ...plan, type: 'TravelPlan' })),
+    );
     expect(mockTravelPlan.find).toHaveBeenCalledWith({ privacy: 'public' });
   });
 
@@ -272,7 +285,7 @@ describe('DiscoveryService.getTrendings', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -307,7 +320,7 @@ describe('DiscoveryService.getTrendings', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue(mockPosts.slice(0, 1)),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -316,10 +329,12 @@ describe('DiscoveryService.getTrendings', () => {
     // Should combine and sort by trending score
     const expectedData = [
       { ...mockPlans[0], type: 'TravelPlan' }, // Score: 95.2
-      { ...mockPosts[0], type: 'Post' },        // Score: 88.5
+      { ...mockPosts[0], type: 'Post' }, // Score: 88.5
     ];
-    
+
     expect(result.data).toEqual(expectedData);
-    expect(result.pagination.next_cursor).toBe('88.5|Post|507f1f77bcf86cd799439019');
+    expect(result.pagination.next_cursor).toBe(
+      '88.5|Post|507f1f77bcf86cd799439019',
+    );
   });
 });

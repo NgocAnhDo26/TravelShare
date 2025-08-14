@@ -13,7 +13,7 @@ export function createBookmarkRoutes(onModel: SupportedModels) {
       (req as any).onModel = onModel;
       next();
     },
-    BookmarkController.toggleBookmark
+    BookmarkController.toggleBookmark,
   );
 
   return router;
@@ -22,15 +22,15 @@ export function createBookmarkRoutes(onModel: SupportedModels) {
 const bookmarkRouter = Router();
 
 bookmarkRouter.get(
-    '/me',
-    AuthJwtMiddleware.verifyToken,
-    BookmarkController.getMyBookmarks
+  '/me',
+  AuthJwtMiddleware.verifyToken,
+  BookmarkController.getMyBookmarks,
 );
 
 bookmarkRouter.get(
-    '/me/ids',
-    AuthJwtMiddleware.verifyToken,
-    BookmarkController.getMyBookmarkIds
+  '/me/ids',
+  AuthJwtMiddleware.verifyToken,
+  BookmarkController.getMyBookmarkIds,
 );
 
 export default bookmarkRouter;

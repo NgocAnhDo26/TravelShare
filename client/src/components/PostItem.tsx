@@ -4,15 +4,15 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Heart, 
-  MessageCircle, 
-  Share, 
-  Bookmark, 
-  Loader2, 
+import {
+  Heart,
+  MessageCircle,
+  Share,
+  Bookmark,
+  Loader2,
   EllipsisVerticalIcon,
   PencilIcon,
-  TrashIcon
+  TrashIcon,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -38,7 +38,11 @@ interface PostItemProps {
   onPostDeleted?: (postId: string) => void;
 }
 
-const PostItem: React.FC<PostItemProps> = ({ post, currentUserId, onPostDeleted }) => {
+const PostItem: React.FC<PostItemProps> = ({
+  post,
+  currentUserId,
+  onPostDeleted,
+}) => {
   const navigate = useNavigate();
   const {
     bookmarkedIds,
@@ -46,7 +50,7 @@ const PostItem: React.FC<PostItemProps> = ({ post, currentUserId, onPostDeleted 
     isLoading: isBookmarkLoading,
   } = useBookmarks();
   const isBookmarked = bookmarkedIds.has(post._id);
-  
+
   const handleToggleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleBookmark(post._id, 'Post');
@@ -54,7 +58,11 @@ const PostItem: React.FC<PostItemProps> = ({ post, currentUserId, onPostDeleted 
 
   const handleDeletePost = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+    if (
+      window.confirm(
+        'Are you sure you want to delete this post? This action cannot be undone.',
+      )
+    ) {
       try {
         await API.delete(`/posts/${post._id}`);
         toast.success('Post deleted successfully');

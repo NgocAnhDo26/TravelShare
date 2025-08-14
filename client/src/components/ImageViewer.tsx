@@ -53,25 +53,30 @@ function ImageViewer({
     <>
       {/* Thumbnail grid */}
       {showThumbnails && (
-        <div className={cn('grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3', className)}>
+        <div
+          className={cn(
+            'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3',
+            className,
+          )}
+        >
           {images.map((image, i) => (
             <div
               key={i}
               className={cn(
                 'cursor-pointer overflow-hidden rounded-md hover:opacity-90 transition-opacity',
                 'aspect-square relative group',
-                thumbnailClassName
+                thumbnailClassName,
               )}
               onClick={() => openLightbox(i)}
             >
               <img
                 src={image.thumbnailSrc || image.src}
                 alt={image.alt || `Image ${i + 1}`}
-                className="w-full h-full object-cover"
-                loading="lazy"
+                className='w-full h-full object-cover'
+                loading='lazy'
               />
               {image.title && (
-                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className='absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity'>
                   {image.title}
                 </div>
               )}

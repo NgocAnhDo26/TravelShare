@@ -57,8 +57,7 @@ export async function updateTrendingScores() {
     const postBulkOperations: any[] = [];
     for (const post of recentPosts) {
       const engagementPoints =
-        (post.likesCount || 0) * 2 +
-        (post.commentsCount || 0) * 1;
+        (post.likesCount || 0) * 2 + (post.commentsCount || 0) * 1;
 
       const hoursSinceCreation =
         (now - post.createdAt!.getTime()) / (1000 * 60 * 60);

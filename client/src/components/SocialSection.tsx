@@ -351,13 +351,13 @@ const SocialSection: React.FC<SocialSectionProps> = ({
           </Button>
           <Separator orientation='vertical' className='h-6' />
           <button
-              onClick={() => likesCount > 0 && setIsLikerDialogOpen(true)}
-              disabled={likesCount === 0}
-              className='text-sm text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-md disabled:cursor-not-allowed disabled:hover:text-gray-500 cursor-pointer'
-              aria-label='View users who liked this'
-            >
-              {likesCount} likes
-            </button>
+            onClick={() => likesCount > 0 && setIsLikerDialogOpen(true)}
+            disabled={likesCount === 0}
+            className='text-sm text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-md disabled:cursor-not-allowed disabled:hover:text-gray-500 cursor-pointer'
+            aria-label='View users who liked this'
+          >
+            {likesCount} likes
+          </button>
           <span className='text-sm text-gray-500'>•</span>
           <span className='text-sm text-gray-500'>
             {commentsCount} comments

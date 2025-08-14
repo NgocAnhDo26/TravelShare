@@ -59,9 +59,10 @@ const PostService: IPostService = {
       // Validate content length (strip HTML tags for validation)
       const textContent = postData.content.replace(/<[^>]*>/g, '').trim();
       if (textContent.length < 10) {
-        res.status(400).json({ 
-          message: 'Content must be at least 10 characters (excluding HTML tags)',
-          error: 'Content too short'
+        res.status(400).json({
+          message:
+            'Content must be at least 10 characters (excluding HTML tags)',
+          error: 'Content too short',
         });
         return;
       }
@@ -84,7 +85,7 @@ const PostService: IPostService = {
         .json({ message: 'Post created successfully', data: post });
     } catch (error) {
       console.error('Error creating post:', error);
-      
+
       // Log the data that was being saved for debugging
       if (error instanceof Error) {
         console.error('Validation error details:', error.message);
@@ -92,7 +93,7 @@ const PostService: IPostService = {
           console.error('Validation error fields:', (error as any).errors);
         }
       }
-      
+
       const errorMessage =
         error instanceof Error ? error.message : 'An unknown error occurred';
       res
@@ -104,7 +105,7 @@ const PostService: IPostService = {
   getPost: async (req: Request, res: Response) => {
     try {
       const { postId } = req.params;
-      
+
       if (!postId) {
         res.status(400).json({ message: 'Post ID is required' });
         return;
@@ -129,8 +130,13 @@ const PostService: IPostService = {
 
       // Check if the current user can view this post
       const currentUserId = req.user as string;
-      if (post.privacy === 'private' && post.author._id.toString() !== currentUserId) {
-        res.status(403).json({ message: 'Access denied. This post is private.' });
+      if (
+        post.privacy === 'private' &&
+        post.author._id.toString() !== currentUserId
+      ) {
+        res
+          .status(403)
+          .json({ message: 'Access denied. This post is private.' });
         return;
       }
 
@@ -150,14 +156,15 @@ const PostService: IPostService = {
         isLiked,
         author: {
           _id: post.author._id,
-          name: (post.author as any).displayName || (post.author as any).username,
+          name:
+            (post.author as any).displayName || (post.author as any).username,
           profilePicture: (post.author as any).avatarUrl,
         },
       };
 
-      res.status(200).json({ 
-        message: 'Post retrieved successfully', 
-        data: postWithLikeStatus 
+      res.status(200).json({
+        message: 'Post retrieved successfully',
+        data: postWithLikeStatus,
       });
     } catch (error) {
       console.error('Error retrieving post:', error);
@@ -172,10 +179,10 @@ const PostService: IPostService = {
   getPostsByAuthor: async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
-      
+
       console.log('getPostsByAuthor called with userId:', userId);
       console.log('Request user:', req.user);
-      
+
       if (!userId) {
         console.log('No userId provided');
         res.status(400).json({ message: 'User ID is required' });
@@ -190,7 +197,7 @@ const PostService: IPostService = {
       }
 
       console.log('Searching for posts by author:', userId);
-      
+
       // Find posts by author and populate author information
       const posts = await Post.find({ author: userId })
         .populate('author', 'username displayName avatarUrl')
@@ -201,7 +208,7 @@ const PostService: IPostService = {
       console.log('Posts data:', posts);
 
       // Transform posts to include author ID in the correct format
-      const transformedPosts = posts.map(post => ({
+      const transformedPosts = posts.map((post) => ({
         ...post,
         author: post.author._id.toString(), // Convert ObjectId to string for frontend
       }));
@@ -209,12 +216,12 @@ const PostService: IPostService = {
       // Check if current user can view private posts
       const currentUserId = req.user as string;
       const canViewPrivate = currentUserId === userId;
-      
+
       console.log('Current user ID:', currentUserId);
       console.log('Can view private posts:', canViewPrivate);
 
       // Filter posts based on privacy settings
-      const filteredPosts = transformedPosts.filter(post => {
+      const filteredPosts = transformedPosts.filter((post) => {
         if (post.privacy === 'public') return true;
         if (post.privacy === 'private' && canViewPrivate) return true;
         return false;
@@ -223,9 +230,9 @@ const PostService: IPostService = {
       console.log('Filtered posts count:', filteredPosts.length);
       console.log('Sending response with data:', filteredPosts);
 
-      res.status(200).json({ 
-        message: 'Posts retrieved successfully', 
-        data: filteredPosts 
+      res.status(200).json({
+        message: 'Posts retrieved successfully',
+        data: filteredPosts,
       });
     } catch (error) {
       console.error('Error retrieving posts by author:', error);
@@ -241,7 +248,7 @@ const PostService: IPostService = {
     try {
       const { postId } = req.params;
       const currentUserId = req.user as string;
-      
+
       if (!Types.ObjectId.isValid(postId)) {
         res.status(400).json({ message: 'Invalid post ID format' });
         return;
@@ -264,9 +271,10 @@ const PostService: IPostService = {
       if (req.body.content) {
         const textContent = req.body.content.replace(/<[^>]*>/g, '').trim();
         if (textContent.length < 10) {
-          res.status(400).json({ 
-            message: 'Content must be at least 10 characters (excluding HTML tags)',
-            error: 'Content too short'
+          res.status(400).json({
+            message:
+              'Content must be at least 10 characters (excluding HTML tags)',
+            error: 'Content too short',
           });
           return;
         }
@@ -282,12 +290,12 @@ const PostService: IPostService = {
           relatedPlan: req.body.relatedPlan,
           updatedAt: new Date(),
         },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true },
       ).populate('author', 'username displayName avatarUrl');
 
-      res.status(200).json({ 
-        message: 'Post updated successfully', 
-        data: updatedPost 
+      res.status(200).json({
+        message: 'Post updated successfully',
+        data: updatedPost,
       });
     } catch (error) {
       console.error('Error updating post:', error);
@@ -303,7 +311,7 @@ const PostService: IPostService = {
     try {
       const { postId } = req.params;
       const currentUserId = req.user as string;
-      
+
       if (!Types.ObjectId.isValid(postId)) {
         res.status(400).json({ message: 'Invalid post ID format' });
         return;
@@ -325,8 +333,8 @@ const PostService: IPostService = {
       // Delete the post
       await Post.findByIdAndDelete(postId);
 
-      res.status(200).json({ 
-        message: 'Post deleted successfully' 
+      res.status(200).json({
+        message: 'Post deleted successfully',
       });
     } catch (error) {
       console.error('Error deleting post:', error);
