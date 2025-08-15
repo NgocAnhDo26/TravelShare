@@ -21,42 +21,42 @@ export const createNotificationRouter = (): Router => {
   router.post(
     '/notifications',
     AuthJwtMiddleware.verifyToken,
-    (req, res, next) => createNotification(req, res, next)
+    (req, res, next) => createNotification(req, res, next),
   );
 
   // GET all notifications for the logged-in user
   router.get(
     '/notifications',
     AuthJwtMiddleware.verifyToken,
-    getUserNotifications
+    getUserNotifications,
   );
 
   // GET unread notification count
   router.get(
     '/notifications/unread-count',
     AuthJwtMiddleware.verifyToken,
-    getUnreadCount
+    getUnreadCount,
   );
 
   // POST to mark a specific notification as read
   router.post(
     '/notifications/:notificationId/mark-as-read',
     AuthJwtMiddleware.verifyToken,
-    markAsRead
+    markAsRead,
   );
 
   // POST to mark all notifications as read
   router.post(
     '/notifications/mark-all-as-read',
     AuthJwtMiddleware.verifyToken,
-    markAllAsRead
+    markAllAsRead,
   );
 
   // DELETE a specific notification
   router.delete(
     '/notifications/:notificationId',
     AuthJwtMiddleware.verifyToken,
-    deleteNotification
+    deleteNotification,
   );
 
   return router;

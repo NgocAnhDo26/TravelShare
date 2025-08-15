@@ -7,7 +7,10 @@ import { safeInitializeSearchIndexes } from './config/searchIndexes';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from 'redis';
-import { registerSocketUser, unregisterSocketUser } from './controllers/notification.controller';
+import {
+  registerSocketUser,
+  unregisterSocketUser,
+} from './controllers/notification.controller';
 import { setIO } from './config/socket.config';
 
 // Initialize search indexes on startup

@@ -41,7 +41,7 @@ export const likeTarget = async (
     // Create notification for the content owner
     try {
       let contentOwnerId: string | null = null;
-      
+
       if (onModel === 'TravelPlan') {
         const plan = await TravelPlan.findById(targetId).select('author');
         contentOwnerId = plan?.author?.toString() || null;
@@ -52,15 +52,20 @@ export const likeTarget = async (
 
       // Only create notification if the content owner is different from the liker
       if (contentOwnerId && contentOwnerId !== userId) {
-        const notificationType = onModel === 'TravelPlan' ? 'like_plan' : 'like_post';
-        const targetField = onModel === 'TravelPlan' ? { plan: targetId } : { post: targetId };
-        
-        await NotificationService.createNotification({
-          recipient: contentOwnerId,
-          actor: userId,
-          type: notificationType,
-          target: targetField
-        }, req.io);
+        const notificationType =
+          onModel === 'TravelPlan' ? 'like_plan' : 'like_post';
+        const targetField =
+          onModel === 'TravelPlan' ? { plan: targetId } : { post: targetId };
+
+        await NotificationService.createNotification(
+          {
+            recipient: contentOwnerId,
+            actor: userId,
+            type: notificationType,
+            target: targetField,
+          },
+          req.io,
+        );
       }
     } catch (notificationError) {
       console.error('Failed to create like notification:', notificationError);

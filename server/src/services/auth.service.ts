@@ -257,14 +257,14 @@ const AuthService: IAuthenticationService = {
       }
 
       const lowerCaseEmail = email.toLowerCase();
-      
+
       let user = await User.findOne({ email: lowerCaseEmail });
 
       if (!user) {
         user = new User({
           email: lowerCaseEmail,
           displayName: name || lowerCaseEmail.split('@')[0],
-          username: lowerCaseEmail, 
+          username: lowerCaseEmail,
           avatarUrl: picture,
           registrationDate: new Date(),
         });

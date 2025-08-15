@@ -36,7 +36,7 @@ const BookmarkSchema: Schema = new Schema(
     timestamps: { createdAt: true, updatedAt: false }, // Only need `createdAt`
     // Ensure a user can only bookmark an item once
     indexes: [{ unique: true, fields: ['user', 'targetId', 'onModel'] }],
-  }
+  },
 );
 
 const Bookmark = mongoose.model<IBookmark>('Bookmark', BookmarkSchema);

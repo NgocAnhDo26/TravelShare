@@ -59,10 +59,9 @@ app.use('/api/discovery', discoveryRouter);
 app.use('/api/search', searchRouter);
 app.use('/api', createNotificationRouter());
 
-app.use('/api/bookmarks', bookmarkRouter); 
-app.use('/api/plans', createBookmarkRoutes('TravelPlan')); 
-app.use('/api/posts', createBookmarkRoutes('Post')); 
-
+app.use('/api/bookmarks', bookmarkRouter);
+app.use('/api/plans', createBookmarkRoutes('TravelPlan'));
+app.use('/api/posts', createBookmarkRoutes('Post'));
 
 // Global error handler (should be after routes)
 app.use(errorHandler);

@@ -32,7 +32,7 @@ export const createNotification = async (
 
     const notification = await NotificationService.createNotification(
       { recipient, actor, type, target },
-      io
+      io,
     );
 
     res.status(201).json(notification);
@@ -71,7 +71,11 @@ export const getUserNotifications = async (
       });
     }
 
-    const result = await NotificationService.getUserNotifications(userId, pageNum, limitNum);
+    const result = await NotificationService.getUserNotifications(
+      userId,
+      pageNum,
+      limitNum,
+    );
     res.status(200).json({
       success: true,
       data: result.notifications,
@@ -100,7 +104,10 @@ export const markAsRead = async (
     const { notificationId } = req.params;
     const userId = req.user as string;
 
-    const notification = await NotificationService.markAsRead(notificationId, userId);
+    const notification = await NotificationService.markAsRead(
+      notificationId,
+      userId,
+    );
     res.status(200).json(notification);
   } catch (error) {
     next(error);

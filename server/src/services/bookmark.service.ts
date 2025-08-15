@@ -89,9 +89,9 @@ const BookmarkService = {
         });
       }
     }
-    
+
     return {
-      bookmarks: bookmarks.map(b => ({
+      bookmarks: bookmarks.map((b) => ({
         _id: b._id,
         onModel: b.onModel,
         target: b.targetId,
@@ -104,7 +104,7 @@ const BookmarkService = {
 
   async getBookmarkIdsForUser(userId: string): Promise<string[]> {
     const bookmarks = await Bookmark.find({ user: userId }).select('targetId');
-    return bookmarks.map(bookmark => bookmark.targetId.toString());
+    return bookmarks.map((bookmark) => bookmark.targetId.toString());
   },
 };
 

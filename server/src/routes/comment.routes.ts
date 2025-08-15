@@ -53,8 +53,8 @@ commentActionRouter.post(
 
 commentActionRouter.get(
   '/:commentId/likes',
-  AuthJwtMiddleware.optionalAuth, 
-  CommentController.getCommentLikers
+  AuthJwtMiddleware.optionalAuth,
+  CommentController.getCommentLikers,
 );
 
 commentActionRouter.get(

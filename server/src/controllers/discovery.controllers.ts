@@ -3,6 +3,7 @@ import { HTTP_STATUS } from '../constants/http';
 import DiscoveryService from '../services/discovery.service';
 import { LikeService } from '../services/like.service';
 import { Types } from 'mongoose'; // <-- Added import
+import Follow from '../models/follow.model';
 
 /**
  * Attach isLiked to any array of items (plans, posts, etc.) based on likes array.
@@ -63,8 +64,13 @@ class DiscoveryController {
   ): Promise<void> {
     try {
       const { q: query } = req.query;
+      const page = parseInt((req.query.page as string) || '1');
+      const limit = parseInt((req.query.limit as string) || '12');
       const userId = req.user as string | undefined;
-      const plans = await DiscoveryService.getPlans(query as string, userId);
+      const plans = await DiscoveryService.getPlans(query as string, userId, {
+        page,
+        limit,
+      });
 
       // Check for likes if user is authenticated
       let likes: any[] = [];
@@ -89,8 +95,13 @@ class DiscoveryController {
   ): Promise<void> {
     try {
       const { q: query } = req.query;
+      const page = parseInt((req.query.page as string) || '1');
+      const limit = parseInt((req.query.limit as string) || '12');
       const userId = req.user as string | undefined;
-      const posts = await DiscoveryService.getPosts(query as string, userId);
+      const posts = await DiscoveryService.getPosts(query as string, userId, {
+        page,
+        limit,
+      });
 
       // Check for likes if user is authenticated
       let likes: any[] = [];
@@ -115,8 +126,37 @@ class DiscoveryController {
   ): Promise<void> {
     try {
       const { q: query } = req.query;
+      const page = parseInt((req.query.page as string) || '1');
+      const limit = parseInt((req.query.limit as string) || '12');
       const userId = req.user as string | undefined;
-      const people = await DiscoveryService.getPeople(query as string, userId);
+      const people = await DiscoveryService.getPeople(query as string, userId, {
+        page,
+        limit,
+      });
+
+      // If authenticated, annotate with isFollowing for accurate UI state
+      if (userId && people.length > 0) {
+        const targetIds = people.map((p: any) => p._id);
+        const follows = await Follow.find({
+          follower: new Types.ObjectId(userId),
+          following: { $in: targetIds },
+        })
+          .select('following')
+          .lean();
+
+        const followingSet = new Set(
+          follows.map((f: any) => f.following.toString()),
+        );
+
+        const enriched = people.map((p: any) => ({
+          ...(p.toObject?.() || p),
+          isFollowing: followingSet.has(p._id.toString()),
+        }));
+
+        res.status(HTTP_STATUS.OK).json(enriched);
+        return;
+      }
+
       res.status(HTTP_STATUS.OK).json(people);
     } catch (error) {
       next(error);

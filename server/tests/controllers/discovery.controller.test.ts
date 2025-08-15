@@ -97,7 +97,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -106,7 +106,9 @@ describe('GET /api/discovery/discover', () => {
       .expect(200);
 
     // Should include type field for each item
-    const expectedData = mockPlans.slice(0, 2).map(plan => ({ ...plan, type: 'TravelPlan' }));
+    const expectedData = mockPlans
+      .slice(0, 2)
+      .map((plan) => ({ ...plan, type: 'TravelPlan' }));
     expect(response.body).toEqual({
       data: expectedData,
       pagination: {
@@ -135,7 +137,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -146,7 +148,9 @@ describe('GET /api/discovery/discover', () => {
     expect(mockPlanFind.limit).toHaveBeenCalledWith(1);
     expect(response.body.pagination.has_next_page).toBe(true);
     // New cursor format includes type
-    expect(response.body.pagination.next_cursor).toBe('95.2|TravelPlan|507f1f77bcf86cd799439011');
+    expect(response.body.pagination.next_cursor).toBe(
+      '95.2|TravelPlan|507f1f77bcf86cd799439011',
+    );
   });
 
   it('should handle cursor-based pagination', async () => {
@@ -165,7 +169,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -202,7 +206,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -232,7 +236,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -241,7 +245,9 @@ describe('GET /api/discovery/discover', () => {
       .expect(200);
 
     // Should still return results despite invalid cursor
-    const expectedData = mockPlans.slice(0, 2).map(plan => ({ ...plan, type: 'TravelPlan' }));
+    const expectedData = mockPlans
+      .slice(0, 2)
+      .map((plan) => ({ ...plan, type: 'TravelPlan' }));
     expect(response.body.data).toEqual(expectedData);
     expect(mockTravelPlan.find).toHaveBeenCalledWith({ privacy: 'public' });
   });
@@ -261,7 +267,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -271,7 +277,9 @@ describe('GET /api/discovery/discover', () => {
 
     // Should use default limit of 20
     expect(mockPlanFind.limit).toHaveBeenCalledWith(20);
-    const expectedData = mockPlans.slice(0, 2).map(plan => ({ ...plan, type: 'TravelPlan' }));
+    const expectedData = mockPlans
+      .slice(0, 2)
+      .map((plan) => ({ ...plan, type: 'TravelPlan' }));
     expect(response.body.data).toEqual(expectedData);
   });
 
@@ -291,7 +299,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -328,7 +336,7 @@ describe('GET /api/discovery/discover', () => {
       lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue(mockPosts.slice(0, 1)),
     };
-    
+
     mockTravelPlan.find.mockReturnValue(mockPlanFind as any);
     mockPost.find.mockReturnValue(mockPostFind as any);
 
@@ -339,10 +347,12 @@ describe('GET /api/discovery/discover', () => {
     // Should combine and sort by trending score
     const expectedData = [
       { ...mockPlans[0], type: 'TravelPlan' }, // Score: 95.2
-      { ...mockPosts[0], type: 'Post' },        // Score: 88.5
+      { ...mockPosts[0], type: 'Post' }, // Score: 88.5
     ];
-    
+
     expect(response.body.data).toEqual(expectedData);
-    expect(response.body.pagination.next_cursor).toBe('88.5|Post|507f1f77bcf86cd799439019');
+    expect(response.body.pagination.next_cursor).toBe(
+      '88.5|Post|507f1f77bcf86cd799439019',
+    );
   });
 });

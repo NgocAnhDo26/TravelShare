@@ -40,8 +40,12 @@ interface SocketContextType {
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
-export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [notifications, setNotifications] = useState<RealtimeNotification[]>(
+    [],
+  );
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const { user } = useAuth(); // <-- Get user from your AuthProvider
   const navigate = useNavigate();
@@ -91,11 +95,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const truncate = (text: string, maxLen = 60) =>
         text.length <= maxLen ? text : text.slice(0, maxLen) + '...';
 
-      const buildToastText = (payload: RealtimeNotification | string): string => {
+      const buildToastText = (
+        payload: RealtimeNotification | string,
+      ): string => {
         if (typeof payload === 'string') return payload;
         if (payload.message) return payload.message;
 
-        const actorName = payload.actor?.displayName || payload.actor?.name || payload.actor?.username || 'Someone';
+        const actorName =
+          payload.actor?.displayName ||
+          payload.actor?.name ||
+          payload.actor?.username ||
+          'Someone';
         const base = `${actorName} ${getNotificationMessage(payload.type)}`;
 
         // Add brief context if available
@@ -114,7 +124,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const onNewNotification = (value: any) => {
         // Store raw payload for potential consumers
         console.log(value);
-        setNotifications(prev => [value as RealtimeNotification, ...prev]);
+        setNotifications((prev) => [value as RealtimeNotification, ...prev]);
         // Increment unread counter for new incoming notification
         setUnreadCount((c) => c + 1);
         const text = buildToastText(value as RealtimeNotification | string);
@@ -141,7 +151,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 );
               });
           }
-          if (typeof value === 'object' && value && 'url' in value && (value as any).url) {
+          if (
+            typeof value === 'object' &&
+            value &&
+            'url' in value &&
+            (value as any).url
+          ) {
             navigate((value as any).url as string);
             return;
           }
@@ -167,9 +182,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               className='cursor-pointer flex items-start gap-3 rounded-md shadow-lg border bg-white p-3'
             >
               <span>🔔</span>
-              <div className="text-sm flex flex-col items-start">
-                <div className="font-medium">Notification</div>
-                <div className="text-gray-700">{text}</div>
+              <div className='text-sm flex flex-col items-start'>
+                <div className='font-medium'>Notification</div>
+                <div className='text-gray-700'>{text}</div>
               </div>
             </div>
           ),

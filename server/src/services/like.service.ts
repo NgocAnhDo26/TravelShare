@@ -37,10 +37,7 @@ export class LikeService {
         { $inc: { likesCount: 1 } },
       );
     } else if (onModel === 'Post') {
-      await Post.updateOne(
-        { _id: targetId },
-        { $inc: { likesCount: 1 } },
-      );
+      await Post.updateOne({ _id: targetId }, { $inc: { likesCount: 1 } });
     }
 
     return { liked: true };
@@ -67,10 +64,7 @@ export class LikeService {
           { $inc: { likesCount: -1 } },
         );
       } else if (onModel === 'Post') {
-        await Post.updateOne(
-          { _id: targetId },
-          { $inc: { likesCount: -1 } },
-        );
+        await Post.updateOne({ _id: targetId }, { $inc: { likesCount: -1 } });
       }
       return { unliked: true };
     }
@@ -85,13 +79,13 @@ export class LikeService {
     onModel,
     page = 1,
     limit = 20,
-    currentUserId, 
+    currentUserId,
   }: {
     targetId: Types.ObjectId;
     onModel: OnModel;
     page?: number;
     limit?: number;
-    currentUserId?: Types.ObjectId; 
+    currentUserId?: Types.ObjectId;
   }) {
     const matchQuery = { targetId: new Types.ObjectId(targetId), onModel };
     const skip = (page - 1) * limit;
@@ -123,18 +117,24 @@ export class LikeService {
 
     let followingSet = new Set();
     if (currentUserId) {
-      const likerIds = likers.map(l => l._id);
+      const likerIds = likers.map((l) => l._id);
       const followingRelations = await Follow.find({
         follower: currentUserId,
         following: { $in: likerIds },
-      }).select('following').lean();
-      
-      followingSet = new Set(followingRelations.map(f => f.following.toString()));
+      })
+        .select('following')
+        .lean();
+
+      followingSet = new Set(
+        followingRelations.map((f) => f.following.toString()),
+      );
     }
 
-    const usersWithFollowStatus = likers.map(user => ({
+    const usersWithFollowStatus = likers.map((user) => ({
       ...user,
-      isFollowing: currentUserId ? followingSet.has(user._id.toString()) : false,
+      isFollowing: currentUserId
+        ? followingSet.has(user._id.toString())
+        : false,
     }));
 
     return {

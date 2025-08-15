@@ -1,16 +1,28 @@
-import { createContext, useContext, useState, useEffect, useCallback,type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import API from '@/utils/axiosInstance';
 import { useAuth } from './AuthContext';
 
 interface BookmarkContextType {
   bookmarkedIds: Set<string>;
-  toggleBookmark: (targetId: string, targetModel: 'TravelPlan' | 'Post') => Promise<void>;
+  toggleBookmark: (
+    targetId: string,
+    targetModel: 'TravelPlan' | 'Post',
+  ) => Promise<void>;
   isLoading: boolean;
 }
 
-const BookmarkContext = createContext<BookmarkContextType | undefined>(undefined);
+const BookmarkContext = createContext<BookmarkContextType | undefined>(
+  undefined,
+);
 
-export const BookmarkProvider = ({ children }: { children: ReactNode }) => {  
+export const BookmarkProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -23,11 +35,11 @@ export const BookmarkProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoading(true);
     try {
-      const response = await API.get('/bookmarks/me/ids'); 
+      const response = await API.get('/bookmarks/me/ids');
       const ids = response.data || [];
       setBookmarkedIds(new Set(ids));
     } catch (error) {
-      console.error("Failed to fetch bookmarked IDs:", error);
+      console.error('Failed to fetch bookmarked IDs:', error);
       setBookmarkedIds(new Set());
     } finally {
       setIsLoading(false);
@@ -38,10 +50,14 @@ export const BookmarkProvider = ({ children }: { children: ReactNode }) => {
     fetchBookmarkedIds();
   }, [fetchBookmarkedIds]);
 
-  const toggleBookmark = async (targetId: string, targetModel: 'TravelPlan' | 'Post') => {
-    const apiPath = targetModel === 'TravelPlan' 
-      ? `/plans/${targetId}/bookmark` 
-      : `/posts/${targetId}/bookmark`;
+  const toggleBookmark = async (
+    targetId: string,
+    targetModel: 'TravelPlan' | 'Post',
+  ) => {
+    const apiPath =
+      targetModel === 'TravelPlan'
+        ? `/plans/${targetId}/bookmark`
+        : `/posts/${targetId}/bookmark`;
 
     const originalIds = new Set(bookmarkedIds);
     const newBookmarkedIds = new Set(bookmarkedIds);
@@ -55,8 +71,8 @@ export const BookmarkProvider = ({ children }: { children: ReactNode }) => {
     try {
       await API.post(apiPath);
     } catch (error) {
-      console.error("Failed to toggle bookmark:", error);
-      setBookmarkedIds(originalIds); 
+      console.error('Failed to toggle bookmark:', error);
+      setBookmarkedIds(originalIds);
     }
   };
 

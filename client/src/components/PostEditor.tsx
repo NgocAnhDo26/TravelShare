@@ -36,7 +36,10 @@ interface PostEditorProps {
   postId?: string;
 }
 
-export default function PostEditor({ editMode = false, postId }: PostEditorProps) {
+export default function PostEditor({
+  editMode = false,
+  postId,
+}: PostEditorProps) {
   const TITLE_MAX = 120;
   const navigate = useNavigate();
   const params = useParams();
@@ -75,32 +78,37 @@ export default function PostEditor({ editMode = false, postId }: PostEditorProps
       setIsLoading(true);
       const response = await API.get(`/posts/${currentPostId}`);
       const post = response.data.data;
-      
+
       console.log('Loading post data:', post);
       console.log('Post content:', post.content);
       console.log('Post content type:', typeof post.content);
-      
+
       setFormState({
         title: post.title,
         content: post.content,
         privacy: post.privacy,
-        relatedPlan: post.relatedPlan ? {
-          _id: post.relatedPlan._id,
-          title: post.relatedPlan.title,
-          author: { displayName: post.relatedPlan.author?.displayName || 'Anonymous' }
-        } : null,
+        relatedPlan: post.relatedPlan
+          ? {
+              _id: post.relatedPlan._id,
+              title: post.relatedPlan.title,
+              author: {
+                displayName:
+                  post.relatedPlan.author?.displayName || 'Anonymous',
+              },
+            }
+          : null,
       });
-      
+
       console.log('Form state after setting:', {
         title: post.title,
         content: post.content,
         privacy: post.privacy,
       });
-      
+
       if (post.coverImageUrl) {
         setCoverImagePreview(post.coverImageUrl);
       }
-      
+
       if (post.images && post.images.length > 0) {
         setImagesPreviews(post.images);
       }
@@ -118,13 +126,14 @@ export default function PostEditor({ editMode = false, postId }: PostEditorProps
     if (!formState.title || formState.title.length < 2) {
       newErrors.title = 'Title must be at least 2 characters.';
     }
-    
+
     // Better content validation that handles HTML content
     const textContent = formState.content.replace(/<[^>]*>/g, '').trim();
     if (!textContent || textContent.length < 10) {
-      newErrors.content = 'Content must be at least 10 characters (excluding HTML tags).';
+      newErrors.content =
+        'Content must be at least 10 characters (excluding HTML tags).';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -139,21 +148,23 @@ export default function PostEditor({ editMode = false, postId }: PostEditorProps
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Check if content is just placeholder text or empty
     const textContent = formState.content.replace(/<[^>]*>/g, '').trim();
     if (textContent === '' || textContent.length < 10) {
-      toast.error('Please write meaningful content for your post (at least 10 characters).');
+      toast.error(
+        'Please write meaningful content for your post (at least 10 characters).',
+      );
       return;
     }
-    
+
     if (!validateForm()) {
       toast.error('Please fix the errors in the form.');
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       if (editMode && currentPostId) {
         // Edit mode - send PUT request
@@ -173,7 +184,10 @@ export default function PostEditor({ editMode = false, postId }: PostEditorProps
           })
           .catch((error) => {
             console.error('Post update error:', error);
-            const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to update post. Please try again.';
+            const errorMessage =
+              error.response?.data?.error ||
+              error.response?.data?.message ||
+              'Failed to update post. Please try again.';
             toast.error(errorMessage);
           })
           .finally(() => setIsLoading(false));
@@ -198,13 +212,13 @@ export default function PostEditor({ editMode = false, postId }: PostEditorProps
           privacy: formState.privacy,
           hasCoverImage: !!coverImageFile,
           imageCount: imageFiles.length,
-          relatedPlan: formState.relatedPlan?._id
+          relatedPlan: formState.relatedPlan?._id,
         });
 
         API.post('/posts/create', formData)
           .then((response) => {
             toast.success('Post created successfully!');
-            
+
             // Extract the post ID from the response and navigate to the post detail page
             const postId = response.data?.data?._id;
             if (postId) {
@@ -222,7 +236,10 @@ export default function PostEditor({ editMode = false, postId }: PostEditorProps
           })
           .catch((error) => {
             console.error('Post creation error:', error);
-            const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to create post. Please try again.';
+            const errorMessage =
+              error.response?.data?.error ||
+              error.response?.data?.message ||
+              'Failed to create post. Please try again.';
             toast.error(errorMessage);
           })
           .finally(() => setIsLoading(false));
@@ -567,13 +584,11 @@ export default function PostEditor({ editMode = false, postId }: PostEditorProps
               className='bg-black text-white hover:bg-gray-800'
               disabled={isLoading}
             >
-              {isLoading ? (
-                'Saving...'
-              ) : editMode ? (
-                'Update Post'
-              ) : (
-                'Publish Post'
-              )}
+              {isLoading
+                ? 'Saving...'
+                : editMode
+                  ? 'Update Post'
+                  : 'Publish Post'}
             </Button>
           </div>
         </div>

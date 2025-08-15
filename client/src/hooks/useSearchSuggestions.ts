@@ -40,7 +40,7 @@ export const useSearchSuggestions = () => {
     try {
       setIsLoading(true);
       const response = await API.get<SearchSuggestionsResponse>(
-        `/search/suggestions?q=${encodeURIComponent(query)}&limit=5`,
+        `/search/suggestions?q=${encodeURIComponent(query)}&limit=10`,
       );
 
       if (response.data.success) {

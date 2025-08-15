@@ -26,7 +26,9 @@ class DiscoveryService {
           ];
         } else {
           // Invalid cursor format, reset query to just privacy filter
-          console.error('Invalid cursor format: missing parts or invalid score');
+          console.error(
+            'Invalid cursor format: missing parts or invalid score',
+          );
         }
       } catch (error) {
         console.error('Invalid cursor format:', error);
@@ -52,16 +54,18 @@ class DiscoveryService {
 
     // Combine and sort by trending score
     const allTrendings = [
-      ...trendingPlans.map(plan => ({ ...plan, type: 'TravelPlan' })),
-      ...trendingPosts.map(post => ({ ...post, type: 'Post' }))
-    ].sort((a, b) => {
-      // Sort by trending score (descending), then by _id for consistency
-      if (b.trendingScore !== a.trendingScore) {
-        return (b.trendingScore || 0) - (a.trendingScore || 0);
-      }
-      // When scores are equal, sort by _id in descending order for consistency
-      return b._id.toString().localeCompare(a._id.toString());
-    }).slice(0, limit);
+      ...trendingPlans.map((plan) => ({ ...plan, type: 'TravelPlan' })),
+      ...trendingPosts.map((post) => ({ ...post, type: 'Post' })),
+    ]
+      .sort((a, b) => {
+        // Sort by trending score (descending), then by _id for consistency
+        if (b.trendingScore !== a.trendingScore) {
+          return (b.trendingScore || 0) - (a.trendingScore || 0);
+        }
+        // When scores are equal, sort by _id in descending order for consistency
+        return b._id.toString().localeCompare(a._id.toString());
+      })
+      .slice(0, limit);
 
     // Prepare pagination info with compound cursor
     let next_cursor = null;
@@ -79,7 +83,12 @@ class DiscoveryService {
     };
   }
 
-  async getPlans(query?: string, userId?: string) {
+  async getPlans(
+    query?: string,
+    userId?: string,
+    options: { page?: number; limit?: number } = {},
+  ) {
+    const { page = 1, limit = 12 } = options;
     const filter: any = { privacy: 'public' };
 
     if (query) {
@@ -94,18 +103,23 @@ class DiscoveryService {
     const plans = await TravelPlan.find(filter)
       .populate('author', 'username displayName avatarUrl')
       .sort({ trendingScore: -1, createdAt: -1 })
-      .limit(50);
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     return plans;
   }
 
-  async getPosts(query?: string, userId?: string) {
+  async getPosts(
+    query?: string,
+    userId?: string,
+    options: { page?: number; limit?: number } = {},
+  ) {
+    const { page = 1, limit = 12 } = options;
     const filter: any = { privacy: 'public' };
 
-    // Exclude user's own posts
-    if (userId) {
-      filter.author = { $ne: userId };
-    }
+    // Note: Do not exclude current user's public posts; the Explore page expects
+    // to show "all" public posts regardless of author. If a consumer wants to
+    // hide self posts, that filtering should be handled at the caller/UI layer.
 
     if (query) {
       filter.$or = [
@@ -118,13 +132,20 @@ class DiscoveryService {
 
     const posts = await Post.find(filter)
       .populate('author', 'username displayName avatarUrl')
+      .populate('relatedPlan', 'title destination')
       .sort({ trendingScore: -1, createdAt: -1 })
-      .limit(50);
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     return posts;
   }
 
-  async getPeople(query?: string, userId?: string) {
+  async getPeople(
+    query?: string,
+    userId?: string,
+    options: { page?: number; limit?: number } = {},
+  ) {
+    const { page = 1, limit = 12 } = options;
     const filter: any = {};
 
     // Exclude the current user from people search
@@ -145,7 +166,8 @@ class DiscoveryService {
         'username displayName avatarUrl bio followerCount followingCount registrationDate',
       )
       .sort({ followerCount: -1, registrationDate: -1 })
-      .limit(50);
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     return people;
   }

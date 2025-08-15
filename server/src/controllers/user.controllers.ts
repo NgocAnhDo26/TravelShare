@@ -43,16 +43,22 @@ const FollowController: IFollowController = {
       }
 
       const result = await FollowService.followUser(followerId, followingId);
-      
+
       // Create notification for the followed user
       try {
-        await NotificationService.createNotification({
-          recipient: followingId,
-          actor: followerId,
-          type: 'follow'
-        }, req.io);
+        await NotificationService.createNotification(
+          {
+            recipient: followingId,
+            actor: followerId,
+            type: 'follow',
+          },
+          req.io,
+        );
       } catch (notificationError) {
-        console.error('Failed to create follow notification:', notificationError);
+        console.error(
+          'Failed to create follow notification:',
+          notificationError,
+        );
         // Don't fail the follow operation if notification creation fails
       }
 

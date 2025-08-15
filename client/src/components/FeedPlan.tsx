@@ -54,7 +54,11 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
     apiPath: '/plans',
   });
 
-  const { bookmarkedIds, toggleBookmark, isLoading: isBookmarkLoading } = useBookmarks();
+  const {
+    bookmarkedIds,
+    toggleBookmark,
+    isLoading: isBookmarkLoading,
+  } = useBookmarks();
   const isBookmarked = bookmarkedIds.has(plan._id);
 
   const handleToggleBookmark = (e: React.MouseEvent) => {
@@ -80,9 +84,7 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
   };
 
   return (
-    <Card
-      className='overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left gap-0 pb-1'
-    >
+    <Card className='overflow-hidden bg-white/80 backdrop-blur-sm border-blue-50 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 text-left gap-0 pb-1'>
       <CardHeader className='pb-4'>
         <div className='flex items-center gap-3'>
           <Avatar
@@ -119,7 +121,10 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
       </CardHeader>
       <CardContent className='px-6 pb-4'>
         <div className='mb-4'>
-          <h4 className='text-xl font-bold text-slate-800 mb-2 cursor-pointer' onClick={handleViewPlan}>
+          <h4
+            className='text-xl font-bold text-slate-800 mb-2 cursor-pointer'
+            onClick={handleViewPlan}
+          >
             {plan.title}
           </h4>
           <p className='text-slate-600 flex items-center gap-2'>
@@ -127,7 +132,10 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
             Destination: {plan.destination.name}
           </p>
         </div>
-        <div className='relative rounded-2xl overflow-hidden group cursor-pointer' onClick={handleViewPlan}>
+        <div
+          className='relative rounded-2xl overflow-hidden group cursor-pointer'
+          onClick={handleViewPlan}
+        >
           <img
             src={plan.coverImageUrl}
             alt={plan.title}
@@ -196,13 +204,15 @@ const FeedPlan: React.FC<FeedPlanProps> = ({ plan }) => {
                 <button
                   onClick={handleToggleBookmark}
                   onMouseDown={(e) => e.stopPropagation()}
-                   disabled={isBookmarkLoading}
+                  disabled={isBookmarkLoading}
                   className='text-slate-600 hover:text-yellow-500 transition-colors duration-200 cursor-pointer'
                 >
-                    {isBookmarkLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                  {isBookmarkLoading ? (
+                    <Loader2 className='w-5 h-5 animate-spin' />
                   ) : (
-                    <Bookmark className={`w-5 h-5 hover:scale-110 transition-transform duration-200 ${isBookmarked ? 'fill-yellow-400 text-yellow-500' : 'fill-transparent'}`} />
+                    <Bookmark
+                      className={`w-5 h-5 hover:scale-110 transition-transform duration-200 ${isBookmarked ? 'fill-yellow-400 text-yellow-500' : 'fill-transparent'}`}
+                    />
                   )}
                 </button>
               </TooltipTrigger>

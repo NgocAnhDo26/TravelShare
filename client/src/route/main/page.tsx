@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import HeaderTabs from '@/components/HeaderTabs';
 import { SearchInput } from '@/components/SearchInput';
 import { useAuth } from '../../context/AuthContext';
 import CreatePlanSection from './CreatePlanSection';
@@ -49,12 +48,7 @@ const MainPage: React.FC = () => {
           />
         </div>
 
-        <HeaderTabs
-          tabs={[
-            { label: 'For you', value: 'for-you', to: '/' },
-            { label: 'Following', value: 'following', to: '/following' },
-          ]}
-        />
+        {/* Tabs removed (For you / Following) as requested */}
 
         {user ? (
           <>

@@ -270,7 +270,10 @@ const TabsSection: React.FC<TabsSectionProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={postDeleteDialogOpen} onOpenChange={setPostDeleteDialogOpen}>
+      <Dialog
+        open={postDeleteDialogOpen}
+        onOpenChange={setPostDeleteDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Post</DialogTitle>
@@ -344,11 +347,21 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                     />
                     {/* Privacy badge */}
                     <div className='absolute top-2 left-2 z-10'>
-                      <Badge variant={plan.privacy === 'private' ? "secondary" : "default"} className='gap-1 text-xs'>
-                        {plan.privacy === 'private' ? 
-                          <><Lock className='h-3 w-3' /> Private</> : 
-                          <><Globe className='h-3 w-3' /> Public</>
+                      <Badge
+                        variant={
+                          plan.privacy === 'private' ? 'secondary' : 'default'
                         }
+                        className='gap-1 text-xs'
+                      >
+                        {plan.privacy === 'private' ? (
+                          <>
+                            <Lock className='h-3 w-3' /> Private
+                          </>
+                        ) : (
+                          <>
+                            <Globe className='h-3 w-3' /> Public
+                          </>
+                        )}
                       </Badge>
                     </div>
                     {user &&
@@ -397,8 +410,11 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                       }}
                     />
                   </div>
-                  <div className='px-4 mt-0 pb-2 flex flex-col flex-1' onClick={() => navigate(`/plans/${plan._id}`)}>
-                    <h3 
+                  <div
+                    className='px-4 mt-0 pb-2 flex flex-col flex-1'
+                    onClick={() => navigate(`/plans/${plan._id}`)}
+                  >
+                    <h3
                       className='text-lg font-bold mb-1 text-left line-clamp-2'
                       title={plan.title}
                     >
@@ -418,7 +434,9 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                           : ''}
                       </span>
                       <div className='flex items-center gap-2 text-xs text-gray-400'>
-                        {(plan.likesCount > 0 || plan.commentsCount > 0 || plan.remixCount > 0) ? (
+                        {plan.likesCount > 0 ||
+                        plan.commentsCount > 0 ||
+                        plan.remixCount > 0 ? (
                           <>
                             {plan.likesCount > 0 && (
                               <span className='flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full flex-nowrap whitespace-nowrap'>
@@ -432,7 +450,9 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                             )}
                           </>
                         ) : (
-                          <span className='text-gray-300 text-xs'>No engagement yet</span>
+                          <span className='text-gray-300 text-xs'>
+                            No engagement yet
+                          </span>
                         )}
                       </div>
                     </div>
@@ -441,8 +461,8 @@ const TabsSection: React.FC<TabsSectionProps> = ({
               ))}
             </div>
           ))}
-        {activeTab === 'guides' && (
-          (!safePosts || safePosts.length === 0) ? (
+        {activeTab === 'guides' &&
+          (!safePosts || safePosts.length === 0 ? (
             <div className='text-center py-10 bg-gray-50 rounded-lg border border-gray-200'>
               <p className='text-gray-600 text-lg mb-4'>
                 {isMyProfile
@@ -459,18 +479,31 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                 >
                   <div className='relative w-full h-20'>
                     <img
-                      src={post.coverImageUrl || 'https://placehold.co/400x200/CCCCCC/FFFFFF?text=No+Image'}
+                      src={
+                        post.coverImageUrl ||
+                        'https://placehold.co/400x200/CCCCCC/FFFFFF?text=No+Image'
+                      }
                       alt={post.title}
                       className='w-full h-20 object-cover'
                       onClick={() => navigate(`/posts/${post._id}`)}
                     />
                     {/* Privacy badge */}
                     <div className='absolute top-2 left-2 z-10'>
-                      <Badge variant={post.privacy === 'private' ? "secondary" : "default"} className='gap-1 text-xs'>
-                        {post.privacy === 'private' ? 
-                          <><Lock className='h-3 w-3' /> Private</> : 
-                          <><Globe className='h-3 w-3' /> Public</>
+                      <Badge
+                        variant={
+                          post.privacy === 'private' ? 'secondary' : 'default'
                         }
+                        className='gap-1 text-xs'
+                      >
+                        {post.privacy === 'private' ? (
+                          <>
+                            <Lock className='h-3 w-3' /> Private
+                          </>
+                        ) : (
+                          <>
+                            <Globe className='h-3 w-3' /> Public
+                          </>
+                        )}
                       </Badge>
                     </div>
                     {user &&
@@ -519,15 +552,22 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                       }}
                     />
                   </div>
-                  <div className='px-4 mt-0 pb-2 flex flex-col flex-1' onClick={() => navigate(`/posts/${post._id}`)}>
-                    <h3 
+                  <div
+                    className='px-4 mt-0 pb-2 flex flex-col flex-1'
+                    onClick={() => navigate(`/posts/${post._id}`)}
+                  >
+                    <h3
                       className='text-lg font-bold mb-1 text-left line-clamp-2'
                       title={post.title}
                     >
                       {post.title}
                     </h3>
                     <p className='text-gray-500 text-sm mb-2 text-left flex-1 line-clamp-2'>
-                      {post.content ? post.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : 'No content'}
+                      {post.content
+                        ? post.content
+                            .replace(/<[^>]*>/g, '')
+                            .substring(0, 100) + '...'
+                        : 'No content'}
                     </p>
                     <div className='flex justify-between items-center'>
                       <span className='text-xs text-gray-400'>
@@ -536,7 +576,9 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                           : ''}
                       </span>
                       <div className='flex items-center gap-2 text-xs text-gray-400'>
-                        {(post.likesCount > 0 || post.commentsCount > 0 || (post.remixCount && post.remixCount > 0)) ? (
+                        {post.likesCount > 0 ||
+                        post.commentsCount > 0 ||
+                        (post.remixCount && post.remixCount > 0) ? (
                           <>
                             {post.likesCount > 0 && (
                               <span className='flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full'>
@@ -550,7 +592,9 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                             )}
                           </>
                         ) : (
-                          <span className='text-gray-300 text-xs'>No engagement yet</span>
+                          <span className='text-gray-300 text-xs'>
+                            No engagement yet
+                          </span>
                         )}
                       </div>
                     </div>
@@ -558,8 +602,7 @@ const TabsSection: React.FC<TabsSectionProps> = ({
                 </Card>
               ))}
             </div>
-          )
-        )}
+          ))}
       </div>
     </Card>
   );

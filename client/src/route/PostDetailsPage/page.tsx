@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import Lightbox from 'yet-another-react-lightbox'; // Direct import of Lightbox
 import Captions from 'yet-another-react-lightbox/plugins/captions';
@@ -8,12 +9,12 @@ import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import 'yet-another-react-lightbox/styles.css';
 
 // shadcn/ui components
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Lock, Globe, ZoomIn } from "lucide-react";
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Lock, Globe, ZoomIn, MapPin, Route, ArrowRight } from 'lucide-react';
 
 // Splide carousel imports
 import { Splide, SplideSlide, SplideTrack } from '@splidejs/react-splide';
@@ -43,6 +44,13 @@ interface IPost {
     name: string;
     profilePicture?: string;
   };
+  relatedPlan?: {
+    _id: string;
+    title: string;
+    destination?: {
+      name?: string;
+    };
+  };
 }
 
 function PostDetailsPage(): React.ReactElement {
@@ -51,18 +59,20 @@ function PostDetailsPage(): React.ReactElement {
   const [post, setPost] = useState<IPost | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Splide carousel states
   const splideRef = useRef<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [progress, setProgress] = useState(0);
-  
+
   // Image viewer states - using this directly with the Lightbox component
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  
+
   // Debug image loading
-  const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: boolean}>({});
+  const [imageLoadErrors, setImageLoadErrors] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   // Function to convert JSON content to HTML if needed
   const convertContentToHTML = (content: string): string => {
@@ -73,7 +83,7 @@ function PostDetailsPage(): React.ReactElement {
         // This is TipTap JSON content, convert to HTML
         return convertTipTapToHTML(parsed);
       }
-    } catch (e) {
+    } catch {
       // Content is not JSON, return as-is (HTML)
       return content;
     }
@@ -83,15 +93,17 @@ function PostDetailsPage(): React.ReactElement {
   // Convert TipTap JSON to HTML
   const convertTipTapToHTML = (doc: any): string => {
     if (!doc.content) return '';
-    
+
     let html = '';
-    
+
     doc.content.forEach((node: any) => {
       if (node.type === 'paragraph') {
         const attrs = node.attrs || {};
-        const style = attrs.textAlign ? ` style="text-align: ${attrs.textAlign}"` : '';
+        const style = attrs.textAlign
+          ? ` style="text-align: ${attrs.textAlign}"`
+          : '';
         html += `<p${style}>`;
-        
+
         if (node.content) {
           node.content.forEach((textNode: any) => {
             if (textNode.type === 'text') {
@@ -123,7 +135,7 @@ function PostDetailsPage(): React.ReactElement {
             }
           });
         }
-        
+
         html += '</p>';
       } else if (node.type === 'blockquote') {
         html += '<blockquote>';
@@ -163,7 +175,7 @@ function PostDetailsPage(): React.ReactElement {
         html += '</ul>';
       }
     });
-    
+
     return html;
   };
 
@@ -179,14 +191,14 @@ function PostDetailsPage(): React.ReactElement {
   useEffect(() => {
     const fetchPostDetails = async () => {
       if (!postId) return;
-      
+
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await API.get(`/posts/${postId}`);
         const postData = response.data.data;
-        
+
         // Transform the API response to match our interface
         const transformedPost: IPost = {
           _id: postData._id,
@@ -205,17 +217,26 @@ function PostDetailsPage(): React.ReactElement {
             name: postData.author.name,
             profilePicture: postData.author.profilePicture,
           },
+          relatedPlan:
+            postData.relatedPlan && typeof postData.relatedPlan === 'object'
+              ? {
+                  _id: (postData.relatedPlan as any)._id,
+                  title: (postData.relatedPlan as any).title,
+                  destination: (postData.relatedPlan as any).destination,
+                }
+              : undefined,
         };
-        
+
         setPost(transformedPost);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching post details:', err);
-        
-        if (err.response?.status === 404) {
+        const e = err as { response?: { status?: number } };
+
+        if (e.response?.status === 404) {
           setError('Post not found');
-        } else if (err.response?.status === 403) {
+        } else if (e.response?.status === 403) {
           setError('Access denied. This post is private.');
-        } else if (err.response?.status === 401) {
+        } else if (e.response?.status === 401) {
           setError('Please log in to view this post');
         } else {
           setError('Failed to load post details');
@@ -231,23 +252,23 @@ function PostDetailsPage(): React.ReactElement {
   // Format post images for the lightbox
   const formatPostImages = () => {
     if (!post?.images || post.images.length === 0) return [];
-    
+
     return post.images.map((image, index) => ({
       src: image,
       alt: `${post.title} - Image ${index + 1}`,
-      title: `${post.title} - Image ${index + 1}`
+      title: `${post.title} - Image ${index + 1}`,
     }));
   };
 
   // Handle image load error
   const handleImageError = (imageUrl: string, index: number) => {
     console.error(`Failed to load image at index ${index}: ${imageUrl}`);
-    setImageLoadErrors(prev => ({...prev, [imageUrl]: true}));
+    setImageLoadErrors((prev) => ({ ...prev, [imageUrl]: true }));
   };
 
   // Open lightbox when an image is clicked
   const handleImageClick = (index: number) => {
-    console.log("Image clicked, opening lightbox at index:", index);
+    console.log('Image clicked, opening lightbox at index:', index);
     setLightboxIndex(index);
     setLightboxOpen(true);
   };
@@ -259,38 +280,38 @@ function PostDetailsPage(): React.ReactElement {
       const currentIndex = splideInstance.index;
       const totalSlides = splideInstance.length;
       setCurrentSlide(currentIndex);
-      setProgress(((currentIndex) / (totalSlides - 1)) * 100);
+      setProgress((currentIndex / (totalSlides - 1)) * 100);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <div className="space-y-3">
-          <Skeleton className="h-8 w-[250px]" />
-          <Skeleton className="h-4 w-[200px]" />
-          <Skeleton className="h-[300px] w-full rounded-md" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
+      <div className='flex flex-col items-center justify-center py-16 space-y-4'>
+        <div className='space-y-3'>
+          <Skeleton className='h-8 w-[250px]' />
+          <Skeleton className='h-4 w-[200px]' />
+          <Skeleton className='h-[300px] w-full rounded-md' />
+          <div className='space-y-2'>
+            <Skeleton className='h-4 w-full' />
+            <Skeleton className='h-4 w-full' />
+            <Skeleton className='h-4 w-3/4' />
           </div>
         </div>
-        <p className="text-muted-foreground">Loading post...</p>
+        <p className='text-muted-foreground'>Loading post...</p>
       </div>
     );
   }
 
   if (error || !post) {
     return (
-      <Card className="max-w-2xl mx-auto my-8 border-red-200">
-        <CardContent className="flex flex-col items-center pt-6 pb-8 text-center">
-          <h2 className="text-2xl font-bold text-red-500 mb-2">Error</h2>
-          <p className="text-muted-foreground">{error || 'Post not found'}</p>
+      <Card className='max-w-2xl mx-auto my-8 border-red-200'>
+        <CardContent className='flex flex-col items-center pt-6 pb-8 text-center'>
+          <h2 className='text-2xl font-bold text-red-500 mb-2'>Error</h2>
+          <p className='text-muted-foreground'>{error || 'Post not found'}</p>
           {error === 'Please log in to view this post' && (
-            <Button 
-              className="mt-4" 
-              onClick={() => window.location.href = '/login'}
+            <Button
+              className='mt-4'
+              onClick={() => (window.location.href = '/login')}
             >
               Go to Login
             </Button>
@@ -308,51 +329,71 @@ function PostDetailsPage(): React.ReactElement {
     : null;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <Card className="border-none shadow-md py-0 text-left">
+    <div className='max-w-5xl mx-auto px-4 py-8'>
+      <Card className='border-none shadow-md py-0 text-left'>
         {/* Privacy badge */}
-        <div className="absolute top-4 right-4 z-10">
-          <Badge variant={post.privacy === 'private' ? "secondary" : "default"} className="gap-1">
-            {post.privacy === 'private' ? 
-              <><Lock className="h-3 w-3" /> Private</> : 
-              <><Globe className="h-3 w-3" /> Public</>
-            }
+        <div className='absolute top-4 right-4 z-10'>
+          <Badge
+            variant={post.privacy === 'private' ? 'secondary' : 'default'}
+            className='gap-1'
+          >
+            {post.privacy === 'private' ? (
+              <>
+                <Lock className='h-3 w-3' /> Private
+              </>
+            ) : (
+              <>
+                <Globe className='h-3 w-3' /> Public
+              </>
+            )}
           </Badge>
         </div>
 
         {/* Cover image with error handling */}
         {post?.coverImageUrl && (
-          <div className="w-full h-[300px] overflow-hidden rounded-t-lg bg-gray-100">
-            <img 
-              src={post.coverImageUrl} 
-              alt={post.title} 
-              className="w-full h-full object-cover"
+          <div className='w-full h-[300px] overflow-hidden rounded-t-lg bg-gray-100'>
+            <img
+              src={post.coverImageUrl}
+              alt={post.title}
+              className='w-full h-full object-cover'
               onError={() => handleImageError(post.coverImageUrl || '', -1)}
             />
           </div>
         )}
 
-        <CardContent className={`px-6 pt-8 pb-6 ${!post?.coverImageUrl ? 'pt-12' : ''}`}>
+        <CardContent
+          className={`px-6 pt-8 pb-6 ${!post?.coverImageUrl ? 'pt-12' : ''}`}
+        >
           {/* Post header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold tracking-tight mb-6">{post.title}</h1>
-            
+          <div className='mb-8'>
+            <h1 className='text-4xl font-bold tracking-tight mb-6'>
+              {post.title}
+            </h1>
+
             {/* Author info and dates */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <div className="flex items-center">
-                <Avatar className="h-10 w-10 mr-3">
-                  <AvatarImage src={post.author?.profilePicture} alt={post.author?.name || 'Author'} />
-                  <AvatarFallback>{post.author?.name?.charAt(0) || 'A'}</AvatarFallback>
+            <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4'>
+              <div className='flex items-center'>
+                <Avatar className='h-10 w-10 mr-3'>
+                  <AvatarImage
+                    src={post.author?.profilePicture}
+                    alt={post.author?.name || 'Author'}
+                  />
+                  <AvatarFallback>
+                    {post.author?.name?.charAt(0) || 'A'}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="font-medium">{post.author?.name || 'Unknown Author'}</span>
+                <span className='font-medium'>
+                  {post.author?.name || 'Unknown Author'}
+                </span>
               </div>
-              
-              <div className="text-muted-foreground text-sm">
+
+              <div className='text-muted-foreground text-sm'>
                 <span>
                   Published {format(new Date(post.createdAt), 'MMM d, yyyy')}
                 </span>
-                {new Date(post.updatedAt).getTime() > new Date(post.createdAt).getTime() && (
-                  <span className="ml-2">
+                {new Date(post.updatedAt).getTime() >
+                  new Date(post.createdAt).getTime() && (
+                  <span className='ml-2'>
                     • Updated {format(new Date(post.updatedAt), 'MMM d, yyyy')}
                   </span>
                 )}
@@ -361,17 +402,53 @@ function PostDetailsPage(): React.ReactElement {
           </div>
 
           {/* Post content */}
-          <div className="prose prose-slate max-w-none my-8">
-            <div dangerouslySetInnerHTML={{ __html: convertContentToHTML(post.content) }} />
+          <div className='prose prose-slate max-w-none my-8'>
+            <div
+              dangerouslySetInnerHTML={{
+                __html: convertContentToHTML(post.content),
+              }}
+            />
           </div>
+
+          {/* Related Plan Tag / Card */}
+          {post.relatedPlan && (
+            <div className='my-8'>
+              <div className='inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-medium ring-1 ring-blue-100'>
+                Related plan
+              </div>
+              <Link
+                to={`/plans/${post.relatedPlan._id}`}
+                className='group mt-3 flex items-center gap-4 rounded-xl border bg-card/50 p-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500'
+                aria-label={`View plan ${post.relatedPlan.title}`}
+              >
+                <div className='flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200'>
+                  <Route className='h-5 w-5' />
+                </div>
+                <div className='min-w-0 flex-1'>
+                  <div className='font-medium truncate'>
+                    {post.relatedPlan.title}
+                  </div>
+                  {post.relatedPlan.destination?.name && (
+                    <div className='mt-0.5 flex items-center text-xs text-muted-foreground'>
+                      <MapPin className='mr-1 h-3.5 w-3.5' />
+                      <span className='truncate'>
+                        {post.relatedPlan.destination.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <ArrowRight className='h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5' />
+              </Link>
+            </div>
+          )}
 
           {/* Images Gallery */}
           {post?.images && post.images.length > 0 && (
-            <div className="mt-10">
-              <h3 className="text-xl font-semibold mb-4">Gallery</h3>
-              
+            <div className='mt-10'>
+              <h3 className='text-xl font-semibold mb-4'>Gallery</h3>
+
               {/* Splide Carousel with improved image handling */}
-              <div className="relative">
+              <div className='relative'>
                 <Splide
                   ref={splideRef}
                   onMove={handleSplideMove}
@@ -383,41 +460,41 @@ function PostDetailsPage(): React.ReactElement {
                     height: '400px',
                   }}
                   hasTrack={false}
-                  aria-label="Post Images"
+                  aria-label='Post Images'
                 >
                   <SplideTrack>
                     {post.images.map((image, index) => (
                       <SplideSlide key={index}>
-                        <div 
-                          className="relative h-full bg-gray-100 cursor-pointer flex items-center justify-center"
+                        <div
+                          className='relative h-full bg-gray-100 cursor-pointer flex items-center justify-center'
                           onClick={() => handleImageClick(index)}
                         >
                           <img
                             src={image}
                             alt={`${post.title} - Image ${index + 1}`}
-                            className="max-h-full max-w-full object-contain"
+                            className='max-h-full max-w-full object-contain'
                             onError={() => handleImageError(image, index)}
                           />
                           {/* More visible click indicator */}
-                          <div className="absolute top-2 right-2 bg-black bg-opacity-50 p-2 rounded-full">
-                            <ZoomIn className="h-5 w-5 text-white" />
+                          <div className='absolute top-2 right-2 bg-black bg-opacity-50 p-2 rounded-full'>
+                            <ZoomIn className='h-5 w-5 text-white' />
                           </div>
                         </div>
                       </SplideSlide>
                     ))}
                   </SplideTrack>
                 </Splide>
-                
+
                 {/* Progress bar */}
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-4">
+                <div className='w-full bg-gray-200 rounded-full h-1.5 mt-4'>
                   <div
-                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-out"
+                    className='bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-out'
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>
-                
+
                 {/* Slide counter */}
-                <div className="text-xs text-muted-foreground mt-2">
+                <div className='text-xs text-muted-foreground mt-2'>
                   {currentSlide + 1} / {post.images.length}
                 </div>
               </div>
@@ -438,7 +515,7 @@ function PostDetailsPage(): React.ReactElement {
           onToggleLike={handleToggleLike}
         />
       )}
-      
+
       {/* Direct usage of Lightbox component instead of ImageViewer */}
       {post?.images && post.images.length > 0 && (
         <Lightbox
@@ -449,14 +526,18 @@ function PostDetailsPage(): React.ReactElement {
           plugins={[Captions, Fullscreen, Zoom]}
         />
       )}
-      
+
       {/* Debug info - display any image load errors */}
       {Object.keys(imageLoadErrors).length > 0 && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-500 font-semibold">Some images failed to load:</p>
-          <ul className="list-disc pl-5">
+        <div className='mt-4 p-4 bg-red-50 border border-red-200 rounded-md'>
+          <p className='text-red-500 font-semibold'>
+            Some images failed to load:
+          </p>
+          <ul className='list-disc pl-5'>
             {Object.keys(imageLoadErrors).map((url, i) => (
-              <li key={i} className="text-red-400 text-sm truncate">{url}</li>
+              <li key={i} className='text-red-400 text-sm truncate'>
+                {url}
+              </li>
             ))}
           </ul>
         </div>

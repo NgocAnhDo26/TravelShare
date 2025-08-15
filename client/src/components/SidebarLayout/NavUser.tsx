@@ -1,10 +1,4 @@
-import {
-  CreditCard,
-  MoreVertical,
-  LogOut,
-  Bell,
-  UserCircle,
-} from 'lucide-react';
+import { MoreVertical, LogOut, Bell, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom'; // Make sure Link is imported
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,14 +15,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/context/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
 
 export function NavUser() {
   const { user, logout } = useAuth();
-  const { isMobile } = useSidebar();
+  const isMobile = useIsMobile();
 
   if (!user)
     return (
@@ -88,12 +82,6 @@ export function NavUser() {
                 <DropdownMenuItem>
                   <UserCircle className='mr-2 h-4 w-4' />
                   <span>Account</span>
-                </DropdownMenuItem>
-              </Link>
-              <Link to='/billing'>
-                <DropdownMenuItem>
-                  <CreditCard className='mr-2 h-4 w-4' />
-                  <span>Billing</span>
                 </DropdownMenuItem>
               </Link>
               <Link to='/notifications'>

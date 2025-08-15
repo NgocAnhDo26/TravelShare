@@ -19,6 +19,10 @@ discoveryRouter.get(
   AuthJwtMiddleware.optionalAuth,
   discoveryController.getPosts,
 );
-discoveryRouter.get('/people', discoveryController.getPeople);
+discoveryRouter.get(
+  '/people',
+  AuthJwtMiddleware.optionalAuth,
+  discoveryController.getPeople,
+);
 
 export default discoveryRouter;

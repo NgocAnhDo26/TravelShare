@@ -61,11 +61,7 @@ router.get(
  * @desc    Get all posts related to a specific travel plan, including author info
  * @access  Public (no authentication required)
  */
-router.get(
-  '/:id/related-posts',
-  TravelPlanController.getRelatedPostById,
-);
-
+router.get('/:id/related-posts', TravelPlanController.getRelatedPostById);
 
 /**
  * GET /api/plans/:id

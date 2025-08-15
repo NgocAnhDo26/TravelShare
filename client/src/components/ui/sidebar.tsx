@@ -2,20 +2,14 @@ import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva } from 'class-variance-authority';
 import type { VariantProps } from 'class-variance-authority';
-import { PanelLeftIcon } from 'lucide-react';
+import { PanelLeftIcon, PanelRightIcon } from 'lucide-react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+// Sheet imports removed: we keep a compact inline sidebar on all sizes
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
@@ -27,9 +21,10 @@ import {
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = '16rem';
-const SIDEBAR_WIDTH_MOBILE = '18rem';
+// const SIDEBAR_WIDTH_MOBILE = '18rem'; // no longer used (no Sheet)
 const SIDEBAR_WIDTH_ICON = '3rem';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
+const SIDEBAR_COMPACT_BREAKPOINT = 1280; // px; below this, collapse to icon-only
 
 type SidebarContextProps = {
   state: 'expanded' | 'collapsed';
@@ -125,6 +120,23 @@ function SidebarProvider({
     [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
   );
 
+  // Auto-collapse/expand on desktop based on a responsive breakpoint (like X/Twitter)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isMobile) return; // mobile uses sheet behavior
+
+    const mql = window.matchMedia(
+      `(min-width: ${SIDEBAR_COMPACT_BREAKPOINT}px)`,
+    );
+    const handle = () => {
+      const shouldBeOpen = mql.matches; // large screens => expanded
+      setOpen((prev) => (prev !== shouldBeOpen ? shouldBeOpen : prev));
+    };
+    handle();
+    mql.addEventListener('change', handle);
+    return () => mql.removeEventListener('change', handle);
+  }, [isMobile, setOpen]);
+
   return (
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
@@ -162,7 +174,7 @@ function Sidebar({
   variant?: 'sidebar' | 'floating' | 'inset';
   collapsible?: 'offcanvas' | 'icon' | 'none';
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { state } = useSidebar();
 
   if (collapsible === 'none') {
     return (
@@ -179,34 +191,11 @@ function Sidebar({
     );
   }
 
-  if (isMobile) {
-    return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-        <SheetContent
-          data-sidebar='sidebar'
-          data-slot='sidebar'
-          data-mobile='true'
-          className='bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden'
-          style={
-            {
-              '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
-          side={side}
-        >
-          <SheetHeader className='sr-only'>
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-          </SheetHeader>
-          <div className='flex h-full w-full flex-col'>{children}</div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
+  // Do not use Sheet on mobile; we keep a compact icon-rail similar to X/Twitter.
 
   return (
     <div
-      className='group peer text-sidebar-foreground hidden md:block'
+      className='group peer text-sidebar-foreground block'
       data-state={state}
       data-collapsible={state === 'collapsed' ? collapsible : ''}
       data-variant={variant}
@@ -228,14 +217,14 @@ function Sidebar({
       <div
         data-slot='sidebar-container'
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
+          'fixed inset-y-0 z-10 flex h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear',
           side === 'left'
             ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
             : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
           // Adjust the padding for floating and inset variants.
           variant === 'floating' || variant === 'inset'
             ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
-            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
+            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l group-data-[collapsible=icon]:p-0',
           className,
         )}
         {...props}
@@ -257,24 +246,38 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, state, isMobile } = useSidebar();
+
+  const Icon = state === 'collapsed' ? PanelRightIcon : PanelLeftIcon;
 
   return (
-    <Button
-      data-sidebar='trigger'
-      data-slot='sidebar-trigger'
-      variant='ghost'
-      size='icon'
-      className={cn('size-7', className)}
-      onClick={(event) => {
-        onClick?.(event);
-        toggleSidebar();
-      }}
-      {...props}
-    >
-      <PanelLeftIcon />
-      <span className='sr-only'>Toggle Sidebar</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          data-sidebar='trigger'
+          data-slot='sidebar-trigger'
+          variant='outline'
+          size='icon'
+          aria-expanded={state === 'expanded'}
+          className={cn(
+            'h-10 w-10 rounded-full border-slate-200 bg-white/90 backdrop-blur shadow-sm hover:bg-white hover:shadow-md text-slate-700',
+            'focus-visible:ring-2 focus-visible:ring-blue-200',
+            className,
+          )}
+          onClick={(event) => {
+            onClick?.(event);
+            toggleSidebar();
+          }}
+          {...props}
+        >
+          <Icon className='h-5 w-5' />
+          <span className='sr-only'>Toggle Sidebar</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side={isMobile ? 'bottom' : 'right'} sideOffset={8}>
+        Toggle sidebar (Ctrl+B)
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -721,5 +724,4 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
 };
