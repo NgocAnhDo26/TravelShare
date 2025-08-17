@@ -34,10 +34,10 @@ interface SocialSectionProps {
 const SocialSection: React.FC<SocialSectionProps> = ({
   targetId,
   onModel,
-  likesCount, // Use live prop
+  likesCount,
   initialCommentsCount,
-  isLiked, // Use live prop
-  onToggleLike, // Use handler from props
+  isLiked,
+  onToggleLike,
   currentUser,
 }) => {
   const [comments, setComments] = useState<IComment[]>([]);
@@ -73,7 +73,11 @@ const SocialSection: React.FC<SocialSectionProps> = ({
         const response = await API.get<string[]>(`/likes/me/targets`, {
           params: { onModel: 'Comment', targetIds: commentIds.join(',') },
         });
-        setLikedCommentIds(new Set(response.data));
+        setLikedCommentIds((prevLikedIds) => {
+            const updatedIds = new Set(prevLikedIds);
+            response.data.forEach(id => updatedIds.add(id));
+            return updatedIds;
+        });
       } catch (error) {
         console.error("Failed to fetch user's likes", error);
       }
@@ -104,8 +108,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
 
         if (currentUser) {
           const allCommentIds = response.data.comments.flatMap((c) => [
-            c._id,
-            ...(c.replies?.map((r) => r._id) || []),
+            c._id
           ]);
           if (allCommentIds.length > 0) fetchUserLikes(allCommentIds);
         }
@@ -282,15 +285,20 @@ const SocialSection: React.FC<SocialSectionProps> = ({
       throw error;
     }
   };
+
   const handleLikeComment = async (commentId: string) => {
     if (!currentUser) {
       toast.error('Please log in to like comments.');
       return;
     }
 
-    const isCurrentlyLiked = likedCommentIds.has(commentId);
+    const originalLikedIds = new Set(likedCommentIds);
+    const originalComments = JSON.parse(JSON.stringify(comments));
 
-    const newLikedIds = new Set(likedCommentIds);
+    const isCurrentlyLiked = originalLikedIds.has(commentId);
+    const change = isCurrentlyLiked ? -1 : 1;
+
+    const newLikedIds = new Set(originalLikedIds);
     if (isCurrentlyLiked) {
       newLikedIds.delete(commentId);
     } else {
@@ -298,30 +306,25 @@ const SocialSection: React.FC<SocialSectionProps> = ({
     }
     setLikedCommentIds(newLikedIds);
 
-    try {
-      const { data: updatedComment } = await API.post<IComment>(
-        `/comments/${commentId}/like`,
-      );
-
-      setComments((prevComments) => {
-        const updateRecursive = (commentList: IComment[]): IComment[] => {
-          return commentList.map((c) => {
-            if (c._id === commentId) {
-              return { ...c, likesCount: updatedComment.likesCount };
-            }
-            if (c.replies && c.replies.length > 0) {
-              return { ...c, replies: updateRecursive(c.replies) };
-            }
-            return c;
-          });
-        };
-        return updateRecursive(prevComments);
+    const updateCommentCount = (commentList: IComment[]): IComment[] => {
+      return commentList.map((c) => {
+        if (c._id === commentId) {
+          return { ...c, likesCount: c.likesCount + change };
+        }
+        return c;
       });
+    };
+    setComments(updateCommentCount);
+
+    try {
+      await API.post(`/comments/${commentId}/like`);
     } catch (error) {
       toast.error('Action failed. Please try again.');
-      setLikedCommentIds(likedCommentIds);
+      setLikedCommentIds(originalLikedIds);
+      setComments(originalComments);
     }
   };
+  
   const handleHideComment = (commentId: string) => {
     setHiddenCommentIds((prev) => new Set(prev).add(commentId));
   };
@@ -340,7 +343,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
                 ? 'text-red-600 hover:text-red-700'
                 : 'text-gray-600 hover:text-red-600'
             }`}
-            onClick={onToggleLike} // Use the handler from props
+            onClick={onToggleLike}
           >
             <Heart
               size={18}
@@ -381,6 +384,7 @@ const SocialSection: React.FC<SocialSectionProps> = ({
             onAddComment={handleAddComment}
             onLike={handleLikeComment}
             onHide={handleHideComment}
+            onRepliesLoaded={fetchUserLikes}
             onReplyAdded={(parentId) => {
               setCommentsCount((prev) => prev + 1);
               setComments((prevComments) =>

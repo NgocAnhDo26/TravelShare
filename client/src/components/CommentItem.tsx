@@ -108,13 +108,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
 }) => {
   const [editedContent, setEditedContent] = useState(comment.content);
   const [isSaving, setIsSaving] = useState(false);
-  const [optimisticLikesCount, setOptimisticLikesCount] = useState(
-    comment.likesCount,
-  );
-
-  useEffect(() => {
-    setOptimisticLikesCount(comment.likesCount);
-  }, [comment.likesCount]);
 
   useEffect(() => {
     setEditedContent(comment.content);
@@ -148,7 +141,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const handleLikeClick = () => {
     onLike(comment._id);
-    setOptimisticLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
   };
 
   return (
@@ -281,12 +273,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
           >
             Reply
           </button>
-          {optimisticLikesCount > 0 && (
+          {comment.likesCount > 0 && (
             <LikesModal targetId={comment._id} onModel='Comment'>
               <div className='flex items-center gap-1 cursor-pointer'>
                 <ThumbsUp className='w-4 h-4 text-white bg-blue-600 rounded-full p-0.5' />
                 <span className='font-semibold text-gray-500'>
-                  {optimisticLikesCount}
+                  {comment.likesCount}
                 </span>
               </div>
             </LikesModal>

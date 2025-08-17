@@ -159,10 +159,11 @@ interface ThreadProps {
   onHide: (commentId: string) => void;
   onAddComment: (formData: FormData) => Promise<AxiosResponse<IComment>>;
   onReplyAdded: (parentId: string) => void;
+  onRepliesLoaded: (commentIds: string[]) => void;
 }
 
 const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
-  const { currentUser, onEdit, onDelete } = rest;
+  const { currentUser, onEdit, onDelete, onRepliesLoaded } = rest;
   const [localComment, setLocalComment] = useState(comment);
   const [replies, setReplies] = useState<IComment[]>([]);
   const [areRepliesVisible, setAreRepliesVisible] = useState(false);
@@ -269,12 +270,17 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
         `/comments/${localComment._id}/replies`,
       );
       setReplies(response.data);
+
+      const replyIds = response.data.map((r) => r._id);
+      if (replyIds.length > 0) {
+        onRepliesLoaded(replyIds);
+      }
     } catch (error) {
       console.error('Failed to fetch replies:', error);
     } finally {
       setIsLoadingReplies(false);
     }
-  }, [localComment._id, localComment.replyCount]);
+  }, [localComment._id, localComment.replyCount, onRepliesLoaded]);
 
   useEffect(() => {
     if (
@@ -352,6 +358,22 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
     }
   };
 
+  const handleLikeReply = (replyId: string) => {
+    setReplies((currentReplies) =>
+      currentReplies.map((reply) => {
+        if (reply._id === replyId) {
+          const isLiked = rest.likedCommentIds.has(replyId);
+          const newLikesCount = isLiked
+            ? reply.likesCount - 1
+            : reply.likesCount + 1;
+          return { ...reply, likesCount: Math.max(0, newLikesCount) };
+        }
+        return reply;
+      }),
+    );
+    rest.onLike(replyId);
+  };
+
   const getInitialReplyContent = () => {
     if (
       replyTarget &&
@@ -406,7 +428,9 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
             {isLoadingReplies ? (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             ) : (
-              `View ${localComment.replyCount} ${localComment.replyCount > 1 ? 'replies' : 'reply'}`
+              `View ${localComment.replyCount} ${
+                localComment.replyCount > 1 ? 'replies' : 'reply'
+              }`
             )}
           </Button>
         )}
@@ -431,7 +455,7 @@ const CommentThread: React.FC<ThreadProps> = ({ comment, ...rest }) => {
                     onSetReplyTarget={() =>
                       handleSetReply(reply, localComment._id, true)
                     }
-                    onLike={rest.onLike}
+                    onLike={() => handleLikeReply(reply._id)}
                     onHide={rest.onHide}
                     onImageLoad={handleImageLoad}
                   />
