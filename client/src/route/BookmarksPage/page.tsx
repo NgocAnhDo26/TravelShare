@@ -154,9 +154,6 @@ const FeedPlan = ({ plan, onRemove }: FeedPlanProps) => {
             {plan.author?.displayName || 'Anonymous'}
           </Link>
         </div>
-        <div className='text-xs text-gray-400 dark:text-gray-500 mt-1'>
-          {duration > 0 ? `${duration} days` : ''}
-        </div>
       </div>
       <ItemMenu onRemove={() => onRemove(plan._id)} />
     </div>
