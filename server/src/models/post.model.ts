@@ -101,6 +101,6 @@ postSchema.virtual('createdAtFormatted').get(function () {
 });
 
 // Define Post model
-const Post: Model<IPost> = model<IPost>('posts', postSchema);
+const Post: Model<IPost> = model<IPost>('Post', postSchema);
 
 export default Post;

@@ -22,8 +22,8 @@ interface Trip {
 }
 interface Post {
   _id: string;
-  content: string;
-  imageUrl?: string;
+  title: string;
+  coverImageUrl?: string;
   author: Author;
 }
 type BookmarkTarget = Trip | Post;
@@ -165,8 +165,8 @@ const PostItem = ({ post, onRemove }: PostItemProps) => (
     <Link to={`/posts/${post._id}`} className='flex-shrink-0'>
       <div className='w-48 h-28 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden'>
         <img
-          src={post.imageUrl}
-          alt='Post content'
+          src={post.coverImageUrl} 
+          alt={post.title}
           className='w-full h-full object-cover'
           onError={(e) => {
             e.currentTarget.style.display = 'none';
@@ -177,7 +177,7 @@ const PostItem = ({ post, onRemove }: PostItemProps) => (
     <div className='flex-1 min-w-0 text-left'>
       <Link to={`/posts/${post._id}`} className='block'>
         <p className='text-md font-bold text-gray-900 dark:text-white truncate hover:underline'>
-          {post.content}
+          {post.title}
         </p>
       </Link>
       <div className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
